@@ -6,3 +6,4 @@ package.json
 .clasprc.json
 node_modules/
 *.log
+.clasp-*.json

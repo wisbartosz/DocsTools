@@ -54,10 +54,41 @@ miejsca do poprawy, a poprawki formatowania wprowadza tylko wtedy, gdy klikniesz
 
 ## Instalacja
 
-Kod dodatku jest przypięty do konkretnego dokumentu. Każdy dokument, w którym chcesz
-go używać, dostaje własną kopię. Są dwa sposoby, żeby ją tam wgrać.
+### Najprościej: kopia gotowego dokumentu
 
-### Przez clasp (wygodniej)
+Otwórz ten link i kliknij „Utwórz kopię”:
+
+https://docs.google.com/document/d/18DZXa969W9EE75X6z7C3ZNG1ieOqRtMOaDvdnFVoKc4/copy
+
+Kopia ląduje na Twoim Dysku i ma już w sobie Przybornik. Na górze dokumentu jest krótka
+instrukcja, co kliknąć dalej. Nic nie trzeba instalować na komputerze.
+
+### Masz już dokument z pracą
+
+Otwórz Instalator PDZ, wklej link do swojego dokumentu i kliknij „Zainstaluj”:
+
+https://script.google.com/macros/s/AKfycbw46Frsvuuh_VpBv5G1iSk2KE_flxFaJ6ZClwq51BneFK9qAsxVmA8LBXYlfBNSNcfT/exec
+
+Przy pierwszym użyciu instalator poprosi o włączenie „Google Apps Script API” na Twoim
+koncie (https://script.google.com/home/usersettings). To jeden przełącznik, ustawiany raz.
+
+### Aktualizacje
+
+W Przyborniku otwórz Ustawienia i kliknij „Sprawdź aktualizacje”. Otworzy się instalator,
+który pokaże, co nowego, i podmieni Przybornik w Twoim dokumencie na najnowszą wersję.
+Praca, ustawienia i przetworzone źródła zostają. Gdyby nowa wersja sprawiała kłopoty,
+w tym samym miejscu jest przycisk „Przywróć poprzednią wersję”. Po aktualizacji odśwież
+dokument.
+
+Na kontach firmowych i uczelnianych administrator może blokować takie skrypty.
+
+### Dla programistów
+
+Kod dodatku jest przypięty do konkretnego dokumentu. Każdy dokument, w którym chcesz
+go używać, dostaje własną kopię. Poniżej dwa sposoby, żeby wgrać ją do istniejącego
+dokumentu.
+
+#### Przez clasp
 
 clasp to narzędzie Google, które kopiuje pliki z tego repozytorium do edytora skryptów
 dokumentu. Działa tak samo na Windowsie i na Macu. Potrzebne są git i Node.js.
@@ -99,7 +130,7 @@ Dla każdego dokumentu:
 Aktualizacja to `git pull`, a potem znowu `clasp push -f`. Nie poprawiaj kodu ręcznie
 w edytorze skryptów, bo następne wgranie nadpisze te zmiany.
 
-### Ręcznie
+#### Ręcznie
 
 1. Otwórz dokument, wybierz Rozszerzenia → Apps Script.
 2. W Ustawieniach projektu zaznacz „Pokaż plik manifestu appsscript.json w edytorze”.
@@ -181,3 +212,21 @@ około 6 minut na jedno wywołanie.
 
 Przy każdej zmianie w czyszczeniu tekstu podbij `TEXT_PIPELINE_VERSION` w
 `TextClean.js`. Dodatek sam oznaczy wtedy źródła do ponownego przetworzenia.
+
+Instalator (`installer/`) to osobny skrypt Apps Script opublikowany jako aplikacja
+internetowa, działający w imieniu osoby, która go otwiera. Musi być połączony z własnym
+projektem Google Cloud z włączonym Apps Script API, bo ukryte projekty skryptów w
+dokumentach nie pozwalają na zmianę kodu. Najnowszą wersję bierze z pliku `latest.json`
+na gałęzi `main`, a kod z archiwum wskazanego tam tagu (tylko katalog `src`). Przed
+podmianą zapisuje bieżący kod jako wersję skryptu „PDZ backup”, z której korzysta
+przycisk przywracania. Jeśli zepsuta wersja nie otworzy nawet panelu, instalator można
+otworzyć ręcznie z parametrem `?scriptId=<identyfikator skryptu dokumentu>`.
+
+Wydanie nowej wersji: podbij `APP_VERSION` w `src/Menu.js`, zaktualizuj `latest.json`
+(wersja, tag, opis zmian po polsku i angielsku), zrób commit i tag `vX.Y.Z`, wypchnij oba.
+
+## Prywatność i licencja
+
+Co Przybornik zapisuje i co wysyła, opisuje [polityka prywatności](PRIVACY.md).
+
+MIT, szczegóły w pliku [LICENSE](LICENSE).

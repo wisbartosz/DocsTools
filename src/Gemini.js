@@ -1,4 +1,4 @@
-﻿const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_MAX_ATTEMPTS = 4;
 const GEMINI_MAX_WAIT_MS = 60000;
 const GEMINI_RETRY_BUDGET_MS = 150000;

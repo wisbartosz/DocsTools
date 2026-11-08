@@ -1,4 +1,4 @@
-﻿const MESSAGES = {
+const MESSAGES = {
   pl: {
     'menu.open': 'Otwórz {name}',
 
@@ -89,6 +89,10 @@
     'settings.model.test': 'Testuj połączenie',
     'settings.model.hint': 'Limity darmowego planu zależą od modelu – sprawdzisz je w Google AI Studio.',
     'settings.model.saved': 'Model zapisany: {model}',
+
+    'update.title': 'Aktualizacje',
+    'update.check': 'Sprawdź aktualizacje',
+    'update.hint': 'Otworzy się Instalator PDZ: pokaże, co nowego, i zaktualizuje Przybornik w tym dokumencie. Twoja praca i ustawienia zostają.',
 
     'settings.language.title': 'Język',
     'settings.language.auto': 'Automatycznie (język konta Google)',
@@ -219,6 +223,10 @@
     'settings.model.test': 'Test connection',
     'settings.model.hint': 'Free tier limits depend on the model – you can check them in Google AI Studio.',
     'settings.model.saved': 'Model saved: {model}',
+
+    'update.title': 'Updates',
+    'update.check': 'Check for updates',
+    'update.hint': 'Opens the PDZ Installer: it shows what is new and updates the toolkit in this document. Your work and settings stay as they are.',
 
     'settings.language.title': 'Language',
     'settings.language.auto': 'Automatic (Google account language)',

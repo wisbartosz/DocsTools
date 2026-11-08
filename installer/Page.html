@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="<?= lang ?>">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font: 15px/1.55 Roboto, Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #202124; }
+    h1 { font-size: 22px; font-weight: 500; margin-bottom: 24px; }
+    h2 { font-size: 17px; font-weight: 500; margin-top: 32px; }
+    input { width: 100%; box-sizing: border-box; padding: 9px 10px; font: inherit; border: 1px solid #dadce0; border-radius: 4px; }
+    button { margin: 12px 8px 0 0; padding: 9px 18px; font: inherit; border: 1px solid #dadce0; border-radius: 4px; background: #fff; cursor: pointer; }
+    button.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+    button:disabled { opacity: .5; cursor: default; }
+    .muted { color: #5f6368; }
+    .notes { white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 12px 14px; margin-top: 8px; }
+    .message { margin-top: 20px; padding: 10px 12px; border-radius: 6px; background: #e8f0fe; white-space: pre-wrap; }
+    .message.ok { background: #e6f4ea; color: #188038; }
+    .message.error { background: #fce8e6; color: #c5221f; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1><?= texts.heading ?></h1>
+
+  <section id="update" class="hidden">
+    <div id="status" class="muted"><?= texts.loading ?></div>
+    <div id="versions" class="hidden">
+      <div id="current"></div>
+      <div id="latest"></div>
+      <div id="notes-box" class="hidden">
+        <h2><?= texts.whatsNew ?></h2>
+        <div id="notes" class="notes"></div>
+      </div>
+      <button id="btn-update" class="primary hidden"></button>
+      <button id="btn-rollback" class="hidden"><?= texts.rollback ?></button>
+    </div>
+  </section>
+
+  <section id="install" class="hidden">
+    <h2><?= texts.installHeading ?></h2>
+    <p class="muted"><?= texts.installHint ?></p>
+    <input id="doc-link" placeholder="<?= texts.installPlaceholder ?>">
+    <button id="btn-install" class="primary"><?= texts.install ?></button>
+  </section>
+
+  <div id="message" class="message hidden"></div>
+
+  <script>
+    const T = <?!= JSON.stringify(texts) ?>;
+    const SCRIPT_ID = <?!= JSON.stringify(scriptId) ?>;
+    const $ = id => document.getElementById(id);
+    const fmt = (key, params) => (T[key] || key).replace(/\{(\w+)\}/g, (m, k) => params && params[k] !== undefined ? params[k] : m);
+
+    function message(text, kind) {
+      $('message').textContent = text;
+      $('message').className = 'message' + (kind ? ' ' + kind : '');
+    }
+
+    function call(fn, ...args) {
+      return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
+    }
+
+    async function busy(button, action) {
+      const buttons = document.querySelectorAll('button');
+      buttons.forEach(b => b.disabled = true);
+      message(T.working);
+      try {
+        await action();
+      } catch (e) {
+        message(e.message, 'error');
+      } finally {
+        buttons.forEach(b => b.disabled = false);
+      }
+    }
+
+    function newer(a, b) {
+      const pa = String(a).split('.').map(Number);
+      const pb = String(b).split('.').map(Number);
+      for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+      return false;
+    }
+
+    async function loadStatus() {
+      try {
+        const status = await call('getStatus', SCRIPT_ID);
+        $('status').classList.add('hidden');
+        $('versions').classList.remove('hidden');
+        $('current').textContent = fmt('yourVersion', { version: status.current });
+        $('latest').textContent = fmt('latestVersion', { version: status.latest.version });
+        const canUpdate = newer(status.latest.version, status.current);
+        if (canUpdate) {
+          $('btn-update').textContent = fmt('update', { version: status.latest.version });
+          $('btn-update').classList.remove('hidden');
+          if (status.latest.notes) {
+            $('notes').textContent = status.latest.notes;
+            $('notes-box').classList.remove('hidden');
+          }
+        } else {
+          message(T.upToDate, 'ok');
+        }
+        $('btn-rollback').classList.toggle('hidden', !status.hasBackup);
+      } catch (e) {
+        $('status').classList.add('hidden');
+        message(e.message, 'error');
+      }
+    }
+
+    $('btn-update').addEventListener('click', () => busy($('btn-update'), async () => {
+      const result = await call('installUpdate', SCRIPT_ID);
+      $('btn-update').classList.add('hidden');
+      $('notes-box').classList.add('hidden');
+      $('current').textContent = fmt('yourVersion', { version: result.version });
+      $('btn-rollback').classList.remove('hidden');
+      message(fmt('updated', { version: result.version }), 'ok');
+    }));
+
+    $('btn-rollback').addEventListener('click', () => busy($('btn-rollback'), async () => {
+      await call('rollback', SCRIPT_ID);
+      message(T.rolledBack, 'ok');
+    }));
+
+    $('btn-install').addEventListener('click', () => busy($('btn-install'), async () => {
+      await call('installIntoDocument', $('doc-link').value);
+      message(T.installed, 'ok');
+    }));
+
+    if (SCRIPT_ID) {
+      $('update').classList.remove('hidden');
+      loadStatus();
+    } else {
+      $('install').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

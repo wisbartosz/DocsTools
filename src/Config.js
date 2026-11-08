@@ -1,4 +1,4 @@
-﻿const PROP = {
+const PROP = {
   API_KEY: 'geminiApiKey',
   MODEL: 'geminiModel',
   AI_NOTICE: 'aiNoticeAccepted',
@@ -30,6 +30,7 @@ function getSettings() {
     model: userProps_().getProperty(PROP.MODEL) || '',
     aiNoticeAccepted: userProps_().getProperty(PROP.AI_NOTICE) === 'true',
     uiLanguageSetting: savedUiLanguage_(),
+    updateUrl: updateUrl_(),
     sourceFolderId: folderId,
     sourceFolderName: folderName,
   };

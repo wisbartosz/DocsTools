@@ -1,4 +1,4 @@
-﻿const UI_LANGUAGES = ['pl', 'en'];
+const UI_LANGUAGES = ['pl', 'en'];
 
 let uiLanguageCache_ = null;
 

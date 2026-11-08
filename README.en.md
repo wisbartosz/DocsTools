@@ -56,10 +56,39 @@ what to fix, and it only applies formatting fixes when you click.
 
 ## Installation
 
-The add-on's code is attached to a specific document. Every document you want to use it
-in gets its own copy. There are two ways to put it there.
+### The easy way: copy a ready document
 
-### With clasp (easier)
+Open this link and click "Make a copy":
+
+https://docs.google.com/document/d/18DZXa969W9EE75X6z7C3ZNG1ieOqRtMOaDvdnFVoKc4/copy
+
+The copy lands in your Drive with the toolkit already inside. A short note at the top of
+the document tells you what to click next. Nothing to install on your computer.
+
+### You already have a thesis document
+
+Open the PDZ Installer, paste the link to your document and click "Install":
+
+https://script.google.com/macros/s/AKfycbw46Frsvuuh_VpBv5G1iSk2KE_flxFaJ6ZClwq51BneFK9qAsxVmA8LBXYlfBNSNcfT/exec
+
+The first time, the installer will ask you to turn on "Google Apps Script API" for your
+account (https://script.google.com/home/usersettings). It's a single switch you set once.
+
+### Updates
+
+In the toolkit, open Settings and click "Check for updates". The installer opens, shows
+what's new and replaces the toolkit in your document with the latest version. Your work,
+settings and processed sources stay. If the new version gives you trouble, the same page
+has a "Restore the previous version" button. Reload the document after updating.
+
+On work and university accounts the administrator may block scripts like this.
+
+### For developers
+
+The add-on's code is attached to a specific document. Every document you want to use it
+in gets its own copy. Below are two ways to put it into an existing document.
+
+#### With clasp
 
 clasp is a Google tool that copies files from this repository into the document's script
 editor. It works the same on Windows and macOS. You need git and Node.js.
@@ -102,7 +131,7 @@ For each document:
 To update, run `git pull` and then `clasp push -f` again. Don't edit the code by hand in
 the script editor, because the next push will overwrite your changes.
 
-### Manually
+#### Manually
 
 1. Open the document and choose Extensions → Apps Script.
 2. In Project Settings, tick "Show appsscript.json manifest file in editor".
@@ -183,3 +212,21 @@ single call to about 6 minutes.
 
 Whenever you change the text cleanup, bump `TEXT_PIPELINE_VERSION` in `TextClean.js`.
 The add-on will then mark sources for processing again.
+
+The installer (`installer/`) is a separate Apps Script project published as a web app that
+runs as the person who opens it. It has to be linked to its own Google Cloud project with
+the Apps Script API enabled, because the hidden projects behind document scripts don't
+allow code changes. It reads the latest version from `latest.json` on the `main` branch
+and takes the code from the archive of the tag named there (the `src` folder only). Before
+replacing anything it saves the current code as a "PDZ backup" script version, which the
+restore button uses. If a broken version can't even open the sidebar, you can open the
+installer by hand with `?scriptId=<the document's script ID>`.
+
+Releasing a new version: bump `APP_VERSION` in `src/Menu.js`, update `latest.json`
+(version, tag, release notes in Polish and English), commit, tag `vX.Y.Z` and push both.
+
+## Privacy and license
+
+What the toolkit stores and sends is described in the [privacy policy](PRIVACY.md).
+
+MIT, see [LICENSE](LICENSE).

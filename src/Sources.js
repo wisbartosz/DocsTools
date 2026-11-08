@@ -1,4 +1,4 @@
-﻿const SOURCE_INDEX_NAME = 'index.json';
+const SOURCE_INDEX_NAME = 'index.json';
 
 const SOURCE_TYPES = {
   'application/vnd.google-apps.document': { label: 'type.gdoc', read: 'export' },

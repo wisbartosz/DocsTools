@@ -1,4 +1,4 @@
-﻿<script>
+<script>
   const TO_PROCESS = ['pending', 'changed', 'outdated', 'error'];
 
   let settings = null;
@@ -452,6 +452,8 @@
   }));
 
   $('btn-save-language').addEventListener('click', () => run(() => call('saveUiLanguage', $('language-select').value)));
+
+  $('btn-check-update').addEventListener('click', () => window.open(settings.updateUrl, '_blank'));
 
   $('btn-select-all').addEventListener('click', () => selectAllSources(true));
   $('btn-select-none').addEventListener('click', () => selectAllSources(false));
