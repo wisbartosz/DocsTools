@@ -1,5 +1,7 @@
 # Przybornik dyplomowanej Żabki
 
+[English version](README.en.md)
+
 Dodatek do Google Docs, który pomaga pisać pracę dyplomową. Siedzi w panelu bocznym
 dokumentu i korzysta ze źródeł, które trzymasz w jednym folderze na Dysku Google
 (tym samym, którego możesz używać w NotebookLM).
