@@ -1,0 +1,243 @@
+<script>
+  const STATUS_LABELS = {
+    ok: 'gotowe',
+    pending: 'do przetworzenia',
+    changed: 'zmienione – do ponownego przetworzenia',
+    outdated: 'nowa wersja przetwarzania – przetwórz ponownie',
+    empty: 'brak tekstu (skan bez warstwy tekstu?)',
+    error: 'błąd',
+    unsupported: 'nieobsługiwany typ',
+  };
+  const TO_PROCESS = ['pending', 'changed', 'outdated', 'error'];
+
+  let settings = null;
+  let sources = [];
+  let busy = false;
+
+  function $(id) { return document.getElementById(id); }
+
+  function call(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+    });
+  }
+
+  function showMessage(text, kind) {
+    const box = $('message');
+    box.textContent = text;
+    box.className = 'message' + (kind ? ' ' + kind : '');
+  }
+
+  function hideMessage() { $('message').className = 'message hidden'; }
+
+  function errorText(e) {
+    return (e && e.message ? e.message : String(e)).replace(/^(Exception|Error|UserError):\s*/, '');
+  }
+
+  async function run(button, action) {
+    if (busy) return;
+    busy = true;
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(b => b.disabled = true);
+    hideMessage();
+    try {
+      await action();
+    } catch (e) {
+      showMessage(errorText(e), 'error');
+    } finally {
+      buttons.forEach(b => b.disabled = false);
+      busy = false;
+      renderSettings();
+    }
+  }
+
+  async function callGemini(fn, ...args) {
+    if (!await confirmAiNotice()) return null;
+    showMessage('Czekam na odpowiedź Gemini (model ' + settings.model + '). Na darmowym planie bywa to wolne – nawet do 2–3 minut…');
+    return call(fn, ...args);
+  }
+
+  function confirmAiNotice() {
+    if (settings.aiNoticeAccepted) return Promise.resolve(true);
+    return new Promise(resolve => {
+      $('ai-notice').classList.remove('hidden');
+      $('btn-notice-accept').disabled = false;
+      $('btn-notice-cancel').disabled = false;
+      $('btn-notice-accept').onclick = async () => {
+        $('ai-notice').classList.add('hidden');
+        settings = await call('acceptAiNotice');
+        resolve(true);
+      };
+      $('btn-notice-cancel').onclick = () => {
+        $('ai-notice').classList.add('hidden');
+        resolve(false);
+      };
+    });
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+    hideMessage();
+  }
+
+  function renderSettings() {
+    if (!settings) return;
+    $('folder-current').textContent = settings.sourceFolderId
+      ? (settings.sourceFolderName ? 'Wybrany: ' + settings.sourceFolderName : 'Wybrany folder jest niedostępny dla tego konta.')
+      : 'Nie wybrano folderu.';
+    $('key-status').textContent = settings.hasApiKey ? 'Klucz zapisany.' : 'Brak klucza.';
+    $('btn-clear-key').disabled = busy || !settings.hasApiKey;
+    $('model-select').disabled = busy || !settings.hasApiKey;
+    $('btn-save-model').disabled = busy || !settings.hasApiKey;
+    $('btn-test').disabled = busy || !settings.hasApiKey || !settings.model;
+    const hasFolder = !!(settings.sourceFolderId && settings.sourceFolderName);
+    $('sources-no-folder').classList.toggle('hidden', hasFolder);
+    $('sources-content').classList.toggle('hidden', !hasFolder);
+  }
+
+  function fillModels(models) {
+    const select = $('model-select');
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = models.length ? '— wybierz model —' : '— brak dostępnych modeli —';
+    select.appendChild(empty);
+    models.forEach(m => {
+      const option = document.createElement('option');
+      option.value = m.id;
+      option.textContent = m.label + ' (' + m.id + ')';
+      select.appendChild(option);
+    });
+    if (settings.model && !models.some(m => m.id === settings.model)) {
+      const option = document.createElement('option');
+      option.value = settings.model;
+      option.textContent = settings.model + ' (zapisany, niedostępny na liście)';
+      select.appendChild(option);
+    }
+    select.value = settings.model || '';
+  }
+
+  async function loadModels() {
+    if (!settings.hasApiKey) return;
+    try {
+      fillModels(await call('listGeminiModels'));
+    } catch (e) {
+      fillModels([]);
+      showMessage(errorText(e), 'error');
+    }
+  }
+
+  function renderSources() {
+    const list = $('sources-list');
+    list.innerHTML = '';
+    sources.forEach(s => {
+      const li = document.createElement('li');
+      const name = document.createElement('a');
+      name.className = 'name';
+      name.href = s.url;
+      name.target = '_blank';
+      name.textContent = s.name;
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const status = document.createElement('span');
+      status.className = 'status-' + s.status;
+      status.textContent = STATUS_LABELS[s.status] || s.status;
+      meta.append(s.type + ' · ', status);
+      if (s.chars) meta.append(' · ' + s.chars.toLocaleString('pl-PL') + ' znaków');
+      if (s.pages) meta.append(' · ' + s.pages + ' str.');
+      li.append(name, meta);
+      if (s.error) {
+        const err = document.createElement('div');
+        err.className = 'meta status-error';
+        err.textContent = s.error;
+        li.append(err);
+      }
+      list.append(li);
+    });
+    const ready = sources.filter(s => s.status === 'ok').length;
+    const todo = sources.filter(s => TO_PROCESS.includes(s.status)).length;
+    $('sources-summary').textContent = sources.length
+      ? 'Plików: ' + sources.length + ' · gotowe: ' + ready + ' · do przetworzenia: ' + todo
+      : 'Folder jest pusty.';
+  }
+
+  async function loadSources() {
+    if (!settings.sourceFolderName) return;
+    sources = await call('listSources');
+    renderSources();
+  }
+
+  async function processSources() {
+    const progress = $('process-progress');
+    progress.classList.remove('hidden');
+    try {
+      progress.textContent = 'Porządkowanie usuniętych źródeł…';
+      const cleanup = await call('cleanupSources');
+      await loadSources();
+      const removedNote = cleanup.removed ? ' Usunięto teksty ' + cleanup.removed + ' źródeł, których nie ma już w folderze.' : '';
+      const queue = sources.filter(s => TO_PROCESS.includes(s.status));
+      if (!queue.length) {
+        showMessage('Wszystkie obsługiwane źródła są już przetworzone.' + removedNote, 'ok');
+        return;
+      }
+      let failed = 0;
+      for (let i = 0; i < queue.length; i++) {
+        progress.textContent = 'Przetwarzanie ' + (i + 1) + ' z ' + queue.length + ': ' + queue[i].name;
+        const updated = await call('processSource', queue[i].id);
+        if (updated.status === 'error') failed++;
+        sources = sources.map(s => s.id === updated.id ? updated : s);
+        renderSources();
+      }
+      showMessage(
+        (failed ? 'Gotowe, ale ' + failed + ' plików nie udało się odczytać – szczegóły na liście.' : 'Wszystkie źródła przetworzone.') + removedNote,
+        failed ? 'error' : 'ok'
+      );
+    } finally {
+      progress.classList.add('hidden');
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+  $('btn-refresh').addEventListener('click', e => run(e.target, loadSources));
+  $('btn-process').addEventListener('click', e => run(e.target, processSources));
+
+  $('btn-save-folder').addEventListener('click', e => run(e.target, async () => {
+    settings = await call('saveSourceFolder', $('folder-input').value);
+    $('folder-input').value = '';
+    showMessage('Folder zapisany: ' + settings.sourceFolderName, 'ok');
+    await loadSources();
+  }));
+
+  $('btn-save-key').addEventListener('click', e => run(e.target, async () => {
+    settings = await call('saveApiKey', $('key-input').value);
+    $('key-input').value = '';
+    showMessage('Klucz zapisany.', 'ok');
+    await loadModels();
+  }));
+
+  $('btn-clear-key').addEventListener('click', e => run(e.target, async () => {
+    settings = await call('clearApiKey');
+    fillModels([]);
+    showMessage('Klucz usunięty.', 'ok');
+  }));
+
+  $('btn-save-model').addEventListener('click', e => run(e.target, async () => {
+    settings = await call('saveModel', $('model-select').value);
+    showMessage('Model zapisany: ' + settings.model, 'ok');
+  }));
+
+  $('btn-test').addEventListener('click', e => run(e.target, async () => {
+    const result = await callGemini('testGeminiConnection');
+    if (!result) return;
+    showMessage('Połączenie działa. Model ' + result.model + ' odpowiedział: „' + result.reply + '”.', 'ok');
+  }));
+
+  run(null, async () => {
+    settings = await call('getSettings');
+    renderSettings();
+    if (!settings.sourceFolderId || !settings.hasApiKey) switchTab('settings');
+    await Promise.all([loadSources(), loadModels()]);
+  });
+</script>

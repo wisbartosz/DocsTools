@@ -1,0 +1,84 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include_('Styles'); ?>
+</head>
+<body>
+  <nav class="tabs">
+    <button class="tab active" data-tab="sources">Źródła</button>
+    <button class="tab" data-tab="settings">Ustawienia</button>
+  </nav>
+
+  <div id="message" class="message hidden"></div>
+
+  <section id="tab-sources" class="panel">
+    <div id="sources-no-folder" class="hint hidden">
+      Najpierw wskaż folder ze źródłami w zakładce <b>Ustawienia</b>.
+    </div>
+    <div id="sources-content" class="hidden">
+      <div class="row">
+        <span id="sources-summary" class="muted"></span>
+      </div>
+      <div class="row buttons">
+        <button id="btn-process" class="primary">Przetwórz źródła</button>
+        <button id="btn-refresh">Odśwież</button>
+      </div>
+      <div id="process-progress" class="muted hidden"></div>
+      <ul id="sources-list" class="list"></ul>
+    </div>
+  </section>
+
+  <section id="tab-settings" class="panel hidden">
+    <h3>Folder ze źródłami</h3>
+    <div id="folder-current" class="muted"></div>
+    <input id="folder-input" type="text" placeholder="Link do folderu na Dysku Google">
+    <div class="row buttons">
+      <button id="btn-save-folder" class="primary">Zapisz folder</button>
+    </div>
+
+    <h3>Klucz API Gemini</h3>
+    <div id="key-status" class="muted"></div>
+    <input id="key-input" type="password" placeholder="Wklej klucz z Google AI Studio" autocomplete="off">
+    <div class="row buttons">
+      <button id="btn-save-key" class="primary">Zapisz klucz</button>
+      <button id="btn-clear-key">Usuń klucz</button>
+    </div>
+    <div class="muted small">
+      Klucz za darmo: <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
+      Zapisuje się tylko na Twoim koncie Google, nie w dokumencie.
+    </div>
+
+    <h3>Model</h3>
+    <select id="model-select" disabled>
+      <option value="">— najpierw zapisz klucz —</option>
+    </select>
+    <div class="row buttons">
+      <button id="btn-save-model" class="primary">Zapisz model</button>
+      <button id="btn-test">Testuj połączenie</button>
+    </div>
+    <div class="muted small">
+      Limity darmowego planu zależą od modelu – sprawdzisz je w Google AI Studio.
+    </div>
+  </section>
+
+  <div id="ai-notice" class="overlay hidden">
+    <div class="notice">
+      <h3>Zanim użyjesz AI</h3>
+      <p>
+        Funkcje AI wysyłają fragmenty pracy, źródeł i Twoje pytania do Gemini API.
+        Na <b>darmowym</b> planie Google może wykorzystywać te treści do ulepszania swoich
+        usług, a ludzie mogą je przeglądać.
+      </p>
+      <p>Nie wysyłaj danych poufnych ani osobowych.</p>
+      <div class="row buttons">
+        <button id="btn-notice-accept" class="primary">Rozumiem</button>
+        <button id="btn-notice-cancel">Anuluj</button>
+      </div>
+    </div>
+  </div>
+
+  <?!= include_('Client'); ?>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.clasp.json
+CLAUDE.md
+CLAUDE.local.md
+test/
+package.json
+.clasprc.json
+node_modules/
+*.log
