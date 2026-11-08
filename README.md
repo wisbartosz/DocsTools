@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.svg" width="160" alt="Żabka w birecie absolwenta"></p>
+
 # Przybornik dyplomowanej Żabki
 
 [English version](README.en.md)

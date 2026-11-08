@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.svg" width="160" alt="A frog in a graduation cap"></p>
+
 # Przybornik dyplomowanej Żabki
 
 [Polska wersja](README.md)

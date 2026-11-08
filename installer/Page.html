@@ -18,10 +18,15 @@
     .message.ok { background: #e6f4ea; color: #188038; }
     .message.error { background: #fce8e6; color: #c5221f; }
     .hidden { display: none; }
+    header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    header h1 { margin: 0; }
   </style>
 </head>
 <body>
-  <h1><?= texts.heading ?></h1>
+  <header>
+    <?!= HtmlService.createHtmlOutputFromFile('Logo').getContent() ?>
+    <h1><?= texts.heading ?></h1>
+  </header>
 
   <section id="update" class="hidden">
     <div id="status" class="muted"><?= texts.loading ?></div>

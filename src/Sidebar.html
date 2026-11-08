@@ -105,7 +105,7 @@
     <? if (mode === 'sidebar') { ?>
       <button id="btn-enlarge" class="link" title="<?= t_('assistant.enlargeHint') ?>">⤢ <?= t_('assistant.enlarge') ?></button>
     <? } ?>
-    <span class="version"><?= APP_SHORT_NAME ?> <?= APP_VERSION ?></span>
+    <span class="version"><?!= include_('Logo') ?><?= APP_SHORT_NAME ?> <?= APP_VERSION ?></span>
   </footer>
 
   <div id="ai-notice" class="overlay hidden">
