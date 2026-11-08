@@ -2,6 +2,7 @@
   API_KEY: 'geminiApiKey',
   MODEL: 'geminiModel',
   AI_NOTICE: 'aiNoticeAccepted',
+  UI_LANGUAGE: 'uiLanguage',
   SOURCE_FOLDER: 'sourceFolderId',
   DATA_FOLDER: 'dataFolderId',
 };
@@ -28,6 +29,7 @@ function getSettings() {
     hasApiKey: !!userProps_().getProperty(PROP.API_KEY),
     model: userProps_().getProperty(PROP.MODEL) || '',
     aiNoticeAccepted: userProps_().getProperty(PROP.AI_NOTICE) === 'true',
+    uiLanguageSetting: savedUiLanguage_(),
     sourceFolderId: folderId,
     sourceFolderName: folderName,
   };
@@ -35,7 +37,7 @@ function getSettings() {
 
 function saveApiKey(key) {
   const value = String(key || '').trim();
-  if (!value) throw userError_('Wpisz klucz API.');
+  if (!value) throw userError_('err.apiKeyEmpty');
   userProps_().setProperty(PROP.API_KEY, value);
   return getSettings();
 }
@@ -47,7 +49,7 @@ function clearApiKey() {
 
 function saveModel(model) {
   const value = String(model || '').trim();
-  if (!value) throw userError_('Wybierz model.');
+  if (!value) throw userError_('err.modelEmpty');
   userProps_().setProperty(PROP.MODEL, value);
   return getSettings();
 }
@@ -59,13 +61,13 @@ function acceptAiNotice() {
 
 function saveSourceFolder(input) {
   const id = parseDriveId_(input);
-  if (!id) throw userError_('To nie wygląda na link ani ID folderu z Dysku Google.');
+  if (!id) throw userError_('err.folderInvalid');
   let folder;
   try {
     folder = DriveApp.getFolderById(id);
     folder.getName();
   } catch (e) {
-    throw userError_('Nie znaleziono folderu albo nie masz do niego dostępu.');
+    throw userError_('err.folderNotFound');
   }
   const props = docProps_();
   if (props.getProperty(PROP.SOURCE_FOLDER) !== id) {
@@ -77,19 +79,19 @@ function saveSourceFolder(input) {
 
 function getApiKey_() {
   const key = userProps_().getProperty(PROP.API_KEY);
-  if (!key) throw userError_('Brak klucza API Gemini. Wpisz go w zakładce Ustawienia.');
+  if (!key) throw userError_('err.noApiKey');
   return key;
 }
 
 function getModel_() {
   const model = userProps_().getProperty(PROP.MODEL);
-  if (!model) throw userError_('Nie wybrano modelu Gemini. Wybierz go w zakładce Ustawienia.');
+  if (!model) throw userError_('err.noModel');
   return model;
 }
 
 function getSourceFolderId_() {
   const id = docProps_().getProperty(PROP.SOURCE_FOLDER);
-  if (!id) throw userError_('Nie wskazano folderu ze źródłami. Wklej jego link w zakładce Ustawienia.');
+  if (!id) throw userError_('err.noFolder');
   return id;
 }
 

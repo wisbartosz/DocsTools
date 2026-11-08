@@ -12,6 +12,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 ## Co już działa
 
 - Ustawienia w panelu: folder ze źródłami, klucz Gemini, wybór modelu i test połączenia.
+- Polski i angielski interfejs. Dodatek sam wybiera język według ustawień konta Google,
+  a w ustawieniach można go zmienić.
 - Przetwarzanie źródeł. Dodatek wyciąga tekst z PDF-ów (także skanów), plików Word,
   ODT, RTF, Dokumentów Google i plików tekstowych. Przy okazji go porządkuje: usuwa
   komentarze z Worda, wykropkowania z formularzy i powtarzające się stopki. Jeśli stopki
@@ -33,7 +35,6 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
 - licznik postępu i zgłaszanie uwag o dodatku,
-- interfejs po angielsku, wybierany automatycznie według języka konta Google,
 - prostsza instalacja: gotowy dokument do skopiowania jednym kliknięciem, aktualizacje
   z poziomu panelu i skrypt instalacyjny dla Windowsa i Maca.
 
@@ -144,7 +145,11 @@ Inne osoby z dostępem do dokumentu go nie zobaczą.
 Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez podkatalogów,
 żeby dało się je odtworzyć przy instalacji ręcznej.
 
-- `Menu.js`: menu, panel boczny, nazwa dodatku.
+- `Menu.js`: menu, panel boczny, nazwa i numer wersji dodatku.
+- `Messages.js`: wszystkie teksty widoczne dla użytkownika, po polsku i po angielsku.
+  Nowy napis dopisujesz w obu językach, a w kodzie używasz go przez `t_('klucz')`
+  (w panelu przez `t('klucz')`).
+- `I18n.js`: wybór języka i podstawianie parametrów w tekstach.
 - `Config.js`: ustawienia. Klucz i model są przypisane do użytkownika, folder do dokumentu.
 - `Gemini.js`: połączenie z Gemini, ponawianie przy błędach 429/5xx, lista modeli.
 - `Store.js`: pliki robocze w folderze `PDZ – dane`. Usunięcie oznacza przeniesienie do kosza.

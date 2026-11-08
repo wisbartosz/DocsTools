@@ -1,10 +1,11 @@
 ﻿const APP_SHORT_NAME = 'PDZ';
 const APP_NAME = 'Przybornik dyplomowanej Żabki';
+const APP_VERSION = '0.2.0';
 
 function onOpen() {
   DocumentApp.getUi()
     .createMenu(APP_SHORT_NAME)
-    .addItem('Otwórz ' + APP_NAME, 'showSidebar')
+    .addItem(t_('menu.open', { name: APP_NAME }), 'showSidebar')
     .addToUi();
 }
 
@@ -23,8 +24,10 @@ function include_(name) {
   return HtmlService.createHtmlOutputFromFile(name).getContent();
 }
 
-function userError_(message) {
-  const error = new Error(message);
+function userError_(key, params) {
+  const error = new Error(t_(key, params));
   error.name = 'UserError';
+  error.messageKey = key;
+  error.messageParams = params || null;
   return error;
 }

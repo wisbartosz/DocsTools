@@ -1,4 +1,4 @@
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+﻿const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_MAX_ATTEMPTS = 4;
 const GEMINI_MAX_WAIT_MS = 60000;
 const GEMINI_RETRY_BUDGET_MS = 150000;
@@ -15,12 +15,12 @@ function geminiGenerate_(request, maxAttempts) {
   const candidate = data.candidates && data.candidates[0];
   if (!candidate) {
     const reason = data.promptFeedback && data.promptFeedback.blockReason;
-    throw userError_('Gemini odrzuciło zapytanie' + (reason ? ' (' + reason + ')' : '') + '.');
+    throw userError_('gemini.rejected', { reason: reason || t_('gemini.unknownReason') });
   }
   const parts = (candidate.content && candidate.content.parts) || [];
   const text = parts.map(function (p) { return p.text || ''; }).join('').trim();
   if (!text) {
-    throw userError_('Gemini nie zwróciło odpowiedzi (powód: ' + (candidate.finishReason || 'nieznany') + ').');
+    throw userError_('gemini.noAnswer', { reason: candidate.finishReason || t_('gemini.unknownReason') });
   }
   return { text: text, model: model, usage: data.usageMetadata || null };
 }
@@ -67,25 +67,13 @@ function geminiError_(code, response, model) {
     message = response.getContentText().slice(0, 300);
   }
   console.error('Gemini HTTP ' + code + ': ' + message);
-  if (code === 400 && /api key/i.test(message)) {
-    return userError_('Klucz API Gemini jest nieprawidłowy. Sprawdź go w zakładce Ustawienia.');
-  }
-  if (code === 400 && /location|region|country/i.test(message)) {
-    return userError_('Darmowy plan Gemini API nie jest dostępny dla tego konta lub regionu.');
-  }
-  if (code === 403) {
-    return userError_('Klucz API nie ma dostępu do Gemini. Sprawdź klucz w Google AI Studio.');
-  }
-  if (code === 404) {
-    return userError_('Model „' + (model || '') + '” nie istnieje albo nie jest dostępny. Wybierz inny model w ustawieniach.');
-  }
-  if (code === 429) {
-    return userError_('Wyczerpano limit zapytań darmowego planu Gemini. Odczekaj minutę (limit na minutę) albo spróbuj jutro (limit dzienny).');
-  }
-  if (code >= 500) {
-    return userError_('Serwery Gemini są chwilowo przeciążone. Spróbuj ponownie za kilka minut.');
-  }
-  return userError_('Błąd Gemini (' + code + '): ' + message);
+  if (code === 400 && /api key/i.test(message)) return userError_('gemini.badKey');
+  if (code === 400 && /location|region|country/i.test(message)) return userError_('gemini.region');
+  if (code === 403) return userError_('gemini.forbidden');
+  if (code === 404) return userError_('gemini.modelNotFound', { model: model || '' });
+  if (code === 429) return userError_('gemini.quota');
+  if (code >= 500) return userError_('gemini.overloaded');
+  return userError_('gemini.other', { code: code, message: message });
 }
 
 function listGeminiModels() {
@@ -111,7 +99,7 @@ function listGeminiModels() {
 
 function testGeminiConnection() {
   const result = geminiGenerate_({
-    contents: [{ role: 'user', parts: [{ text: 'Odpowiedz jednym słowem: działa' }] }],
+    contents: [{ role: 'user', parts: [{ text: t_('ai.testPrompt') }] }],
   }, 1);
   return { model: result.model, reply: result.text };
 }

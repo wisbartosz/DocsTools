@@ -1,13 +1,4 @@
 <script>
-  const STATUS_LABELS = {
-    ok: 'gotowe',
-    pending: 'do przetworzenia',
-    changed: 'zmienione – do ponownego przetworzenia',
-    outdated: 'nowa wersja przetwarzania – przetwórz ponownie',
-    empty: 'brak tekstu (skan bez warstwy tekstu?)',
-    error: 'błąd',
-    unsupported: 'nieobsługiwany typ',
-  };
   const TO_PROCESS = ['pending', 'changed', 'outdated', 'error'];
 
   let settings = null;
@@ -15,6 +6,16 @@
   let busy = false;
 
   function $(id) { return document.getElementById(id); }
+
+  function t(key, params) {
+    const text = I18N[key] || key;
+    if (!params) return text;
+    return text.replace(/\{(\w+)\}/g, (match, name) => params[name] === undefined ? match : String(params[name]));
+  }
+
+  function formatNumber(value) {
+    return value.toLocaleString(UI_LANG === 'pl' ? 'pl-PL' : 'en-US');
+  }
 
   function call(fn, ...args) {
     return new Promise((resolve, reject) => {
@@ -34,7 +35,7 @@
     return (e && e.message ? e.message : String(e)).replace(/^(Exception|Error|UserError):\s*/, '');
   }
 
-  async function run(button, action) {
+  async function run(action) {
     if (busy) return;
     busy = true;
     const buttons = document.querySelectorAll('button');
@@ -53,7 +54,7 @@
 
   async function callGemini(fn, ...args) {
     if (!await confirmAiNotice()) return null;
-    showMessage('Czekam na odpowiedź Gemini (model ' + settings.model + '). Na darmowym planie bywa to wolne – nawet do 2–3 minut…');
+    showMessage(t('ai.waiting', { model: settings.model }));
     return call(fn, ...args);
   }
 
@@ -76,7 +77,7 @@
   }
 
   function switchTab(name) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     hideMessage();
   }
@@ -84,9 +85,9 @@
   function renderSettings() {
     if (!settings) return;
     $('folder-current').textContent = settings.sourceFolderId
-      ? (settings.sourceFolderName ? 'Wybrany: ' + settings.sourceFolderName : 'Wybrany folder jest niedostępny dla tego konta.')
-      : 'Nie wybrano folderu.';
-    $('key-status').textContent = settings.hasApiKey ? 'Klucz zapisany.' : 'Brak klucza.';
+      ? (settings.sourceFolderName ? t('settings.folder.current', { name: settings.sourceFolderName }) : t('settings.folder.inaccessible'))
+      : t('settings.folder.none');
+    $('key-status').textContent = settings.hasApiKey ? t('settings.key.present') : t('settings.key.missing');
     $('btn-clear-key').disabled = busy || !settings.hasApiKey;
     $('model-select').disabled = busy || !settings.hasApiKey;
     $('btn-save-model').disabled = busy || !settings.hasApiKey;
@@ -101,7 +102,7 @@
     select.innerHTML = '';
     const empty = document.createElement('option');
     empty.value = '';
-    empty.textContent = models.length ? '— wybierz model —' : '— brak dostępnych modeli —';
+    empty.textContent = models.length ? t('settings.model.choose') : t('settings.model.none');
     select.appendChild(empty);
     models.forEach(m => {
       const option = document.createElement('option');
@@ -112,7 +113,7 @@
     if (settings.model && !models.some(m => m.id === settings.model)) {
       const option = document.createElement('option');
       option.value = settings.model;
-      option.textContent = settings.model + ' (zapisany, niedostępny na liście)';
+      option.textContent = t('settings.model.unavailable', { model: settings.model });
       select.appendChild(option);
     }
     select.value = settings.model || '';
@@ -142,10 +143,10 @@
       meta.className = 'meta';
       const status = document.createElement('span');
       status.className = 'status-' + s.status;
-      status.textContent = STATUS_LABELS[s.status] || s.status;
+      status.textContent = t('status.' + s.status);
       meta.append(s.type + ' · ', status);
-      if (s.chars) meta.append(' · ' + s.chars.toLocaleString('pl-PL') + ' znaków');
-      if (s.pages) meta.append(' · ' + s.pages + ' str.');
+      if (s.chars) meta.append(' · ' + t('sources.chars', { count: formatNumber(s.chars) }));
+      if (s.pages) meta.append(' · ' + t('sources.pages', { count: s.pages }));
       li.append(name, meta);
       if (s.error) {
         const err = document.createElement('div');
@@ -158,8 +159,8 @@
     const ready = sources.filter(s => s.status === 'ok').length;
     const todo = sources.filter(s => TO_PROCESS.includes(s.status)).length;
     $('sources-summary').textContent = sources.length
-      ? 'Plików: ' + sources.length + ' · gotowe: ' + ready + ' · do przetworzenia: ' + todo
-      : 'Folder jest pusty.';
+      ? t('sources.summary', { total: sources.length, ready: ready, todo: todo })
+      : t('sources.empty');
   }
 
   async function loadSources() {
@@ -172,25 +173,25 @@
     const progress = $('process-progress');
     progress.classList.remove('hidden');
     try {
-      progress.textContent = 'Porządkowanie usuniętych źródeł…';
+      progress.textContent = t('sources.cleaning');
       const cleanup = await call('cleanupSources');
       await loadSources();
-      const removedNote = cleanup.removed ? ' Usunięto teksty ' + cleanup.removed + ' źródeł, których nie ma już w folderze.' : '';
+      const removedNote = cleanup.removed ? ' ' + t('sources.removedNote', { count: cleanup.removed }) : '';
       const queue = sources.filter(s => TO_PROCESS.includes(s.status));
       if (!queue.length) {
-        showMessage('Wszystkie obsługiwane źródła są już przetworzone.' + removedNote, 'ok');
+        showMessage(t('sources.allDone') + removedNote, 'ok');
         return;
       }
       let failed = 0;
       for (let i = 0; i < queue.length; i++) {
-        progress.textContent = 'Przetwarzanie ' + (i + 1) + ' z ' + queue.length + ': ' + queue[i].name;
+        progress.textContent = t('sources.progress', { current: i + 1, total: queue.length, name: queue[i].name });
         const updated = await call('processSource', queue[i].id);
         if (updated.status === 'error') failed++;
         sources = sources.map(s => s.id === updated.id ? updated : s);
         renderSources();
       }
       showMessage(
-        (failed ? 'Gotowe, ale ' + failed + ' plików nie udało się odczytać – szczegóły na liście.' : 'Wszystkie źródła przetworzone.') + removedNote,
+        (failed ? t('sources.doneWithErrors', { count: failed }) : t('sources.done')) + removedNote,
         failed ? 'error' : 'ok'
       );
     } finally {
@@ -198,44 +199,47 @@
     }
   }
 
-  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+  document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
 
-  $('btn-refresh').addEventListener('click', e => run(e.target, loadSources));
-  $('btn-process').addEventListener('click', e => run(e.target, processSources));
+  $('btn-refresh').addEventListener('click', () => run(loadSources));
+  $('btn-process').addEventListener('click', () => run(processSources));
 
-  $('btn-save-folder').addEventListener('click', e => run(e.target, async () => {
+  $('btn-save-folder').addEventListener('click', () => run(async () => {
     settings = await call('saveSourceFolder', $('folder-input').value);
     $('folder-input').value = '';
-    showMessage('Folder zapisany: ' + settings.sourceFolderName, 'ok');
+    showMessage(t('settings.folder.saved', { name: settings.sourceFolderName }), 'ok');
     await loadSources();
   }));
 
-  $('btn-save-key').addEventListener('click', e => run(e.target, async () => {
+  $('btn-save-key').addEventListener('click', () => run(async () => {
     settings = await call('saveApiKey', $('key-input').value);
     $('key-input').value = '';
-    showMessage('Klucz zapisany.', 'ok');
+    showMessage(t('settings.key.saved'), 'ok');
     await loadModels();
   }));
 
-  $('btn-clear-key').addEventListener('click', e => run(e.target, async () => {
+  $('btn-clear-key').addEventListener('click', () => run(async () => {
     settings = await call('clearApiKey');
     fillModels([]);
-    showMessage('Klucz usunięty.', 'ok');
+    showMessage(t('settings.key.removed'), 'ok');
   }));
 
-  $('btn-save-model').addEventListener('click', e => run(e.target, async () => {
+  $('btn-save-model').addEventListener('click', () => run(async () => {
     settings = await call('saveModel', $('model-select').value);
-    showMessage('Model zapisany: ' + settings.model, 'ok');
+    showMessage(t('settings.model.saved', { model: settings.model }), 'ok');
   }));
 
-  $('btn-test').addEventListener('click', e => run(e.target, async () => {
+  $('btn-test').addEventListener('click', () => run(async () => {
     const result = await callGemini('testGeminiConnection');
     if (!result) return;
-    showMessage('Połączenie działa. Model ' + result.model + ' odpowiedział: „' + result.reply + '”.', 'ok');
+    showMessage(t('ai.testOk', { model: result.model, reply: result.reply }), 'ok');
   }));
 
-  run(null, async () => {
+  $('btn-save-language').addEventListener('click', () => run(() => call('saveUiLanguage', $('language-select').value)));
+
+  run(async () => {
     settings = await call('getSettings');
+    $('language-select').value = settings.uiLanguageSetting || '';
     renderSettings();
     if (!settings.sourceFolderId || !settings.hasApiKey) switchTab('settings');
     await Promise.all([loadSources(), loadModels()]);

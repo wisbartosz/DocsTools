@@ -1,28 +1,21 @@
-const SOURCE_INDEX_NAME = 'index.json';
+﻿const SOURCE_INDEX_NAME = 'index.json';
 
-const CONVERTIBLE_TYPES = {
-  'application/pdf': 'PDF',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word',
-  'application/msword': 'Word',
-  'application/vnd.oasis.opendocument.text': 'ODT',
-  'application/rtf': 'RTF',
+const SOURCE_TYPES = {
+  'application/vnd.google-apps.document': { label: 'type.gdoc', read: 'export' },
+  'application/pdf': { label: 'type.pdf', read: 'convert' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { label: 'type.word', read: 'convert' },
+  'application/msword': { label: 'type.word', read: 'convert' },
+  'application/vnd.oasis.opendocument.text': { label: 'type.odt', read: 'convert' },
+  'application/rtf': { label: 'type.rtf', read: 'convert' },
+  'text/plain': { label: 'type.text', read: 'plain' },
+  'text/markdown': { label: 'type.markdown', read: 'plain' },
 };
-
-const PLAIN_TYPES = {
-  'text/plain': 'Tekst',
-  'text/markdown': 'Markdown',
-};
-
-function sourceTypeLabel_(mimeType) {
-  if (mimeType === MimeType.GOOGLE_DOCS) return 'Dokument Google';
-  return CONVERTIBLE_TYPES[mimeType] || PLAIN_TYPES[mimeType] || null;
-}
 
 function listSources() {
   const index = readSourceIndex_(false);
   return currentSourceFiles_()
     .map(function (file) { return describeSource_(file, index.data[file.getId()]); })
-    .sort(function (a, b) { return a.name.localeCompare(b.name, 'pl'); });
+    .sort(function (a, b) { return a.name.localeCompare(b.name, uiLanguage_()); });
 }
 
 function cleanupSources() {
@@ -66,7 +59,8 @@ function processSource(fileId) {
   } catch (e) {
     console.error('Przetwarzanie ' + file.getName() + ': ' + e.message);
     entry.status = 'error';
-    entry.error = e.name === 'UserError' ? e.message : 'Nie udało się odczytać tekstu: ' + e.message;
+    entry.errorKey = e.messageKey || 'src.readFailed';
+    entry.errorParams = e.messageKey ? e.messageParams : { details: e.message };
   }
   index.data[fileId] = entry;
   storeWriteJson_(index.folderId, SOURCE_INDEX_NAME, index);
@@ -110,18 +104,18 @@ function collectFiles_(folder, out) {
 }
 
 function describeSource_(file, entry) {
-  const mimeType = file.getMimeType();
+  const type = SOURCE_TYPES[file.getMimeType()];
   const item = {
     id: file.getId(),
     name: file.getName(),
-    type: sourceTypeLabel_(mimeType) || mimeType,
+    type: type ? t_(type.label) : file.getMimeType(),
     url: file.getUrl(),
     status: 'pending',
     chars: null,
     pages: null,
     error: null,
   };
-  if (!sourceTypeLabel_(mimeType)) {
+  if (!type) {
     item.status = 'unsupported';
   } else if (entry && entry.modified !== file.getLastUpdated().toISOString()) {
     item.status = 'changed';
@@ -131,17 +125,17 @@ function describeSource_(file, entry) {
     item.status = entry.status;
     item.chars = entry.chars || null;
     item.pages = entry.pages || null;
-    item.error = entry.error || null;
+    item.error = entry.errorKey ? t_(entry.errorKey, entry.errorParams) : null;
   }
   return item;
 }
 
 function extractText_(file, workFolderId) {
-  const mimeType = file.getMimeType();
-  if (mimeType === MimeType.GOOGLE_DOCS) return exportAsText_(file.getId());
-  if (PLAIN_TYPES[mimeType]) return file.getBlob().getDataAsString('UTF-8');
-  if (CONVERTIBLE_TYPES[mimeType]) return convertAndExport_(file, workFolderId);
-  throw userError_('Nieobsługiwany typ pliku.');
+  const type = SOURCE_TYPES[file.getMimeType()];
+  if (!type) throw userError_('src.unsupported');
+  if (type.read === 'export') return exportAsText_(file.getId());
+  if (type.read === 'plain') return file.getBlob().getDataAsString('UTF-8');
+  return convertAndExport_(file, workFolderId);
 }
 
 function convertAndExport_(file, workFolderId) {
@@ -153,7 +147,7 @@ function convertAndExport_(file, workFolderId) {
       { ocrLanguage: 'pl', supportsAllDrives: true }
     );
   } catch (e) {
-    throw userError_('Dysk Google nie przekonwertował pliku na tekst (' + e.message + '). Możliwa przyczyna: plik jest za duży albo to skan słabej jakości.');
+    throw userError_('src.convertFailed', { details: e.message });
   }
   try {
     return exportAsText_(copy.id);
@@ -169,7 +163,7 @@ function exportAsText_(fileId) {
     muteHttpExceptions: true,
   });
   if (response.getResponseCode() !== 200) {
-    throw userError_('Dysk Google nie wyeksportował tekstu (HTTP ' + response.getResponseCode() + '). Dokument może być większy niż 10 MB tekstu.');
+    throw userError_('src.exportFailed', { code: response.getResponseCode() });
   }
   return response.getContentText('UTF-8');
 }

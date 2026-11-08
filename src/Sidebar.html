@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="<?= uiLanguage_() ?>">
 <head>
   <base target="_top">
   <meta charset="utf-8">
@@ -7,23 +7,21 @@
 </head>
 <body>
   <nav class="tabs">
-    <button class="tab active" data-tab="sources">Źródła</button>
-    <button class="tab" data-tab="settings">Ustawienia</button>
+    <button class="tab active" data-tab="sources"><?= t_('tab.sources') ?></button>
+    <button class="tab" data-tab="settings"><?= t_('tab.settings') ?></button>
   </nav>
 
   <div id="message" class="message hidden"></div>
 
   <section id="tab-sources" class="panel">
-    <div id="sources-no-folder" class="hint hidden">
-      Najpierw wskaż folder ze źródłami w zakładce <b>Ustawienia</b>.
-    </div>
+    <div id="sources-no-folder" class="hint hidden"><?= t_('sources.noFolder') ?></div>
     <div id="sources-content" class="hidden">
       <div class="row">
         <span id="sources-summary" class="muted"></span>
       </div>
       <div class="row buttons">
-        <button id="btn-process" class="primary">Przetwórz źródła</button>
-        <button id="btn-refresh">Odśwież</button>
+        <button id="btn-process" class="primary"><?= t_('sources.process') ?></button>
+        <button id="btn-refresh"><?= t_('sources.refresh') ?></button>
       </div>
       <div id="process-progress" class="muted hidden"></div>
       <ul id="sources-list" class="list"></ul>
@@ -31,54 +29,64 @@
   </section>
 
   <section id="tab-settings" class="panel hidden">
-    <h3>Folder ze źródłami</h3>
+    <h3><?= t_('settings.folder.title') ?></h3>
     <div id="folder-current" class="muted"></div>
-    <input id="folder-input" type="text" placeholder="Link do folderu na Dysku Google">
+    <input id="folder-input" type="text" placeholder="<?= t_('settings.folder.placeholder') ?>">
     <div class="row buttons">
-      <button id="btn-save-folder" class="primary">Zapisz folder</button>
+      <button id="btn-save-folder" class="primary"><?= t_('settings.folder.save') ?></button>
     </div>
 
-    <h3>Klucz API Gemini</h3>
+    <h3><?= t_('settings.key.title') ?></h3>
     <div id="key-status" class="muted"></div>
-    <input id="key-input" type="password" placeholder="Wklej klucz z Google AI Studio" autocomplete="off">
+    <input id="key-input" type="password" placeholder="<?= t_('settings.key.placeholder') ?>" autocomplete="off">
     <div class="row buttons">
-      <button id="btn-save-key" class="primary">Zapisz klucz</button>
-      <button id="btn-clear-key">Usuń klucz</button>
+      <button id="btn-save-key" class="primary"><?= t_('settings.key.save') ?></button>
+      <button id="btn-clear-key"><?= t_('settings.key.clear') ?></button>
     </div>
     <div class="muted small">
-      Klucz za darmo: <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
-      Zapisuje się tylko na Twoim koncie Google, nie w dokumencie.
+      <?= t_('settings.key.hint') ?> <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
+      <?= t_('settings.key.storage') ?>
     </div>
 
-    <h3>Model</h3>
+    <h3><?= t_('settings.model.title') ?></h3>
     <select id="model-select" disabled>
-      <option value="">— najpierw zapisz klucz —</option>
+      <option value=""><?= t_('settings.model.needKey') ?></option>
     </select>
     <div class="row buttons">
-      <button id="btn-save-model" class="primary">Zapisz model</button>
-      <button id="btn-test">Testuj połączenie</button>
+      <button id="btn-save-model" class="primary"><?= t_('settings.model.save') ?></button>
+      <button id="btn-test"><?= t_('settings.model.test') ?></button>
     </div>
-    <div class="muted small">
-      Limity darmowego planu zależą od modelu – sprawdzisz je w Google AI Studio.
+    <div class="muted small"><?= t_('settings.model.hint') ?></div>
+
+    <h3><?= t_('settings.language.title') ?></h3>
+    <select id="language-select">
+      <option value=""><?= t_('settings.language.auto') ?></option>
+      <option value="pl">Polski</option>
+      <option value="en">English</option>
+    </select>
+    <div class="row buttons">
+      <button id="btn-save-language" class="primary"><?= t_('settings.language.save') ?></button>
     </div>
   </section>
 
+  <footer class="footer muted small"><?= APP_SHORT_NAME ?> <?= APP_VERSION ?></footer>
+
   <div id="ai-notice" class="overlay hidden">
     <div class="notice">
-      <h3>Zanim użyjesz AI</h3>
-      <p>
-        Funkcje AI wysyłają fragmenty pracy, źródeł i Twoje pytania do Gemini API.
-        Na <b>darmowym</b> planie Google może wykorzystywać te treści do ulepszania swoich
-        usług, a ludzie mogą je przeglądać.
-      </p>
-      <p>Nie wysyłaj danych poufnych ani osobowych.</p>
+      <h3><?= t_('notice.title') ?></h3>
+      <p><?= t_('notice.body') ?></p>
+      <p><?= t_('notice.warning') ?></p>
       <div class="row buttons">
-        <button id="btn-notice-accept" class="primary">Rozumiem</button>
-        <button id="btn-notice-cancel">Anuluj</button>
+        <button id="btn-notice-accept" class="primary"><?= t_('notice.accept') ?></button>
+        <button id="btn-notice-cancel"><?= t_('notice.cancel') ?></button>
       </div>
     </div>
   </div>
 
+  <script>
+    const UI_LANG = <?!= JSON.stringify(uiLanguage_()) ?>;
+    const I18N = <?!= JSON.stringify(uiMessages_()) ?>;
+  </script>
   <?!= include_('Client'); ?>
 </body>
 </html>
