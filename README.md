@@ -74,10 +74,11 @@ koncie (https://script.google.com/home/usersettings). To jeden przełącznik, us
 
 ### Aktualizacje
 
-W Przyborniku otwórz Ustawienia i kliknij „Sprawdź aktualizacje”. Otworzy się instalator,
-który pokaże, co nowego, i podmieni Przybornik w Twoim dokumencie na najnowszą wersję.
+Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, przy zakładce Ustawienia
+pojawia się kropka, a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”. Przycisk
+otwiera instalator, który podmieni Przybornik w Twoim dokumencie na najnowszą wersję.
 Praca, ustawienia i przetworzone źródła zostają. Gdyby nowa wersja sprawiała kłopoty,
-w tym samym miejscu jest przycisk „Przywróć poprzednią wersję”. Po aktualizacji odśwież
+w Ustawieniach jest link do instalatora z przyciskiem „Przywróć poprzednią wersję”. Po aktualizacji odśwież
 dokument.
 
 Na kontach firmowych i uczelnianych administrator może blokować takie skrypty.

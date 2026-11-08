@@ -453,7 +453,37 @@
 
   $('btn-save-language').addEventListener('click', () => run(() => call('saveUiLanguage', $('language-select').value)));
 
-  $('btn-check-update').addEventListener('click', () => window.open(settings.updateUrl, '_blank'));
+  let update = null;
+
+  async function checkForUpdate(force) {
+    $('update-status').textContent = t('update.checking');
+    try {
+      update = await call('checkForUpdate', force);
+    } catch (e) {
+      update = null;
+      $('update-status').textContent = errorText(e);
+    }
+    renderUpdate();
+  }
+
+  function renderUpdate() {
+    const available = !!(update && update.available);
+    if (update) {
+      $('update-status').textContent = available
+        ? t('update.available', { latest: update.latest, current: update.current })
+        : t('update.upToDate', { version: update.current });
+    }
+    $('update-notes').textContent = available ? update.notes : '';
+    $('update-notes').classList.toggle('hidden', !available || !update.notes);
+    $('btn-install-update').classList.toggle('hidden', !available);
+    $('update-install-hint').classList.toggle('hidden', !available);
+    const tab = document.querySelector('.tab[data-tab="settings"]');
+    tab.querySelectorAll('.tab-dot').forEach(node => node.remove());
+    if (available) tab.append(el('span', 'tab-dot'));
+  }
+
+  $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
+  $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
 
   $('btn-select-all').addEventListener('click', () => selectAllSources(true));
   $('btn-select-none').addEventListener('click', () => selectAllSources(false));
@@ -469,6 +499,8 @@
   run(async () => {
     settings = await call('getSettings');
     $('language-select').value = settings.uiLanguageSetting || '';
+    $('link-installer').href = settings.updateUrl;
+    checkForUpdate(false);
     renderSettings();
     if (!settings.sourceFolderId || !settings.hasApiKey) switchTab('settings');
     await Promise.all([loadSources(), loadModels(), loadAssistant()]);

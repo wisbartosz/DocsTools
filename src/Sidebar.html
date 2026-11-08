@@ -81,10 +81,14 @@
     <div class="muted small"><?= t_('settings.model.hint') ?></div>
 
     <h3><?= t_('update.title') ?></h3>
+    <div id="update-status" class="muted"><?= t_('update.checking') ?></div>
+    <div id="update-notes" class="update-notes hidden"></div>
     <div class="row buttons">
+      <button id="btn-install-update" class="primary hidden"><?= t_('update.install') ?></button>
       <button id="btn-check-update"><?= t_('update.check') ?></button>
     </div>
-    <div class="muted small"><?= t_('update.hint') ?></div>
+    <div id="update-install-hint" class="muted small hidden"><?= t_('update.installHint') ?></div>
+    <div class="small"><a id="link-installer" href="#" target="_blank"><?= t_('update.openInstaller') ?></a></div>
 
     <h3><?= t_('settings.language.title') ?></h3>
     <select id="language-select">

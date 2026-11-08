@@ -91,8 +91,14 @@ const MESSAGES = {
     'settings.model.saved': 'Model zapisany: {model}',
 
     'update.title': 'Aktualizacje',
-    'update.check': 'Sprawdź aktualizacje',
-    'update.hint': 'Otworzy się Instalator PDZ: pokaże, co nowego, i zaktualizuje Przybornik w tym dokumencie. Twoja praca i ustawienia zostają.',
+    'update.check': 'Sprawdź ponownie',
+    'update.checking': 'Sprawdzam aktualizacje…',
+    'update.upToDate': 'Masz najnowszą wersję ({version}).',
+    'update.available': 'Dostępna nowa wersja {latest} (masz {current}).',
+    'update.install': 'Aktualizuj',
+    'update.installHint': 'Otworzy się Instalator PDZ. Twoja praca i ustawienia zostają; po aktualizacji odśwież dokument.',
+    'update.openInstaller': 'Otwórz instalator (np. żeby przywrócić poprzednią wersję)',
+    'update.checkFailed': 'Nie udało się sprawdzić aktualizacji. Spróbuj później.',
 
     'settings.language.title': 'Język',
     'settings.language.auto': 'Automatycznie (język konta Google)',
@@ -225,8 +231,14 @@ const MESSAGES = {
     'settings.model.saved': 'Model saved: {model}',
 
     'update.title': 'Updates',
-    'update.check': 'Check for updates',
-    'update.hint': 'Opens the PDZ Installer: it shows what is new and updates the toolkit in this document. Your work and settings stay as they are.',
+    'update.check': 'Check again',
+    'update.checking': 'Checking for updates…',
+    'update.upToDate': 'You have the latest version ({version}).',
+    'update.available': 'A new version {latest} is available (you have {current}).',
+    'update.install': 'Update',
+    'update.installHint': 'The PDZ Installer will open. Your work and settings stay; reload the document after updating.',
+    'update.openInstaller': 'Open the installer (for example to restore the previous version)',
+    'update.checkFailed': 'Could not check for updates. Try again later.',
 
     'settings.language.title': 'Language',
     'settings.language.auto': 'Automatic (Google account language)',

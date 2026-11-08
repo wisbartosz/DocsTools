@@ -27,6 +27,7 @@ const TEXTS = {
     'err.notFound': 'Nie znaleziono skryptu dokumentu albo nie masz do niego dostępu. Otwórz instalator z panelu Przybornika w swoim dokumencie.',
     'err.notPdz': 'Ten skrypt nie wygląda na Przybornik dyplomowanej Żabki – nic nie zmieniam.',
     'err.badDoc': 'To nie wygląda na link do dokumentu Google.',
+    'err.createFailed': 'Google nie pozwolił dodać Przybornika do tego dokumentu ({code}): {message}. Sprawdź, czy masz prawo edycji dokumentu.',
     'err.noBackup': 'Nie ma zapisanej poprzedniej wersji do przywrócenia.',
     'err.github': 'Nie udało się pobrać wersji z GitHuba ({code}).',
     'err.other': 'Błąd ({code}): {message}',
@@ -53,6 +54,7 @@ const TEXTS = {
     'err.notFound': 'The document\'s script was not found or you have no access to it. Open the installer from the toolkit sidebar in your document.',
     'err.notPdz': 'This script does not look like Przybornik dyplomowanej Żabki – nothing was changed.',
     'err.badDoc': 'This does not look like a Google Doc link.',
+    'err.createFailed': 'Google did not allow adding the toolkit to this document ({code}): {message}. Check that you can edit the document.',
     'err.noBackup': 'There is no saved previous version to restore.',
     'err.github': 'Could not download the version from GitHub ({code}).',
     'err.other': 'Error ({code}): {message}',
@@ -112,7 +114,7 @@ function installIntoDocument(link) {
   const match = String(link || '').match(/\/document\/d\/([A-Za-z0-9_-]+)/) || String(link || '').match(/^([A-Za-z0-9_-]{25,})$/);
   if (!match) throw new Error(t_('err.badDoc'));
   const latest = latestRelease_();
-  const project = scriptApi_('post', '', { title: ADDON_TITLE, parentId: match[1] });
+  const project = scriptApi_('post', '', { title: ADDON_TITLE, parentId: match[1] }, 'err.createFailed');
   scriptApi_('put', project.scriptId + '/content', { files: releaseFiles_(latest.tag) });
   return { version: latest.version };
 }
@@ -143,7 +145,7 @@ function plainFiles_(files) {
   return files.map(function (f) { return { name: f.name, type: f.type, source: f.source }; });
 }
 
-function scriptApi_(method, path, payload) {
+function scriptApi_(method, path, payload, failureKey) {
   const options = {
     method: method,
     headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
@@ -153,21 +155,23 @@ function scriptApi_(method, path, payload) {
     options.contentType = 'application/json';
     options.payload = JSON.stringify(payload);
   }
-  const response = UrlFetchApp.fetch(SCRIPT_API_URL + path, options);
+  const url = path ? SCRIPT_API_URL + path : SCRIPT_API_URL.replace(/\/$/, '');
+  const response = UrlFetchApp.fetch(url, options);
   const code = response.getResponseCode();
   const body = response.getContentText();
   if (code === 200) return JSON.parse(body || '{}');
-  console.error('Apps Script API ' + method + ' ' + path + ' → ' + code + ': ' + body.slice(0, 500));
+  console.error('Apps Script API ' + method + ' ' + url + ' → ' + code + ': ' + body.slice(0, 500));
   if (/has not enabled the Apps Script API|User has not enabled/i.test(body)) {
     throw new Error(t_('err.userApiDisabled', { url: SCRIPT_API_SETTINGS_URL }));
   }
-  if (code === 404 || code === 403) throw new Error(t_('err.notFound'));
   let message = body.slice(0, 300);
   try {
     message = JSON.parse(body).error.message || message;
   } catch (e) {
     console.warn('Odpowiedź Apps Script API nie jest JSON: ' + e.message);
   }
+  if (failureKey) throw new Error(t_(failureKey, { code: code, message: message }));
+  if (code === 404 || code === 403) throw new Error(t_('err.notFound'));
   throw new Error(t_('err.other', { code: code, message: message }));
 }
 

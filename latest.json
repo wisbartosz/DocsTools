@@ -1,8 +1,8 @@
 {
-  "version": "0.4.0",
-  "tag": "v0.4.0",
+  "version": "0.4.1",
+  "tag": "v0.4.1",
   "notes": {
-    "pl": "Aktualizacje bez przenoszenia pracy: w ustawieniach Przybornika przycisk „Sprawdź aktualizacje” otwiera Instalator PDZ, który podmienia dodatek w Twoim dokumencie na najnowszą wersję. Praca i ustawienia zostają, a poprzednią wersję można przywrócić jednym kliknięciem.\n\nInstalator potrafi też dodać Przybornik do dokumentu, w którym już piszesz pracę.",
-    "en": "Updates without moving your work: in the toolkit settings, \"Check for updates\" opens the PDZ Installer, which replaces the add-on in your document with the latest version. Your work and settings stay, and you can restore the previous version with one click.\n\nThe installer can also add the toolkit to a document you are already writing in."
+    "pl": "Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, przy zakładce Ustawienia pojawia się kropka, a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”.\n\nPoprawiono instalację Przybornika w istniejącym dokumencie.",
+    "en": "The toolkit now checks for a newer version on its own. When there is one, a dot appears on the Settings tab, and the Updates section shows what's new and an \"Update\" button.\n\nFixed installing the toolkit into an existing document."
   }
 }

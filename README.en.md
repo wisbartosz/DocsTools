@@ -76,10 +76,11 @@ account (https://script.google.com/home/usersettings). It's a single switch you 
 
 ### Updates
 
-In the toolkit, open Settings and click "Check for updates". The installer opens, shows
-what's new and replaces the toolkit in your document with the latest version. Your work,
-settings and processed sources stay. If the new version gives you trouble, the same page
-has a "Restore the previous version" button. Reload the document after updating.
+The toolkit checks for a newer version on its own. When there is one, a dot appears on the
+Settings tab, and the Updates section shows what's new and an "Update" button. The button
+opens the installer, which replaces the toolkit in your document with the latest version.
+Your work, settings and processed sources stay. If the new version gives you trouble,
+Settings has a link to the installer with a "Restore the previous version" button. Reload the document after updating.
 
 On work and university accounts the administrator may block scripts like this.
 
