@@ -21,7 +21,18 @@
   .hidden { display: none !important; }
   .muted { color: var(--muted); }
   .small { font-size: 12px; margin-top: 4px; }
-  .footer { margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--border); text-align: right; }
+  .footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    margin: 24px -12px 0;
+    padding: 6px 12px;
+    border-top: 1px solid var(--border);
+    background: #fff;
+  }
+  .footer .version { margin-left: auto; }
+  body.window .footer { margin: 24px -24px 0; padding: 6px 24px; }
   .tabs {
     display: flex;
     border-bottom: 1px solid var(--border);
@@ -41,6 +52,26 @@
     font: inherit;
   }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 5px;
+    vertical-align: 2px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .tab-spinner {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-left: 6px;
+    vertical-align: 0;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
   .row { margin: 6px 0; }
   .buttons { display: flex; gap: 6px; flex-wrap: wrap; }
   button {
@@ -88,4 +119,90 @@
     padding: 12px;
   }
   .notice { background: #fff; border-radius: 6px; padding: 4px 14px 12px; }
+  .message.warn { background: #fef7e0; color: var(--warn); font-size: 12px; }
+  details { margin-bottom: 8px; }
+  summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+  button.link { border: 0; padding: 2px 0; color: var(--accent); background: none; }
+  .checklist { list-style: none; margin: 4px 0 0; padding: 0; max-height: 180px; overflow-y: auto; }
+  .checklist li { padding: 3px 0; }
+  .checklist label { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; word-break: break-word; }
+  .checklist input { margin-top: 3px; }
+  textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font: inherit;
+    resize: vertical;
+  }
+  .ask-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .thread {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 10px 0;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, .12);
+  }
+  .thread[open] { padding-bottom: 10px; }
+  .thread-title {
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .thread[open] > .thread-title { white-space: normal; color: var(--muted); font-weight: 400; font-size: 12px; }
+  .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 8px;
+    vertical-align: -2px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  button.loading, button.loading:disabled { opacity: 1; cursor: progress; }
+  button.loading::before {
+    content: '';
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    margin-right: 6px;
+    vertical-align: -1px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  .thread-sources { font-size: 11px; color: var(--muted); margin-bottom: 4px; word-break: break-word; }
+  .turn + .turn { border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 6px; }
+  .bubble {
+    background: #e8f0fe;
+    color: #174ea6;
+    border-radius: 12px 12px 12px 3px;
+    padding: 6px 10px;
+    margin: 6px 0 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .answer p, .raw { margin: 0 0 8px; white-space: pre-wrap; }
+  .not-found { color: var(--warn); font-size: 12px; margin-bottom: 4px; }
+  .cites summary { font-size: 12px; }
+  .cites ol { margin: 4px 0 0; padding-left: 20px; font-size: 12px; }
+  .cites li { margin-bottom: 6px; word-break: break-word; }
+  .quote { color: var(--muted); font-style: italic; }
+  .badge { font-size: 11px; }
+  .reply { margin-top: 8px; }
+  .reply button { margin-top: 4px; }
+  body.window { padding: 0 24px 24px; font-size: 14px; }
+  body.window .tabs { margin: 0 -24px 12px; padding: 0 24px; }
+  body.window .checklist { max-height: 240px; }
+  body.window .cites ol, body.window .thread-sources { font-size: 13px; }
+  .badge.exact { color: var(--ok); }
+  .badge.close { color: var(--warn); }
+  .badge.missing { color: var(--err); }
 </style>

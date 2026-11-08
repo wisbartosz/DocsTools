@@ -73,7 +73,14 @@ function getReadySources_() {
     .map(function (file) {
       const entry = index.data[file.getId()];
       if (describeSource_(file, entry).status !== 'ok') return null;
-      return { id: file.getId(), name: file.getName(), pages: entry.pages || null, textFileId: entry.textFileId };
+      return {
+        id: file.getId(),
+        name: file.getName(),
+        url: file.getUrl(),
+        pages: entry.pages || null,
+        chars: entry.chars || 0,
+        textFileId: entry.textFileId,
+      };
     })
     .filter(Boolean);
 }

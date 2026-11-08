@@ -1,8 +1,9 @@
-<script>
+﻿<script>
   const TO_PROCESS = ['pending', 'changed', 'outdated', 'error'];
 
   let settings = null;
   let sources = [];
+  let assistant = { sources: [], warnChars: 0 };
   let busy = false;
 
   function $(id) { return document.getElementById(id); }
@@ -38,7 +39,7 @@
   async function run(action) {
     if (busy) return;
     busy = true;
-    const buttons = document.querySelectorAll('button');
+    const buttons = [...document.querySelectorAll('button:not(.tab)')].filter(b => !b.classList.contains('loading'));
     buttons.forEach(b => b.disabled = true);
     hideMessage();
     try {
@@ -52,10 +53,51 @@
     }
   }
 
-  async function callGemini(fn, ...args) {
+  async function runInBackground(button, action) {
+    if (button.disabled || button.classList.contains('loading')) return;
+    button.disabled = true;
+    hideMessage();
+    try {
+      await action();
+    } catch (e) {
+      showMessage(errorText(e), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  let assistantPending = 0;
+  let assistantUnread = 0;
+
+  async function callGemini(button, fn, ...args) {
     if (!await confirmAiNotice()) return null;
-    showMessage(t('ai.waiting', { model: settings.model }));
-    return call(fn, ...args);
+    button.classList.add('loading');
+    const counts = button.closest('#tab-assistant') !== null;
+    if (counts) assistantPending++;
+    renderAssistantTab();
+    try {
+      return await call(fn, ...args);
+    } finally {
+      button.classList.remove('loading');
+      if (counts) assistantPending--;
+      renderAssistantTab();
+    }
+  }
+
+  function notifyAssistant() {
+    if (!assistantTab().classList.contains('active')) assistantUnread++;
+    renderAssistantTab();
+  }
+
+  function assistantTab() {
+    return document.querySelector('.tab[data-tab="assistant"]');
+  }
+
+  function renderAssistantTab() {
+    const tab = assistantTab();
+    tab.querySelectorAll('.tab-dot, .tab-spinner').forEach(node => node.remove());
+    if (assistantUnread > 0) tab.append(el('span', 'tab-dot'));
+    else if (assistantPending > 0) tab.append(el('span', 'tab-spinner'));
   }
 
   function confirmAiNotice() {
@@ -78,6 +120,10 @@
 
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+    if (name === 'assistant') {
+      assistantUnread = 0;
+      renderAssistantTab();
+    }
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     hideMessage();
   }
@@ -169,11 +215,180 @@
     renderSources();
   }
 
+  async function loadAssistant() {
+    if (!settings.sourceFolderName) return;
+    assistant = await call('getAssistantSources');
+    renderAssistant();
+  }
+
+  function renderAssistant() {
+    const hasSources = assistant.sources.length > 0;
+    $('assistant-no-sources').classList.toggle('hidden', hasSources || !settings.sourceFolderName);
+    $('assistant-content').classList.toggle('hidden', !hasSources);
+    const list = $('assistant-source-list');
+    list.innerHTML = '';
+    assistant.sources.forEach(s => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = s.selected;
+      box.addEventListener('change', () => { s.selected = box.checked; selectionChanged(); });
+      const name = document.createElement('span');
+      name.textContent = s.name;
+      label.append(box, name);
+      li.append(label);
+      list.append(li);
+    });
+    renderAssistantSummary();
+  }
+
+  function renderAssistantSummary() {
+    const selected = assistant.sources.filter(s => s.selected);
+    const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0);
+    $('assistant-sources-summary').textContent = t('assistant.sourcesSummary', { selected: selected.length, total: assistant.sources.length });
+    $('assistant-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
+    $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
+  }
+
+  function selectionChanged() {
+    renderAssistantSummary();
+    const excluded = assistant.sources.filter(s => !s.selected).map(s => s.id);
+    google.script.run.withFailureHandler(e => showMessage(errorText(e), 'error')).saveAssistantSelection(excluded);
+  }
+
+  function selectAllSources(selected) {
+    assistant.sources.forEach(s => { s.selected = selected; });
+    renderAssistant();
+    selectionChanged();
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  async function askAssistant() {
+    const question = $('question').value.trim();
+    const selected = assistant.sources.filter(s => s.selected);
+    const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), []);
+    if (!result) return;
+    hideMessage();
+    const thread = { sourceIds: selected.map(s => s.id), sourceNames: selected.map(s => s.name), turns: [] };
+    thread.element = renderThread(thread, question);
+    document.querySelectorAll('#answers > .thread').forEach(card => { card.open = false; });
+    $('answers').prepend(thread.element);
+    addTurn(thread, question, result);
+    $('question').value = '';
+    notifyAssistant();
+  }
+
+  async function followUp(thread, input, button) {
+    const question = input.value.trim();
+    const history = thread.turns.map(turn => ({ question: turn.question, answer: turn.answer }));
+    const result = await callGemini(button, 'askAssistant', question, thread.sourceIds, history);
+    if (!result) return;
+    hideMessage();
+    addTurn(thread, question, result);
+    input.value = '';
+    notifyAssistant();
+  }
+
+  function renderThread(thread, firstQuestion) {
+    const card = el('details', 'thread');
+    card.open = true;
+    card.append(el('summary', 'thread-title', firstQuestion));
+    card.append(el('div', 'thread-sources', t('assistant.threadSources', { names: thread.sourceNames.join(', ') })));
+    thread.turnsElement = el('div', 'turns');
+    card.append(thread.turnsElement);
+
+    const reply = el('div', 'reply hidden');
+    const input = el('textarea');
+    input.rows = 2;
+    input.placeholder = t('assistant.followUpPlaceholder');
+    const send = el('button', 'primary', t('assistant.send'));
+    send.addEventListener('click', () => runInBackground(send, () => followUp(thread, input, send)));
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        runInBackground(send, () => followUp(thread, input, send));
+      }
+    });
+    reply.append(input, send);
+
+    const open = el('button', 'link', t('assistant.followUp'));
+    open.addEventListener('click', () => {
+      open.classList.add('hidden');
+      reply.classList.remove('hidden');
+      input.focus();
+    });
+    card.append(open, reply);
+    return card;
+  }
+
+  function addTurn(thread, question, result) {
+    const turn = el('div', 'turn');
+    turn.append(el('div', 'bubble', question));
+    if (result.raw) {
+      turn.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw));
+      thread.turns.push({ question: question, answer: result.raw });
+      thread.turnsElement.append(turn);
+      return;
+    }
+    if (!result.found) turn.append(el('div', 'not-found', t('assistant.notFound')));
+    const answer = el('div', 'answer');
+    result.answer.split(/\n{2,}/).forEach(part => answer.append(el('p', '', part.trim())));
+    turn.append(answer);
+    if (result.citations.length) {
+      const cites = el('details', 'cites');
+      cites.append(el('summary', '', t('assistant.citations', { count: result.citations.length })));
+      const list = el('ol');
+      result.citations.forEach(c => list.append(renderCitation(c)));
+      cites.append(list);
+      turn.append(cites);
+    }
+    thread.turns.push({ question: question, answer: result.answer });
+    thread.turnsElement.append(turn);
+  }
+
+  function renderCitation(c) {
+    const li = document.createElement('li');
+    if (c.known) {
+      const link = document.createElement('a');
+      link.href = c.sourceUrl;
+      link.target = '_blank';
+      link.textContent = c.sourceName;
+      li.append(link);
+    } else {
+      li.append(t('assistant.unknownSource', { name: c.sourceName }));
+    }
+    if (c.page) li.append(', ' + t('assistant.page', { page: c.page }));
+    else if (c.location) li.append(', ' + c.location);
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + c.quoteStatus;
+    badge.textContent = ' · ' + t('assistant.quote.' + c.quoteStatus);
+    li.append(badge);
+    if (c.quote) {
+      const quote = document.createElement('div');
+      quote.className = 'quote';
+      quote.textContent = (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”';
+      li.append(quote);
+    }
+    return li;
+  }
+
+  function setProgress(box, text) {
+    box.textContent = text;
+    box.prepend(el('span', 'spinner'));
+  }
+
   async function processSources() {
     const progress = $('process-progress');
     progress.classList.remove('hidden');
     try {
-      progress.textContent = t('sources.cleaning');
+      setProgress(progress, t('sources.cleaning'));
       const cleanup = await call('cleanupSources');
       await loadSources();
       const removedNote = cleanup.removed ? ' ' + t('sources.removedNote', { count: cleanup.removed }) : '';
@@ -184,7 +399,7 @@
       }
       let failed = 0;
       for (let i = 0; i < queue.length; i++) {
-        progress.textContent = t('sources.progress', { current: i + 1, total: queue.length, name: queue[i].name });
+        setProgress(progress, t('sources.progress', { current: i + 1, total: queue.length, name: queue[i].name }));
         const updated = await call('processSource', queue[i].id);
         if (updated.status === 'error') failed++;
         sources = sources.map(s => s.id === updated.id ? updated : s);
@@ -194,6 +409,7 @@
         (failed ? t('sources.doneWithErrors', { count: failed }) : t('sources.done')) + removedNote,
         failed ? 'error' : 'ok'
       );
+      await loadAssistant();
     } finally {
       progress.classList.add('hidden');
     }
@@ -230,18 +446,29 @@
   }));
 
   $('btn-test').addEventListener('click', () => run(async () => {
-    const result = await callGemini('testGeminiConnection');
+    const result = await callGemini($('btn-test'), 'testGeminiConnection');
     if (!result) return;
     showMessage(t('ai.testOk', { model: result.model, reply: result.reply }), 'ok');
   }));
 
   $('btn-save-language').addEventListener('click', () => run(() => call('saveUiLanguage', $('language-select').value)));
 
+  $('btn-select-all').addEventListener('click', () => selectAllSources(true));
+  $('btn-select-none').addEventListener('click', () => selectAllSources(false));
+  $('btn-ask').addEventListener('click', () => runInBackground($('btn-ask'), askAssistant));
+  if ($('btn-enlarge')) $('btn-enlarge').addEventListener('click', () => run(() => call('showAssistantWindow')));
+  $('question').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      runInBackground($('btn-ask'), askAssistant);
+    }
+  });
+
   run(async () => {
     settings = await call('getSettings');
     $('language-select').value = settings.uiLanguageSetting || '';
     renderSettings();
     if (!settings.sourceFolderId || !settings.hasApiKey) switchTab('settings');
-    await Promise.all([loadSources(), loadModels()]);
+    await Promise.all([loadSources(), loadModels(), loadAssistant()]);
   });
 </script>

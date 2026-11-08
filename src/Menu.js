@@ -1,6 +1,6 @@
 ﻿const APP_SHORT_NAME = 'PDZ';
 const APP_NAME = 'Przybornik dyplomowanej Żabki';
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 
 function onOpen() {
   DocumentApp.getUi()
@@ -14,9 +14,9 @@ function onInstall() {
 }
 
 function showSidebar() {
-  const html = HtmlService.createTemplateFromFile('Sidebar')
-    .evaluate()
-    .setTitle(APP_NAME);
+  const template = HtmlService.createTemplateFromFile('Sidebar');
+  template.mode = 'sidebar';
+  const html = template.evaluate().setTitle(APP_NAME);
   DocumentApp.getUi().showSidebar(html);
 }
 

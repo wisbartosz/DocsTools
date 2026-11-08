@@ -5,15 +5,37 @@
   <meta charset="utf-8">
   <?!= include_('Styles'); ?>
 </head>
-<body>
+<body class="<?= mode ?>">
   <nav class="tabs">
-    <button class="tab active" data-tab="sources"><?= t_('tab.sources') ?></button>
+    <button class="tab active" data-tab="assistant"><?= t_('tab.assistant') ?></button>
+    <button class="tab" data-tab="sources"><?= t_('tab.sources') ?></button>
     <button class="tab" data-tab="settings"><?= t_('tab.settings') ?></button>
   </nav>
 
   <div id="message" class="message hidden"></div>
 
-  <section id="tab-sources" class="panel">
+  <section id="tab-assistant" class="panel">
+    <div id="assistant-no-sources" class="hint hidden"><?= t_('assistant.noSources') ?></div>
+    <div id="assistant-content" class="hidden">
+      <details id="assistant-sources">
+        <summary id="assistant-sources-summary"></summary>
+        <div class="row buttons">
+          <button id="btn-select-all" class="link"><?= t_('assistant.selectAll') ?></button>
+          <button id="btn-select-none" class="link"><?= t_('assistant.selectNone') ?></button>
+        </div>
+        <ul id="assistant-source-list" class="checklist"></ul>
+      </details>
+      <textarea id="question" rows="3" placeholder="<?= t_('assistant.placeholder') ?>"></textarea>
+      <div class="row ask-row">
+        <button id="btn-ask" class="primary"><?= t_('assistant.ask') ?></button>
+        <span id="assistant-size" class="muted small"></span>
+      </div>
+      <div id="assistant-size-warning" class="message warn hidden"><?= t_('assistant.sizeWarning') ?></div>
+      <div id="answers"></div>
+    </div>
+  </section>
+
+  <section id="tab-sources" class="panel hidden">
     <div id="sources-no-folder" class="hint hidden"><?= t_('sources.noFolder') ?></div>
     <div id="sources-content" class="hidden">
       <div class="row">
@@ -69,7 +91,12 @@
     </div>
   </section>
 
-  <footer class="footer muted small"><?= APP_SHORT_NAME ?> <?= APP_VERSION ?></footer>
+  <footer class="footer muted small">
+    <? if (mode === 'sidebar') { ?>
+      <button id="btn-enlarge" class="link" title="<?= t_('assistant.enlargeHint') ?>">⤢ <?= t_('assistant.enlarge') ?></button>
+    <? } ?>
+    <span class="version"><?= APP_SHORT_NAME ?> <?= APP_VERSION ?></span>
+  </footer>
 
   <div id="ai-notice" class="overlay hidden">
     <div class="notice">
@@ -85,6 +112,7 @@
 
   <script>
     const UI_LANG = <?!= JSON.stringify(uiLanguage_()) ?>;
+    const UI_MODE = <?!= JSON.stringify(mode) ?>;
     const I18N = <?!= JSON.stringify(uiMessages_()) ?>;
   </script>
   <?!= include_('Client'); ?>

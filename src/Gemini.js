@@ -3,7 +3,9 @@ const GEMINI_MAX_ATTEMPTS = 4;
 const GEMINI_MAX_WAIT_MS = 60000;
 const GEMINI_RETRY_BUDGET_MS = 150000;
 
-function geminiGenerate_(request, maxAttempts) {
+function geminiGenerate_(request, options) {
+  const opts = options || {};
+  const maxAttempts = opts.maxAttempts;
   const model = getModel_();
   const url = GEMINI_BASE_URL + '/models/' + encodeURIComponent(model) + ':generateContent';
   const response = geminiFetch_(url, {
@@ -22,7 +24,7 @@ function geminiGenerate_(request, maxAttempts) {
   if (!text) {
     throw userError_('gemini.noAnswer', { reason: candidate.finishReason || t_('gemini.unknownReason') });
   }
-  return { text: text, model: model, usage: data.usageMetadata || null };
+  return { text: text, model: model, feature: opts.feature || null, usage: data.usageMetadata || null };
 }
 
 function geminiFetch_(url, options, model, maxAttempts) {
@@ -100,6 +102,6 @@ function listGeminiModels() {
 function testGeminiConnection() {
   const result = geminiGenerate_({
     contents: [{ role: 'user', parts: [{ text: t_('ai.testPrompt') }] }],
-  }, 1);
+  }, { maxAttempts: 1, feature: 'test' });
   return { model: result.model, reply: result.text };
 }

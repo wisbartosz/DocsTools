@@ -13,6 +13,15 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 
 ## Co już działa
 
+- Asystent. Zadajesz pytanie, a odpowiedź powstaje wyłącznie na podstawie zaznaczonych
+  źródeł. Każda odpowiedź ma listę źródeł z dosłownym cytatem i stroną (tam, gdzie ją
+  znamy). Dodatek sam sprawdza, czy cytat naprawdę jest w tekście źródła. Gdy w źródłach
+  nie ma odpowiedzi, asystent mówi to wprost. Nie napisze za Ciebie fragmentu pracy.
+  Pytanie można pociągnąć dalej przyciskiem „Dopytaj”, a podczas czekania na odpowiedź
+  normalnie korzystać z innych zakładek.
+- Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
+  w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
+  Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
 - Ustawienia w panelu: folder ze źródłami, klucz Gemini, wybór modelu i test połączenia.
 - Polski i angielski interfejs. Dodatek sam wybiera język według ustawień konta Google,
   a w ustawieniach można go zmienić.
@@ -26,7 +35,7 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 
 Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źródłami.
 
-- asystent, który odpowiada na pytania wyłącznie na podstawie Twoich źródeł i podaje plik,
+- pytanie o fragment zaznaczony w pracy,
 - dziennik użycia AI, przydatny do oświadczenia o korzystaniu z AI,
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,
@@ -157,6 +166,10 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Store.js`: pliki robocze w folderze `PDZ – dane`. Usunięcie oznacza przeniesienie do kosza.
 - `Sources.js`: lista źródeł, przetwarzanie, indeks i sprzątanie. Inne moduły powinny
   brać źródła z `getReadySources_()`, a nie bezpośrednio z indeksu.
+- `Assistant.js`: asystent. Buduje zapytanie do Gemini z zaznaczonych źródeł, odbiera
+  odpowiedź w ustalonym formacie (JSON) i dopasowuje cytaty do źródeł.
+- `Quotes.js`: odnajdywanie cytatu w tekście źródła (dokładnie albo w przybliżeniu)
+  i ustalanie strony ze znaczników. Bez wywołań Google.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.

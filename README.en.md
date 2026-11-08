@@ -14,6 +14,15 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
 
 ## What works now
 
+- The assistant. You ask a question and the answer is based only on the sources you've
+  ticked. Every answer comes with a list of sources, each with a verbatim quote and a page
+  number (where we know it). The add-on checks on its own whether the quote really appears
+  in the source text. If the sources don't answer the question, the assistant says so
+  plainly. It won't write any part of your thesis for you. You can continue a question
+  with "Follow up", and keep using the other tabs while you wait for an answer.
+- The "Enlarge" button in the footer opens the toolkit in a large floating window. The
+  Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
+  The window and the sidebar work separately: threads from one don't show up in the other.
 - Settings in the sidebar: sources folder, Gemini key, model choice and a connection test.
 - Polish and English interface. The add-on picks the language of your Google account,
   and you can change it in the settings.
@@ -28,7 +37,7 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
 The add-on doesn't write your thesis for you. It's meant to help you check it and work
 with your sources.
 
-- an assistant that answers questions based only on your sources and names the file,
+- asking about a passage you've selected in your thesis,
 - an AI usage log, handy for the AI disclosure statement many universities ask for,
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
@@ -159,6 +168,10 @@ no subfolders, so the manual installation can recreate them.
 - `Store.js`: working files in the `PDZ – dane` folder. Deleting means moving to the trash.
 - `Sources.js`: source list, processing, index and cleanup. Other modules should get
   sources from `getReadySources_()`, not straight from the index.
+- `Assistant.js`: the assistant. Builds the Gemini request from the selected sources,
+  receives the answer in a fixed format (JSON) and matches quotes to sources.
+- `Quotes.js`: finding a quote in the source text (exactly or approximately) and working
+  out the page from the markers. No Google calls.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.
