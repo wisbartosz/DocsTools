@@ -25,6 +25,11 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   fragment pracy”. Możesz zapytać o niego wprost albo zostawić pole pytania puste. Wtedy
   asystent sprawdzi, co z tego fragmentu potwierdzają źródła, czego w nich nie ma i co
   im przeczy. Fragmentu nie przepisuje ani nie poprawia.
+- Polska typografia w zakładce „Sprawdź”. Dodatek przegląda treść pracy i przypisy:
+  pojedyncze litery bez twardej spacji (a, i, o, u, w, z), proste cudzysłowy zamiast
+  „…”, dywizy zamiast półpauz, trzy kropki zamiast wielokropka, podwójne spacje i spacje
+  przed przecinkiem czy kropką. Kliknięcie fragmentu pokazuje go w dokumencie. Poprawka
+  idzie tylko na kliknięcie, pojedynczo albo „Popraw wszystkie” dla danego rodzaju.
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
@@ -47,7 +52,7 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,
 - wyszukiwarka w źródłach,
-- kontrola formatowania i polskiej typografii (twarde spacje, cudzysłowy, półpauzy),
+- kontrola formatowania (czcionka, odstępy, marginesy według wytycznych uczelni),
 - kontrola bibliografii, także dodawanie pozycji po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
@@ -79,7 +84,7 @@ koncie (https://script.google.com/home/usersettings). To jeden przełącznik, us
 
 ### Aktualizacje
 
-Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, przy zakładce Ustawienia
+Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, przy ikonie ustawień (⚙)
 pojawia się kropka, a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”. Przycisk
 otwiera instalator, który podmieni Przybornik w Twoim dokumencie na najnowszą wersję.
 Praca, ustawienia i przetworzone źródła zostają. Gdyby nowa wersja sprawiała kłopoty,
@@ -151,7 +156,7 @@ w edytorze skryptów, bo następne wgranie nadpisze te zmiany.
 1. PDZ → Otwórz Przybornik dyplomowanej Żabki.
 2. Google zapyta o zgodę. Pojawi się ostrzeżenie, że aplikacja nie jest zweryfikowana,
    bo to Twój własny skrypt. Wybierz Zaawansowane → Przejdź do… i zezwól.
-3. W zakładce Ustawienia wklej link do folderu ze źródłami.
+3. W ustawieniach (ikona ⚙ w prawym górnym rogu panelu) wklej link do folderu ze źródłami.
 4. Wklej klucz z https://aistudio.google.com/apikey, wybierz model i kliknij
    „Testuj połączenie”.
 5. W zakładce Źródła kliknij „Przetwórz źródła”.
@@ -208,6 +213,10 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Quotes.js`: odnajdywanie cytatu w tekście źródła (dokładnie albo w przybliżeniu)
   i ustalanie strony ze znaczników. Bez wywołań Google.
 - `Feedback.js`: wysyłka uwag z panelu do usługi pośredniczącej (`feedback/`).
+- `Typography.js`: reguły typografii na zwykłym tekście. Bez wywołań Google.
+- `Check.js`: zakładka „Sprawdź”. Przechodzi po tekście dokumentu i przypisów, pokazuje
+  miejsca i nanosi poprawki. Każda poprawka najpierw sprawdza, czy tekst w tym miejscu
+  się nie zmienił.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.

@@ -539,6 +539,94 @@
   $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
   $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
 
+  let typo = null;
+  const typoOpen = new Set();
+  const TYPO_SHOW_SPACES = ['orphan', 'spaces', 'punctuation', 'dash'];
+
+  async function checkTypography() {
+    const button = $('btn-check-typo');
+    button.classList.add('loading');
+    try {
+      typo = await call('checkTypography');
+      renderTypography();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  function renderTypography() {
+    const groups = typo.groups.filter(g => g.count > 0);
+    const total = groups.reduce((sum, g) => sum + g.count, 0);
+    $('typo-summary').textContent = total ? t('typo.summary', { count: formatNumber(total) }) : t('typo.none');
+    $('typo-summary').classList.remove('hidden');
+    const box = $('typo-groups');
+    box.innerHTML = '';
+    groups.forEach(group => box.append(renderTypoGroup(group)));
+  }
+
+  function renderTypoGroup(group) {
+    const card = el('details', 'typo-group');
+    card.open = typoOpen.has(group.kind);
+    card.addEventListener('toggle', () => card.open ? typoOpen.add(group.kind) : typoOpen.delete(group.kind));
+    card.append(el('summary', '', t('typo.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
+    card.append(el('div', 'typo-desc', t('typo.kind.' + group.kind + '.desc')));
+    const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(group.count) }));
+    fixAll.addEventListener('click', () => run(() => fixTypographyKind(group.kind, fixAll)));
+    const row = el('div', 'row buttons');
+    row.append(fixAll);
+    card.append(row);
+    if (group.count > group.items.length) {
+      card.append(el('div', 'typo-desc', t('typo.more', { shown: group.items.length, count: formatNumber(group.count) })));
+    }
+    const list = el('ul', 'list');
+    group.items.forEach(item => list.append(renderTypoItem(item)));
+    card.append(list);
+    return card;
+  }
+
+  function renderTypoItem(item) {
+    const li = el('li');
+    const snippet = el('div', 'typo-snippet');
+    snippet.title = t('typo.show');
+    if (item.footnote) snippet.append(el('span', 'typo-where', t('typo.footnote')));
+    const match = TYPO_SHOW_SPACES.includes(item.ref.kind) ? item.match.replace(/ /g, '·') : item.match;
+    snippet.append(item.before, el('mark', '', match), item.after);
+    snippet.addEventListener('click', () => {
+      hideMessage();
+      call('showTypographyIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
+    });
+    const fix = el('button', 'link', t('typo.fix'));
+    fix.addEventListener('click', () => run(() => fixTypographyIssue(item)));
+    li.append(snippet, fix);
+    return li;
+  }
+
+  async function fixTypographyIssue(item) {
+    const update = await call('fixTypographyIssue', item.ref);
+    update.items.forEach(fresh => { fresh.order = item.order; });
+    typo.groups.forEach(group => {
+      group.count += (update.after[group.kind] || 0) - (update.before[group.kind] || 0);
+      group.items = group.items
+        .filter(other => other.ref.key !== update.key)
+        .concat(update.items.filter(fresh => fresh.ref.kind === group.kind))
+        .sort((a, b) => a.order - b.order || a.ref.start - b.ref.start);
+    });
+    renderTypography();
+  }
+
+  async function fixTypographyKind(kind, button) {
+    button.classList.add('loading');
+    try {
+      const response = await call('fixTypographyKind', kind);
+      typo = response.result;
+      renderTypography();
+      showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  $('btn-check-typo').addEventListener('click', () => run(checkTypography));
   $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));
   $('btn-remove-fragment').addEventListener('click', removeFragment);
   $('btn-feedback').addEventListener('click', () => switchTab('feedback'));

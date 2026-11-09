@@ -26,6 +26,12 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   "Attach the selected passage of your thesis". You can ask about it directly, or leave
   the question empty. Then the assistant checks what in the passage your sources support,
   what they don't cover and what they contradict. It never rewrites or corrects the passage.
+- Polish typography in the "Check" tab. The add-on goes through the body of your thesis
+  and the footnotes: one-letter words without a non-breaking space (a, i, o, u, w, z),
+  straight quotes instead of „…”, hyphens instead of en dashes, three dots instead of an
+  ellipsis, double spaces and spaces before commas or full stops. Click a passage to see
+  it in the document. Fixes happen only when you click, one at a time or "Fix all" for
+  a given kind.
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
   The window and the sidebar work separately: threads from one don't show up in the other.
@@ -49,7 +55,7 @@ with your sources.
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
 - search across your sources,
-- formatting checks and Polish typography (non-breaking spaces, quotation marks, dashes),
+- formatting checks (font, spacing, margins according to your university's guidelines),
 - bibliography checks, including adding entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
@@ -82,7 +88,7 @@ account (https://script.google.com/home/usersettings). It's a single switch you 
 ### Updates
 
 The toolkit checks for a newer version on its own. When there is one, a dot appears on the
-Settings tab, and the Updates section shows what's new and an "Update" button. The button
+settings icon (⚙), and the Updates section shows what's new and an "Update" button. The button
 opens the installer, which replaces the toolkit in your document with the latest version.
 Your work, settings and processed sources stay. If the new version gives you trouble,
 Settings has a link to the installer with a "Restore the previous version" button. Reload the document after updating.
@@ -152,7 +158,7 @@ the script editor, because the next push will overwrite your changes.
 1. PDZ → Open Przybornik dyplomowanej Żabki.
 2. Google will ask for permission. You'll see a warning that the app isn't verified,
    because it's your own script. Choose Advanced → Go to… and allow it.
-3. In the Settings tab, paste the link to your sources folder.
+3. In Settings (the ⚙ icon in the top right of the panel), paste the link to your sources folder.
 4. Paste the key from https://aistudio.google.com/apikey, choose a model and click
    "Test connection".
 5. In the Sources tab, click "Process sources".
@@ -208,6 +214,10 @@ no subfolders, so the manual installation can recreate them.
 - `Quotes.js`: finding a quote in the source text (exactly or approximately) and working
   out the page from the markers. No Google calls.
 - `Feedback.js`: sends feedback from the sidebar to the relay service (`feedback/`).
+- `Typography.js`: typography rules on plain text. No Google calls.
+- `Check.js`: the "Check" tab. Goes through the text of the document and the footnotes,
+  lists the places and applies fixes. Every fix first checks that the text there hasn't
+  changed.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.

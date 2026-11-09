@@ -8,8 +8,9 @@
 <body class="<?= mode ?>">
   <nav class="tabs">
     <button class="tab active" data-tab="assistant"><?= t_('tab.assistant') ?></button>
+    <button class="tab" data-tab="check"><?= t_('tab.check') ?></button>
     <button class="tab" data-tab="sources"><?= t_('tab.sources') ?></button>
-    <button class="tab" data-tab="settings"><?= t_('tab.settings') ?></button>
+    <button class="tab tab-icon" data-tab="settings" title="<?= t_('tab.settings') ?>" aria-label="<?= t_('tab.settings') ?>"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
   </nav>
 
   <div id="message" class="message hidden"></div>
@@ -41,6 +42,16 @@
       <div id="assistant-size-warning" class="message warn hidden"><?= t_('assistant.sizeWarning') ?></div>
       <div id="answers"></div>
     </div>
+  </section>
+
+  <section id="tab-check" class="panel hidden">
+    <h3><?= t_('typo.title') ?></h3>
+    <div class="muted small"><?= t_('typo.hint') ?></div>
+    <div class="row buttons">
+      <button id="btn-check-typo" class="primary"><?= t_('typo.check') ?></button>
+    </div>
+    <div id="typo-summary" class="muted hidden"></div>
+    <div id="typo-groups"></div>
   </section>
 
   <section id="tab-sources" class="panel hidden">
