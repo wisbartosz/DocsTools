@@ -2,6 +2,7 @@ const ASSISTANT_EXCLUDED_PROP = 'assistantExcludedSources';
 const ASSISTANT_WARN_CHARS = 400000;
 const ASSISTANT_HISTORY_TURNS = 4;
 const ASSISTANT_WINDOW = { width: 900, height: 680 };
+const ASSISTANT_MAX_FRAGMENT_CHARS = 20000;
 
 const ASSISTANT_SYSTEM_PROMPT = [
   'You are a research assistant helping a student who is writing a thesis.',
@@ -28,6 +29,12 @@ const ASSISTANT_SYSTEM_PROMPT = [
   '7. Answer in the same language as the question. Plain text, no Markdown. Be concise.',
   '   Use short paragraphs separated by a blank line. When you list several points, put each',
   '   point on its own line, starting with "1.", "2.", ... or "- ".',
+  '8. The request may include a FRAGMENT OF THE STUDENT\'S THESIS. Then the question is about that',
+  '   fragment. Compare it with the sources: say which of its statements the sources support (with',
+  '   citations), which they do not cover, and which they contradict. Set "found" to false only if',
+  '   the sources say nothing relevant to the fragment. You may quote a few words of the fragment to',
+  '   show which sentence you mean, but the fragment is not a source: never put it in "citations".',
+  '   Never rewrite, correct or improve the fragment and never propose new wording for it.',
 ].join('\n');
 
 const ASSISTANT_RESPONSE_SCHEMA = {
@@ -81,9 +88,31 @@ function showAssistantWindow() {
   DocumentApp.getUi().showModelessDialog(html, APP_NAME);
 }
 
-function askAssistant(question, sourceIds, history) {
+function getSelectedFragment() {
+  const selection = DocumentApp.getActiveDocument().getSelection();
+  const parts = [];
+  if (selection) {
+    selection.getRangeElements().forEach(function (range) {
+      const element = range.getElement();
+      if (range.isPartial()) {
+        parts.push(element.asText().getText().substring(range.getStartOffset(), range.getEndOffsetInclusive() + 1));
+      } else if (element.editAsText) {
+        parts.push(element.asText().getText());
+      }
+    });
+  }
+  const text = parts.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (!text) throw userError_('assistant.err.noSelection');
+  if (text.length > ASSISTANT_MAX_FRAGMENT_CHARS) {
+    throw userError_('assistant.err.selectionTooLong', { max: ASSISTANT_MAX_FRAGMENT_CHARS });
+  }
+  return { text: text, chars: text.length };
+}
+
+function askAssistant(question, sourceIds, history, fragment) {
   const text = String(question || '').trim();
   if (!text) throw userError_('assistant.err.emptyQuestion');
+  const piece = String(fragment || '').trim().slice(0, ASSISTANT_MAX_FRAGMENT_CHARS);
   const wanted = {};
   (sourceIds || []).forEach(function (id) { wanted[id] = true; });
   const sources = getReadySources_().filter(function (s) { return wanted[s.id]; });
@@ -93,6 +122,7 @@ function askAssistant(question, sourceIds, history) {
   const parts = [{ text: buildSourcesBlock_(sources) }];
   const earlier = buildHistoryBlock_(history);
   if (earlier) parts.push({ text: earlier });
+  if (piece) parts.push({ text: 'FRAGMENT OF THE STUDENT\'S THESIS (selected by the student, not a source):\n<<<\n' + piece + '\n>>>' });
   parts.push({ text: 'QUESTION:\n' + text });
 
   const result = geminiGenerate_({

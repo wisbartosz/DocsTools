@@ -21,6 +21,10 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   nie ma odpowiedzi, asystent mówi to wprost. Nie napisze za Ciebie fragmentu pracy.
   Pytanie można pociągnąć dalej przyciskiem „Dopytaj”, a podczas czekania na odpowiedź
   normalnie korzystać z innych zakładek.
+- Pytanie o fragment pracy. Zaznaczasz akapit w dokumencie i klikasz „Dołącz zaznaczony
+  fragment pracy”. Możesz zapytać o niego wprost albo zostawić pole pytania puste. Wtedy
+  asystent sprawdzi, co z tego fragmentu potwierdzają źródła, czego w nich nie ma i co
+  im przeczy. Fragmentu nie przepisuje ani nie poprawia.
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
@@ -39,7 +43,6 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 
 Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źródłami.
 
-- pytanie o fragment zaznaczony w pracy,
 - dziennik użycia AI, przydatny do oświadczenia o korzystaniu z AI,
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,

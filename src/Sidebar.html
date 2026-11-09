@@ -25,6 +25,14 @@
         </div>
         <ul id="assistant-source-list" class="checklist"></ul>
       </details>
+      <button id="btn-attach-fragment" class="link"><?= t_('assistant.fragment.attach') ?></button>
+      <div id="fragment-box" class="fragment hidden">
+        <div class="fragment-head">
+          <span id="fragment-title"></span>
+          <button id="btn-remove-fragment" class="link"><?= t_('assistant.fragment.remove') ?></button>
+        </div>
+        <div id="fragment-text" class="fragment-text"></div>
+      </div>
       <textarea id="question" rows="3" placeholder="<?= t_('assistant.placeholder') ?>"></textarea>
       <div class="row ask-row">
         <button id="btn-ask" class="primary"><?= t_('assistant.ask') ?></button>

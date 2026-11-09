@@ -145,6 +145,19 @@
     resize: vertical;
   }
   #tab-feedback textarea { margin-top: 8px; }
+  #btn-attach-fragment { margin: 0 0 6px; text-align: left; }
+  .fragment, .thread-fragment {
+    border-left: 3px solid var(--accent);
+    background: #f8f9fa;
+    border-radius: 0 4px 4px 0;
+    padding: 4px 8px;
+    margin: 0 0 6px;
+    font-size: 12px;
+  }
+  .fragment-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); }
+  .fragment-text { white-space: pre-wrap; word-break: break-word; max-height: 96px; overflow-y: auto; margin-top: 2px; }
+  .thread-fragment summary { padding: 0; font-size: 12px; }
+  .thread-fragment .fragment-text { max-height: 160px; }
   .footer button.link.active { color: var(--text); }
   .ask-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .thread {

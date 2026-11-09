@@ -265,7 +265,7 @@
 
   function renderAssistantSummary() {
     const selected = assistant.sources.filter(s => s.selected);
-    const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0);
+    const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0) + (fragment ? fragment.chars : 0);
     $('assistant-sources-summary').textContent = t('assistant.sourcesSummary', { selected: selected.length, total: assistant.sources.length });
     $('assistant-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
     $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
@@ -290,13 +290,41 @@
     return node;
   }
 
+  let fragment = null;
+
+  async function attachFragment() {
+    fragment = await call('getSelectedFragment');
+    renderFragment();
+  }
+
+  function removeFragment() {
+    fragment = null;
+    renderFragment();
+  }
+
+  function renderFragment() {
+    $('fragment-box').classList.toggle('hidden', !fragment);
+    $('fragment-title').textContent = fragment ? t('assistant.fragment.title', { chars: formatNumber(fragment.chars) }) : '';
+    $('fragment-text').textContent = fragment ? fragment.text : '';
+    $('btn-attach-fragment').textContent = t(fragment ? 'assistant.fragment.replace' : 'assistant.fragment.attach');
+    $('question').placeholder = t(fragment ? 'assistant.fragment.placeholder' : 'assistant.placeholder');
+    renderAssistantSummary();
+  }
+
   async function askAssistant() {
-    const question = $('question').value.trim();
+    const attached = fragment;
+    const question = $('question').value.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
     const selected = assistant.sources.filter(s => s.selected);
-    const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), []);
+    const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), [], attached ? attached.text : '');
     if (!result) return;
     hideMessage();
-    const thread = { sourceIds: selected.map(s => s.id), sourceNames: selected.map(s => s.name), turns: [] };
+    if (fragment === attached) removeFragment();
+    const thread = {
+      sourceIds: selected.map(s => s.id),
+      sourceNames: selected.map(s => s.name),
+      fragment: attached ? attached.text : '',
+      turns: [],
+    };
     thread.element = renderThread(thread, question);
     document.querySelectorAll('#answers > .thread').forEach(card => { card.open = false; });
     $('answers').prepend(thread.element);
@@ -308,7 +336,7 @@
   async function followUp(thread, input, button) {
     const question = input.value.trim();
     const history = thread.turns.map(turn => ({ question: turn.question, answer: turn.answer }));
-    const result = await callGemini(button, 'askAssistant', question, thread.sourceIds, history);
+    const result = await callGemini(button, 'askAssistant', question, thread.sourceIds, history, thread.fragment);
     if (!result) return;
     hideMessage();
     addTurn(thread, question, result);
@@ -319,8 +347,14 @@
   function renderThread(thread, firstQuestion) {
     const card = el('details', 'thread');
     card.open = true;
-    card.append(el('summary', 'thread-title', firstQuestion));
+    const title = thread.fragment ? (UI_LANG === 'pl' ? '„' : '“') + thread.fragment.slice(0, 80) + '” · ' + firstQuestion : firstQuestion;
+    card.append(el('summary', 'thread-title', title));
     card.append(el('div', 'thread-sources', t('assistant.threadSources', { names: thread.sourceNames.join(', ') })));
+    if (thread.fragment) {
+      const box = el('details', 'thread-fragment');
+      box.append(el('summary', '', t('assistant.fragment.inThread')), el('div', 'fragment-text', thread.fragment));
+      card.append(box);
+    }
     thread.turnsElement = el('div', 'turns');
     card.append(thread.turnsElement);
 
@@ -505,6 +539,8 @@
   $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
   $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
 
+  $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));
+  $('btn-remove-fragment').addEventListener('click', removeFragment);
   $('btn-feedback').addEventListener('click', () => switchTab('feedback'));
   $('btn-send-feedback').addEventListener('click', () => runInBackground($('btn-send-feedback'), sendFeedback));
 

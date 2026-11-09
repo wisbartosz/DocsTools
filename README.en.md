@@ -22,6 +22,10 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   in the source text. If the sources don't answer the question, the assistant says so
   plainly. It won't write any part of your thesis for you. You can continue a question
   with "Follow up", and keep using the other tabs while you wait for an answer.
+- Questions about a passage of your thesis. Select a paragraph in the document and click
+  "Attach the selected passage of your thesis". You can ask about it directly, or leave
+  the question empty. Then the assistant checks what in the passage your sources support,
+  what they don't cover and what they contradict. It never rewrites or corrects the passage.
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
   The window and the sidebar work separately: threads from one don't show up in the other.
@@ -41,7 +45,6 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
 The add-on doesn't write your thesis for you. It's meant to help you check it and work
 with your sources.
 
-- asking about a passage you've selected in your thesis,
 - an AI usage log, handy for the AI disclosure statement many universities ask for,
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
