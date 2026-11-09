@@ -51,9 +51,7 @@ with your sources.
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
 - questions your supervisor might ask, and comparing your goals with your conclusions,
-- a progress counter,
-- simpler installation: a ready document you copy with one click, updates from the
-  sidebar, and an install script for Windows and macOS.
+- a progress counter.
 
 One rule applies throughout: the add-on never changes your text on its own. It shows you
 what to fix, and it only applies formatting fixes when you click.

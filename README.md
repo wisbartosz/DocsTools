@@ -49,9 +49,7 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
-- licznik postępu,
-- prostsza instalacja: gotowy dokument do skopiowania jednym kliknięciem, aktualizacje
-  z poziomu panelu i skrypt instalacyjny dla Windowsa i Maca.
+- licznik postępu.
 
 Zasada jest jedna: dodatek niczego nie zmienia w treści pracy sam z siebie. Pokazuje
 miejsca do poprawy, a poprawki formatowania wprowadza tylko wtedy, gdy klikniesz.
