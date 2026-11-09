@@ -24,6 +24,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
+- „Zgłoś uwagę” w stopce. Piszesz, co nie działa albo czego brakuje, klikasz „Wyślij”
+  i wiadomość trafia prosto do autora. Nie trzeba mieć konta na GitHubie.
 - Ustawienia w panelu: folder ze źródłami, klucz Gemini, wybór modelu i test połączenia.
 - Polski i angielski interfejs. Dodatek sam wybiera język według ustawień konta Google,
   a w ustawieniach można go zmienić.
@@ -47,7 +49,7 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
-- licznik postępu i zgłaszanie uwag o dodatku,
+- licznik postępu,
 - prostsza instalacja: gotowy dokument do skopiowania jednym kliknięciem, aktualizacje
   z poziomu panelu i skrypt instalacyjny dla Windowsa i Maca.
 
@@ -204,6 +206,7 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   odpowiedź w ustalonym formacie (JSON) i dopasowuje cytaty do źródeł.
 - `Quotes.js`: odnajdywanie cytatu w tekście źródła (dokładnie albo w przybliżeniu)
   i ustalanie strony ze znaczników. Bez wywołań Google.
+- `Feedback.js`: wysyłka uwag z panelu do usługi pośredniczącej (`feedback/`).
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.
@@ -224,6 +227,13 @@ na gałęzi `main`, a kod z archiwum wskazanego tam tagu (tylko katalog `src`). 
 podmianą zapisuje bieżący kod jako wersję skryptu „PDZ backup”, z której korzysta
 przycisk przywracania. Jeśli zepsuta wersja nie otworzy nawet panelu, instalator można
 otworzyć ręcznie z parametrem `?scriptId=<identyfikator skryptu dokumentu>`.
+
+Uwagi z panelu trafiają do osobnej małej aplikacji internetowej (`feedback/`). Działa ona
+na koncie autora i wysyła każdą wiadomość mailem na to samo konto, więc adres nie
+pojawia się w kodzie. Ma limit wiadomości na godzinę i przycina zbyt długie pola. Kto
+utrzymuje własną kopię Przybornika, publikuje u siebie własną usługę (dostęp: każdy,
+także anonimowo; uruchamianie: jako ja), raz uruchamia w edytorze `sendTestMessage`,
+żeby nadać uprawnienia, i wpisuje jej adres w `FEEDBACK_URL` w `src/Feedback.js`.
 
 Wydanie nowej wersji: podbij `APP_VERSION` w `src/Menu.js`, zaktualizuj `latest.json`
 (wersja, tag, opis zmian po polsku i angielsku), zrób commit i tag `vX.Y.Z`, wypchnij oba.

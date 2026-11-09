@@ -26,6 +26,7 @@
     bottom: 0;
     display: flex;
     align-items: center;
+    gap: 12px;
     margin: 24px -12px 0;
     padding: 6px 12px;
     border-top: 1px solid var(--border);
@@ -93,7 +94,7 @@
   }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button:disabled { opacity: .5; cursor: default; }
-  input[type=text], input[type=password], select {
+  input[type=text], input[type=password], input[type=email], select {
     width: 100%;
     padding: 6px 8px;
     border: 1px solid var(--border);
@@ -143,6 +144,8 @@
     font: inherit;
     resize: vertical;
   }
+  #tab-feedback textarea { margin-top: 8px; }
+  .footer button.link.active { color: var(--text); }
   .ask-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .thread {
     border: 1px solid var(--border);

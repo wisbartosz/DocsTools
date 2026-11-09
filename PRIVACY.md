@@ -5,8 +5,9 @@
 ## Polski
 
 Przybornik dyplomowanej Żabki (PDZ) i Instalator PDZ to narzędzia open source. Autor nie
-prowadzi żadnego serwera, nie zbiera danych, nie używa analityki ani reklam. Wszystko
-działa na Twoim koncie Google.
+prowadzi żadnego serwera, nie używa analityki ani reklam i nie zbiera danych poza
+wiadomościami, które sam wyślesz przez „Zgłoś uwagę”. Wszystko działa na Twoim koncie
+Google.
 
 **Co zapisuje Przybornik i gdzie**
 
@@ -24,7 +25,12 @@ działa na Twoim koncie Google.
   obowiązują Cię warunki Google dla Gemini API. Na darmowym planie Google może
   wykorzystywać te treści do ulepszania swoich usług. Przybornik przypomina o tym przy
   pierwszym użyciu AI.
-- Nic nie jest wysyłane do autora.
+- Do autora trafia tylko to, co sam wyślesz przez „Zgłoś uwagę”: treść wiadomości,
+  adres e-mail (jeśli go podasz) oraz informacje techniczne: wersja Przybornika, język,
+  wybrany model, przeglądarka, ostatni komunikat błędu i to, czy klucz API oraz folder
+  źródeł są ustawione. Treść pracy, źródła i klucz API nie są wysyłane. Wiadomość
+  przychodzi mailem na konto Google autora i służy tylko do poprawiania Przybornika
+  oraz odpowiedzi, jeśli podasz adres.
 
 **Instalator PDZ**
 
@@ -41,8 +47,9 @@ działa na Twoim koncie Google.
 ## English
 
 Przybornik dyplomowanej Żabki (PDZ) and the PDZ Installer are open-source tools. The
-author runs no server, collects no data, and uses no analytics or ads. Everything runs in
-your own Google account.
+author runs no server, uses no analytics or ads, and collects no data apart from the
+messages you choose to send with "Send feedback". Everything runs in your own Google
+account.
 
 **What the toolkit stores and where**
 
@@ -59,7 +66,12 @@ your own Google account.
   selected sources are sent to the Google Gemini API using your own API key, so Google's
   Gemini API terms apply to you. On the free tier Google may use this content to improve
   its services. The toolkit reminds you about this the first time you use AI.
-- Nothing is sent to the author.
+- The author only receives what you send yourself with "Send feedback": your message,
+  your email address (if you give one) and technical details: toolkit version, language,
+  chosen model, browser, the last error message, and whether an API key and a sources
+  folder are set. Your thesis, sources and API key are never sent. The message arrives by
+  email in the author's Google account and is used only to improve the toolkit and to
+  reply, if you left an address.
 
 **PDZ Installer**
 

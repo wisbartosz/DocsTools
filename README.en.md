@@ -25,6 +25,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
   The window and the sidebar work separately: threads from one don't show up in the other.
+- "Send feedback" in the footer. Write what isn't working or what's missing, click "Send"
+  and the message goes straight to the author. No GitHub account needed.
 - Settings in the sidebar: sources folder, Gemini key, model choice and a connection test.
 - Polish and English interface. The add-on picks the language of your Google account,
   and you can change it in the settings.
@@ -49,7 +51,7 @@ with your sources.
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
 - questions your supervisor might ask, and comparing your goals with your conclusions,
-- a progress counter and a way to send feedback about the add-on,
+- a progress counter,
 - simpler installation: a ready document you copy with one click, updates from the
   sidebar, and an install script for Windows and macOS.
 
@@ -204,6 +206,7 @@ no subfolders, so the manual installation can recreate them.
   receives the answer in a fixed format (JSON) and matches quotes to sources.
 - `Quotes.js`: finding a quote in the source text (exactly or approximately) and working
   out the page from the markers. No Google calls.
+- `Feedback.js`: sends feedback from the sidebar to the relay service (`feedback/`).
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.
@@ -224,6 +227,13 @@ and takes the code from the archive of the tag named there (the `src` folder onl
 replacing anything it saves the current code as a "PDZ backup" script version, which the
 restore button uses. If a broken version can't even open the sidebar, you can open the
 installer by hand with `?scriptId=<the document's script ID>`.
+
+Feedback from the sidebar goes to a separate small web app (`feedback/`). It runs under
+the author's account and emails each message to that same account, so no address appears
+in the code. It has an hourly message limit and trims fields that are too long. If you
+maintain your own copy of the toolkit, deploy your own relay (access: anyone, including
+anonymous; execute as: me), run `sendTestMessage` once in the editor to grant
+permissions, and put its URL in `FEEDBACK_URL` in `src/Feedback.js`.
 
 Releasing a new version: bump `APP_VERSION` in `src/Menu.js`, update `latest.json`
 (version, tag, release notes in Polish and English), commit, tag `vX.Y.Z` and push both.

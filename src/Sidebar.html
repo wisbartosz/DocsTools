@@ -101,10 +101,22 @@
     </div>
   </section>
 
+  <section id="tab-feedback" class="panel hidden">
+    <h3><?= t_('feedback.title') ?></h3>
+    <div class="muted small"><?= t_('feedback.hint') ?></div>
+    <textarea id="feedback-message" rows="7" maxlength="5000" placeholder="<?= t_('feedback.placeholder') ?>"></textarea>
+    <input id="feedback-email" type="email" placeholder="<?= t_('feedback.email') ?>" autocomplete="email">
+    <div class="row buttons">
+      <button id="btn-send-feedback" class="primary"><?= t_('feedback.send') ?></button>
+    </div>
+    <div class="muted small"><?= t_('feedback.privacy') ?></div>
+  </section>
+
   <footer class="footer muted small">
     <? if (mode === 'sidebar') { ?>
       <button id="btn-enlarge" class="link" title="<?= t_('assistant.enlargeHint') ?>">⤢ <?= t_('assistant.enlarge') ?></button>
     <? } ?>
+    <button id="btn-feedback" class="link"><?= t_('feedback.open') ?></button>
     <span class="version"><?!= include_('Logo') ?><?= APP_SHORT_NAME ?> <?= APP_VERSION ?></span>
   </footer>
 

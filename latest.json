@@ -1,8 +1,8 @@
 {
-  "version": "0.4.1",
-  "tag": "v0.4.1",
+  "version": "0.5.0",
+  "tag": "v0.5.0",
   "notes": {
-    "pl": "Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, przy zakładce Ustawienia pojawia się kropka, a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”.\n\nPoprawiono instalację Przybornika w istniejącym dokumencie.",
-    "en": "The toolkit now checks for a newer version on its own. When there is one, a dot appears on the Settings tab, and the Updates section shows what's new and an \"Update\" button.\n\nFixed installing the toolkit into an existing document."
+    "pl": "W stopce panelu jest teraz „Zgłoś uwagę”. Piszesz, co nie działa albo co można zrobić lepiej, klikasz „Wyślij” i wiadomość trafia prosto do autora. Jeśli chcesz odpowiedź, możesz zostawić swój e-mail.\n\nW stopce pojawiło się też logo Przybornika.",
+    "en": "The panel footer now has \"Send feedback\". Write what isn't working or what could be better, click \"Send\" and the message goes straight to the author. Leave your email if you'd like a reply.\n\nThe toolkit's logo now shows in the footer too."
   }
 }

@@ -24,7 +24,10 @@
     });
   }
 
+  let lastError = '';
+
   function showMessage(text, kind) {
+    if (kind === 'error') lastError = text;
     const box = $('message');
     box.textContent = text;
     box.className = 'message' + (kind ? ' ' + kind : '');
@@ -125,7 +128,24 @@
       renderAssistantTab();
     }
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+    $('btn-feedback').classList.toggle('active', name === 'feedback');
     hideMessage();
+  }
+
+  async function sendFeedback() {
+    const button = $('btn-send-feedback');
+    button.classList.add('loading');
+    try {
+      await call('sendFeedback', $('feedback-message').value, $('feedback-email').value, {
+        lastError: lastError,
+        view: UI_MODE,
+        browser: navigator.userAgent,
+      });
+      $('feedback-message').value = '';
+      showMessage(t('feedback.sent'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
   }
 
   function renderSettings() {
@@ -484,6 +504,9 @@
 
   $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
   $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
+
+  $('btn-feedback').addEventListener('click', () => switchTab('feedback'));
+  $('btn-send-feedback').addEventListener('click', () => runInBackground($('btn-send-feedback'), sendFeedback));
 
   $('btn-select-all').addEventListener('click', () => selectAllSources(true));
   $('btn-select-none').addEventListener('click', () => selectAllSources(false));
