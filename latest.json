@@ -1,8 +1,8 @@
 {
-  "version": "0.5.0",
-  "tag": "v0.5.0",
+  "version": "0.6.0",
+  "tag": "v0.6.0",
   "notes": {
-    "pl": "W stopce panelu jest teraz „Zgłoś uwagę”. Piszesz, co nie działa albo co można zrobić lepiej, klikasz „Wyślij” i wiadomość trafia prosto do autora. Jeśli chcesz odpowiedź, możesz zostawić swój e-mail.\n\nW stopce pojawiło się też logo Przybornika.",
-    "en": "The panel footer now has \"Send feedback\". Write what isn't working or what could be better, click \"Send\" and the message goes straight to the author. Leave your email if you'd like a reply.\n\nThe toolkit's logo now shows in the footer too."
+    "pl": "Asystent może teraz pytać o fragment Twojej pracy. Zaznacz akapit w dokumencie, w zakładce Asystent kliknij „Dołącz zaznaczony fragment pracy” i zadaj pytanie. Jeśli pole pytania zostawisz puste, asystent sprawdzi, co z tego fragmentu potwierdzają źródła, czego w nich nie ma i co im przeczy. Fragmentu nie przepisuje ani nie poprawia.",
+    "en": "The assistant can now answer questions about a passage of your thesis. Select a paragraph in the document, click \"Attach the selected passage of your thesis\" in the Assistant tab and ask your question. If you leave the question empty, the assistant checks what in the passage your sources support, what they don't cover and what they contradict. It never rewrites or corrects the passage."
   }
 }
