@@ -1,8 +1,8 @@
 {
-  "version": "0.8.0",
-  "tag": "v0.8.0",
+  "version": "0.8.1",
+  "tag": "v0.8.1",
   "notes": {
-    "pl": "W zakładce „Sprawdź” jest teraz sekcja „Formatowanie”. Wpisujesz wymagania swojej uczelni (czcionka, rozmiar, interlinia, wyrównanie, wcięcie, marginesy, A4, wygląd tytułów, podpisy tabel i rycin, rozdział od nowej strony), a Przybornik pokazuje akapity, które od nich odbiegają. Kliknięcie akapitu pokazuje go w dokumencie, a poprawka idzie tylko na kliknięcie. Wymagania zapisują się w dokumencie.",
-    "en": "The \"Check\" tab now has a \"Formatting\" section. Enter your university's requirements (font, size, line spacing, alignment, indent, margins, A4, how titles look, table and figure captions, chapters on a new page) and the toolkit lists the paragraphs that differ. Click a paragraph to see it in the document; fixes happen only when you click. The requirements are saved in the document."
+    "pl": "Wymagania edytorskie można teraz wczytać ze źródeł. W zakładce „Sprawdź” → „Wymagania edytorskie” kliknij „Wczytaj ze źródeł”, a Gemini wypełni formularz na podstawie regulaminu lub poradnika wśród Twoich źródeł. Gdy dokumenty podają różne wartości, wybierasz właściwą. Lista „Skąd te wartości” pokazuje cytaty. Nic się nie zapisuje, dopóki nie klikniesz „Zapisz wymagania”.",
+    "en": "Formatting requirements can now be read from your sources. In the \"Check\" tab, open \"Formatting requirements\" and click \"Read from sources\"; Gemini fills in the form from the guidelines among your sources. When documents disagree, you choose the value that applies, and \"Where these values come from\" shows the quotes. Nothing is saved until you click \"Save requirements\"."
   }
 }

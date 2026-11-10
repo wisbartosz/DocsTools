@@ -630,27 +630,49 @@
   let format = null;
   let formatRulesLoaded = false;
   const formatOpen = new Set();
-  const RULE_FIELDS = [
-    ['rule-font', r => r.font, (r, v) => { r.font = v; }],
-    ['rule-size', r => r.size, (r, v) => { r.size = v; }],
-    ['rule-line-spacing', r => r.lineSpacing, (r, v) => { r.lineSpacing = v; }],
-    ['rule-alignment', r => r.alignment, (r, v) => { r.alignment = v; }],
-    ['rule-indent', r => r.indent, (r, v) => { r.indent = v; }],
-    ['rule-black', r => r.black, (r, v) => { r.black = v; }],
-    ['rule-a4', r => r.a4, (r, v) => { r.a4 = v; }],
-    ['rule-margin-top', r => r.margins.top, (r, v) => { r.margins.top = v; }],
-    ['rule-margin-right', r => r.margins.right, (r, v) => { r.margins.right = v; }],
-    ['rule-margin-bottom', r => r.margins.bottom, (r, v) => { r.margins.bottom = v; }],
-    ['rule-margin-left', r => r.margins.left, (r, v) => { r.margins.left = v; }],
-    ['rule-h1-size', r => r.heading1.size, (r, v) => { r.heading1.size = v; }],
-    ['rule-h1-bold', r => r.heading1.bold, (r, v) => { r.heading1.bold = v; }],
-    ['rule-h1-upper', r => r.heading1.uppercase, (r, v) => { r.heading1.uppercase = v; }],
-    ['rule-h2-size', r => r.heading2.size, (r, v) => { r.heading2.size = v; }],
-    ['rule-h2-bold', r => r.heading2.bold, (r, v) => { r.heading2.bold = v; }],
-    ['rule-no-period', r => r.noHeadingPeriod, (r, v) => { r.noHeadingPeriod = v; }],
-    ['rule-new-page', r => r.chapterNewPage, (r, v) => { r.chapterNewPage = v; }],
-    ['rule-caption-size', r => r.captionSize, (r, v) => { r.captionSize = v; }],
-  ];
+  const RULE_FIELDS = {
+    'font': 'rule-font',
+    'size': 'rule-size',
+    'lineSpacing': 'rule-line-spacing',
+    'alignment': 'rule-alignment',
+    'indent': 'rule-indent',
+    'black': 'rule-black',
+    'a4': 'rule-a4',
+    'margins.top': 'rule-margin-top',
+    'margins.right': 'rule-margin-right',
+    'margins.bottom': 'rule-margin-bottom',
+    'margins.left': 'rule-margin-left',
+    'heading1.size': 'rule-h1-size',
+    'heading1.bold': 'rule-h1-bold',
+    'heading1.uppercase': 'rule-h1-upper',
+    'heading2.size': 'rule-h2-size',
+    'heading2.bold': 'rule-h2-bold',
+    'noHeadingPeriod': 'rule-no-period',
+    'chapterNewPage': 'rule-new-page',
+    'captionSize': 'rule-caption-size',
+  };
+
+  function ruleValue(rules, path) {
+    return path.split('.').reduce((value, key) => value === null || value === undefined ? value : value[key], rules);
+  }
+
+  function setRuleInput(path, value) {
+    const input = $(RULE_FIELDS[path]);
+    if (input.type === 'checkbox') input.checked = value === true || value === 'true';
+    else if (value === null || value === undefined) input.value = '';
+    else input.value = input.type === 'number' ? String(value).replace(',', '.').replace(/[^\d.]/g, '') : value;
+  }
+
+  function ruleLabel(path) {
+    const [group, key] = path.split('.');
+    if (path === 'size') return t('format.rules.text') + ': ' + t('format.rules.size');
+    if (group === 'margins') return t('format.rules.margins') + ': ' + t('format.rules.' + key);
+    if (group === 'heading1' || group === 'heading2') {
+      const name = key === 'size' ? 'format.rules.size' : key === 'bold' ? 'format.rules.bold' : 'format.rules.uppercase';
+      return t('format.rules.' + group) + ': ' + t(name);
+    }
+    return t('format.rules.' + group);
+  }
 
   async function loadFormatRules() {
     const data = await call('getFormatRules');
@@ -661,21 +683,64 @@
   }
 
   function fillFormatRules(rules) {
-    RULE_FIELDS.forEach(([id, read]) => {
-      const input = $(id);
-      const value = read(rules);
-      if (input.type === 'checkbox') input.checked = !!value;
-      else input.value = value === null || value === undefined ? '' : value;
-    });
+    Object.keys(RULE_FIELDS).forEach(path => setRuleInput(path, ruleValue(rules, path)));
   }
 
   function readFormatRules() {
     const rules = { margins: {}, heading1: {}, heading2: {} };
-    RULE_FIELDS.forEach(([id, , write]) => {
-      const input = $(id);
-      write(rules, input.type === 'checkbox' ? input.checked : input.value);
+    Object.keys(RULE_FIELDS).forEach(path => {
+      const input = $(RULE_FIELDS[path]);
+      const value = input.type === 'checkbox' ? input.checked : input.value;
+      const [group, key] = path.split('.');
+      if (key) rules[group][key] = value;
+      else rules[group] = value;
     });
     return rules;
+  }
+
+  async function importFormatRules() {
+    const result = await callGemini($('btn-import-rules'), 'importFormatRules');
+    if (!result) return;
+    fillFormatRules(result.rules);
+    $('format-rules-example').classList.add('hidden');
+    renderRulesImport(result);
+    showMessage(t('format.rules.imported', { count: result.rules.found.length }), 'ok');
+  }
+
+  function renderRulesImport(result) {
+    const box = $('rules-import-result');
+    box.innerHTML = '';
+    box.classList.toggle('hidden', !result.conflicts.length && !result.evidence.length);
+    if (result.conflicts.length) {
+      box.append(el('div', 'rules-conflicts-title', t('format.rules.conflicts')));
+      result.conflicts.forEach((conflict, index) => {
+        const fieldset = el('div', 'rules-conflict');
+        fieldset.append(el('div', 'rules-conflict-field', ruleLabel(conflict.field)));
+        conflict.options.forEach((option, optionIndex) => {
+          const label = el('label', 'rules-check');
+          const radio = el('input');
+          radio.type = 'radio';
+          radio.name = 'rules-conflict-' + index;
+          radio.checked = optionIndex === 0;
+          radio.addEventListener('change', () => setRuleInput(conflict.field, option.value));
+          label.append(radio, option.value + ' (' + option.source + ')');
+          fieldset.append(label);
+        });
+        box.append(fieldset);
+      });
+    }
+    if (result.evidence.length) {
+      const details = el('details', 'cites');
+      details.append(el('summary', '', t('format.rules.evidence', { count: result.evidence.length })));
+      const list = el('ol');
+      result.evidence.forEach(item => {
+        const li = el('li', '', ruleLabel(item.field) + ' – ' + item.source);
+        li.append(el('div', 'quote', (UI_LANG === 'pl' ? '„' : '“') + item.quote + '”'));
+        list.append(li);
+      });
+      details.append(list);
+      box.append(details);
+    }
   }
 
   async function saveFormatRules() {
@@ -762,6 +827,7 @@
   }
 
   $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
+  $('btn-import-rules').addEventListener('click', () => runInBackground($('btn-import-rules'), importFormatRules));
   $('btn-check-format').addEventListener('click', () => run(checkFormatting));
   $('btn-check-typo').addEventListener('click', () => run(checkTypography));
   $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));

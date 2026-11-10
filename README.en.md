@@ -37,7 +37,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   and section titles look, table and figure captions, chapters on a new page) and the
   add-on lists the paragraphs that differ. Fixes change only the formatting and the
   letter case of titles. The requirements are saved in the document, so every thesis can
-  have its own.
+  have its own. The "Read from sources" button fills in the requirements from the
+  guidelines among your sources (via Gemini); you can check and adjust them before saving.
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
   The window and the sidebar work separately: threads from one don't show up in the other.
@@ -61,7 +62,6 @@ with your sources.
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
 - search across your sources,
-- reading the formatting requirements from the guidelines among your sources,
 - bibliography checks, including adding entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
@@ -226,6 +226,8 @@ no subfolders, so the manual installation can recreate them.
   changed.
 - `Format.js`: formatting requirements (stored in the document properties) and checks of
   paragraphs, titles, margins and page size.
+- `FormatImport.js`: "Read from sources" – picks the passages about formatting from your
+  sources and asks Gemini to fill in the requirements (JSON), with conflicts and quotes.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.

@@ -35,7 +35,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   rozdziałów i podrozdziałów, podpisy tabel i rycin, rozdział od nowej strony), a dodatek
   pokazuje akapity, które od nich odbiegają. Poprawki zmieniają tylko formatowanie
   i wielkość liter w tytułach. Wymagania zapisują się w dokumencie, więc każda praca może
-  mieć własne.
+  mieć własne. Przycisk „Wczytaj ze źródeł” wypełnia wymagania z regulaminu wśród źródeł
+  (przez Gemini); przed zapisem możesz je sprawdzić i poprawić.
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
@@ -58,7 +59,6 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,
 - wyszukiwarka w źródłach,
-- wczytywanie wymagań edytorskich z regulaminu wśród źródeł,
 - kontrola bibliografii, także dodawanie pozycji po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
@@ -225,6 +225,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   się nie zmienił.
 - `Format.js`: wymagania edytorskie (zapisane we właściwościach dokumentu) i sprawdzanie
   formatowania akapitów, tytułów, marginesów i formatu strony.
+- `FormatImport.js`: „Wczytaj ze źródeł” – wybiera ze źródeł fragmenty o formatowaniu
+  i prosi Gemini o wypełnienie wymagań (JSON), z listą sprzeczności i cytatami.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.
