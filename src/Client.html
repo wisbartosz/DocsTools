@@ -130,6 +130,7 @@
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     $('btn-feedback').classList.toggle('active', name === 'feedback');
     hideMessage();
+    if (name === 'check' && !formatRulesLoaded) loadFormatRules().catch(e => showMessage(errorText(e), 'error'));
   }
 
   async function sendFeedback() {
@@ -626,6 +627,142 @@
     }
   }
 
+  let format = null;
+  let formatRulesLoaded = false;
+  const formatOpen = new Set();
+  const RULE_FIELDS = [
+    ['rule-font', r => r.font, (r, v) => { r.font = v; }],
+    ['rule-size', r => r.size, (r, v) => { r.size = v; }],
+    ['rule-line-spacing', r => r.lineSpacing, (r, v) => { r.lineSpacing = v; }],
+    ['rule-alignment', r => r.alignment, (r, v) => { r.alignment = v; }],
+    ['rule-indent', r => r.indent, (r, v) => { r.indent = v; }],
+    ['rule-black', r => r.black, (r, v) => { r.black = v; }],
+    ['rule-a4', r => r.a4, (r, v) => { r.a4 = v; }],
+    ['rule-margin-top', r => r.margins.top, (r, v) => { r.margins.top = v; }],
+    ['rule-margin-right', r => r.margins.right, (r, v) => { r.margins.right = v; }],
+    ['rule-margin-bottom', r => r.margins.bottom, (r, v) => { r.margins.bottom = v; }],
+    ['rule-margin-left', r => r.margins.left, (r, v) => { r.margins.left = v; }],
+    ['rule-h1-size', r => r.heading1.size, (r, v) => { r.heading1.size = v; }],
+    ['rule-h1-bold', r => r.heading1.bold, (r, v) => { r.heading1.bold = v; }],
+    ['rule-h1-upper', r => r.heading1.uppercase, (r, v) => { r.heading1.uppercase = v; }],
+    ['rule-h2-size', r => r.heading2.size, (r, v) => { r.heading2.size = v; }],
+    ['rule-h2-bold', r => r.heading2.bold, (r, v) => { r.heading2.bold = v; }],
+    ['rule-no-period', r => r.noHeadingPeriod, (r, v) => { r.noHeadingPeriod = v; }],
+    ['rule-new-page', r => r.chapterNewPage, (r, v) => { r.chapterNewPage = v; }],
+    ['rule-caption-size', r => r.captionSize, (r, v) => { r.captionSize = v; }],
+  ];
+
+  async function loadFormatRules() {
+    const data = await call('getFormatRules');
+    fillFormatRules(data.rules || data.example);
+    $('format-rules-example').classList.toggle('hidden', !!data.rules);
+    $('format-rules').open = !data.rules;
+    formatRulesLoaded = true;
+  }
+
+  function fillFormatRules(rules) {
+    RULE_FIELDS.forEach(([id, read]) => {
+      const input = $(id);
+      const value = read(rules);
+      if (input.type === 'checkbox') input.checked = !!value;
+      else input.value = value === null || value === undefined ? '' : value;
+    });
+  }
+
+  function readFormatRules() {
+    const rules = { margins: {}, heading1: {}, heading2: {} };
+    RULE_FIELDS.forEach(([id, , write]) => {
+      const input = $(id);
+      write(rules, input.type === 'checkbox' ? input.checked : input.value);
+    });
+    return rules;
+  }
+
+  async function saveFormatRules() {
+    const rules = await call('saveFormatRules', readFormatRules());
+    fillFormatRules(rules);
+    $('format-rules-example').classList.add('hidden');
+    showMessage(t('format.rules.saved'), 'ok');
+  }
+
+  async function checkFormatting() {
+    const button = $('btn-check-format');
+    button.classList.add('loading');
+    try {
+      format = await call('checkFormatting');
+      renderFormatting();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  function renderFormatting() {
+    const groups = format.groups.filter(g => g.count > 0);
+    const total = groups.reduce((sum, g) => sum + g.count, 0);
+    const summary = $('format-summary');
+    summary.textContent = total ? t('format.summary', { count: formatNumber(total) }) : t('format.none');
+    if (format.noHeadings) summary.append(el('div', 'typo-desc', t('format.noHeadings')));
+    summary.classList.remove('hidden');
+    const box = $('format-groups');
+    box.innerHTML = '';
+    groups.forEach(group => box.append(renderFormatGroup(group)));
+  }
+
+  function renderFormatGroup(group) {
+    const card = el('details', 'typo-group');
+    card.open = formatOpen.has(group.kind);
+    card.addEventListener('toggle', () => card.open ? formatOpen.add(group.kind) : formatOpen.delete(group.kind));
+    card.append(el('summary', '', t('format.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
+    card.append(el('div', 'typo-desc', t('format.kind.' + group.kind + '.desc')));
+    const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(group.count) }));
+    fixAll.addEventListener('click', () => run(() => fixFormatKind(group.kind, fixAll)));
+    const row = el('div', 'row buttons');
+    row.append(fixAll);
+    card.append(row);
+    if (group.count > group.items.length) {
+      card.append(el('div', 'typo-desc', t('typo.more', { shown: group.items.length, count: formatNumber(group.count) })));
+    }
+    const list = el('ul', 'list');
+    group.items.forEach(item => list.append(renderFormatItem(item)));
+    card.append(list);
+    return card;
+  }
+
+  function renderFormatItem(item) {
+    const li = el('li');
+    const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
+    snippet.append(el('div', '', item.preview));
+    if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
+    if (item.showable) {
+      snippet.title = t('typo.show');
+      snippet.addEventListener('click', () => {
+        hideMessage();
+        call('showFormatIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
+      });
+    }
+    const fix = el('button', 'link', t('typo.fix'));
+    fix.addEventListener('click', () => run(async () => {
+      format = await call('fixFormatIssue', item.ref);
+      renderFormatting();
+    }));
+    li.append(snippet, fix);
+    return li;
+  }
+
+  async function fixFormatKind(kind, button) {
+    button.classList.add('loading');
+    try {
+      const response = await call('fixFormatKind', kind);
+      format = response.result;
+      renderFormatting();
+      showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
+  $('btn-check-format').addEventListener('click', () => run(checkFormatting));
   $('btn-check-typo').addEventListener('click', () => run(checkTypography));
   $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));
   $('btn-remove-fragment').addEventListener('click', removeFragment);

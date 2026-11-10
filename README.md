@@ -30,6 +30,12 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   „…”, dywizy zamiast półpauz, trzy kropki zamiast wielokropka, podwójne spacje i spacje
   przed przecinkiem czy kropką. Kliknięcie fragmentu pokazuje go w dokumencie. Poprawka
   idzie tylko na kliknięcie, pojedynczo albo „Popraw wszystkie” dla danego rodzaju.
+- Formatowanie według wymagań uczelni, też w zakładce „Sprawdź”. Wpisujesz wymagania
+  (czcionka, rozmiar, interlinia, wyrównanie, wcięcie, marginesy, A4, wygląd tytułów
+  rozdziałów i podrozdziałów, podpisy tabel i rycin, rozdział od nowej strony), a dodatek
+  pokazuje akapity, które od nich odbiegają. Poprawki zmieniają tylko formatowanie
+  i wielkość liter w tytułach. Wymagania zapisują się w dokumencie, więc każda praca może
+  mieć własne.
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
@@ -52,7 +58,7 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,
 - wyszukiwarka w źródłach,
-- kontrola formatowania (czcionka, odstępy, marginesy według wytycznych uczelni),
+- wczytywanie wymagań edytorskich z regulaminu wśród źródeł,
 - kontrola bibliografii, także dodawanie pozycji po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
@@ -217,6 +223,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Check.js`: zakładka „Sprawdź”. Przechodzi po tekście dokumentu i przypisów, pokazuje
   miejsca i nanosi poprawki. Każda poprawka najpierw sprawdza, czy tekst w tym miejscu
   się nie zmienił.
+- `Format.js`: wymagania edytorskie (zapisane we właściwościach dokumentu) i sprawdzanie
+  formatowania akapitów, tytułów, marginesów i formatu strony.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.

@@ -1,8 +1,8 @@
 {
-  "version": "0.7.0",
-  "tag": "v0.7.0",
+  "version": "0.8.0",
+  "tag": "v0.8.0",
   "notes": {
-    "pl": "Nowa zakładka „Sprawdź” z polską typografią. Przybornik znajduje w pracy i przypisach pojedyncze litery bez twardej spacji, proste cudzysłowy, dywizy zamiast półpauz, trzy kropki zamiast wielokropka, podwójne spacje i spacje przed przecinkiem czy kropką. Kliknięcie fragmentu pokazuje go w dokumencie, a poprawka idzie tylko na kliknięcie.\n\nUstawienia są teraz pod ikoną koła zębatego w prawym górnym rogu panelu.",
-    "en": "A new \"Check\" tab with Polish typography. The toolkit finds one-letter words without a non-breaking space, straight quotes, hyphens instead of en dashes, three dots instead of an ellipsis, double spaces and spaces before commas or full stops, in the body and the footnotes. Click a passage to see it in the document; fixes happen only when you click.\n\nSettings are now under the gear icon in the top right of the panel."
+    "pl": "W zakładce „Sprawdź” jest teraz sekcja „Formatowanie”. Wpisujesz wymagania swojej uczelni (czcionka, rozmiar, interlinia, wyrównanie, wcięcie, marginesy, A4, wygląd tytułów, podpisy tabel i rycin, rozdział od nowej strony), a Przybornik pokazuje akapity, które od nich odbiegają. Kliknięcie akapitu pokazuje go w dokumencie, a poprawka idzie tylko na kliknięcie. Wymagania zapisują się w dokumencie.",
+    "en": "The \"Check\" tab now has a \"Formatting\" section. Enter your university's requirements (font, size, line spacing, alignment, indent, margins, A4, how titles look, table and figure captions, chapters on a new page) and the toolkit lists the paragraphs that differ. Click a paragraph to see it in the document; fixes happen only when you click. The requirements are saved in the document."
   }
 }

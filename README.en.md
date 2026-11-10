@@ -32,6 +32,12 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   ellipsis, double spaces and spaces before commas or full stops. Click a passage to see
   it in the document. Fixes happen only when you click, one at a time or "Fix all" for
   a given kind.
+- Formatting against your university's requirements, also in the "Check" tab. You enter
+  the requirements (font, size, line spacing, alignment, indent, margins, A4, how chapter
+  and section titles look, table and figure captions, chapters on a new page) and the
+  add-on lists the paragraphs that differ. Fixes change only the formatting and the
+  letter case of titles. The requirements are saved in the document, so every thesis can
+  have its own.
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
   The window and the sidebar work separately: threads from one don't show up in the other.
@@ -55,7 +61,7 @@ with your sources.
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
 - search across your sources,
-- formatting checks (font, spacing, margins according to your university's guidelines),
+- reading the formatting requirements from the guidelines among your sources,
 - bibliography checks, including adding entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
@@ -218,6 +224,8 @@ no subfolders, so the manual installation can recreate them.
 - `Check.js`: the "Check" tab. Goes through the text of the document and the footnotes,
   lists the places and applies fixes. Every fix first checks that the text there hasn't
   changed.
+- `Format.js`: formatting requirements (stored in the document properties) and checks of
+  paragraphs, titles, margins and page size.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.

@@ -109,13 +109,14 @@ function collectTexts_(container, location, out) {
 }
 
 function castElement_(element) {
-  switch (String(element.getType())) {
-    case 'TEXT': return { isText: true, element: element.asText() };
-    case 'PARAGRAPH': return { element: element.asParagraph() };
-    case 'LIST_ITEM': return { element: element.asListItem() };
-    case 'TABLE': return { element: element.asTable() };
-    case 'TABLE_ROW': return { element: element.asTableRow() };
-    case 'TABLE_CELL': return { element: element.asTableCell() };
+  const type = String(element.getType());
+  switch (type) {
+    case 'TEXT': return { type: type, isText: true, element: element.asText() };
+    case 'PARAGRAPH': return { type: type, element: element.asParagraph() };
+    case 'LIST_ITEM': return { type: type, element: element.asListItem() };
+    case 'TABLE': return { type: type, element: element.asTable() };
+    case 'TABLE_ROW': return { type: type, element: element.asTableRow() };
+    case 'TABLE_CELL': return { type: type, element: element.asTableCell() };
     default: return null;
   }
 }
@@ -135,6 +136,12 @@ function locateTypographyIssue_(ref) {
 }
 
 function resolveLocation_(location) {
+  const current = resolveElementPath_(location);
+  if (!current || !current.isText) return null;
+  return { text: current.element, location: location, key: locationKey_(location), order: null };
+}
+
+function resolveElementPath_(location) {
   const doc = DocumentApp.getActiveDocument();
   let container;
   if (location.footnote >= 0) {
@@ -151,8 +158,7 @@ function resolveLocation_(location) {
     container = current.isText ? null : current.element;
     if (current.isText && i < location.path.length - 1) return null;
   }
-  if (!current || !current.isText) return null;
-  return { text: current.element, location: location, key: locationKey_(location), order: null };
+  return current;
 }
 
 function applyDocumentEdits_(text, edits) {

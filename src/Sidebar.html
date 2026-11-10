@@ -52,6 +52,58 @@
     </div>
     <div id="typo-summary" class="muted hidden"></div>
     <div id="typo-groups"></div>
+
+    <h3><?= t_('format.title') ?></h3>
+    <div class="muted small"><?= t_('format.hint') ?></div>
+    <details id="format-rules" class="typo-group">
+      <summary><?= t_('format.rules.title') ?></summary>
+      <div class="typo-desc"><?= t_('format.rules.hint') ?></div>
+      <div id="format-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
+      <div class="rules-grid">
+        <b class="rules-head"><?= t_('format.rules.text') ?></b>
+        <label for="rule-font"><?= t_('format.rules.font') ?></label><input id="rule-font" type="text">
+        <label for="rule-size"><?= t_('format.rules.size') ?></label><input id="rule-size" type="number" step="0.5" min="0">
+        <label for="rule-line-spacing"><?= t_('format.rules.lineSpacing') ?></label><input id="rule-line-spacing" type="number" step="0.05" min="0">
+        <label for="rule-alignment"><?= t_('format.rules.alignment') ?></label>
+        <select id="rule-alignment">
+          <option value=""><?= t_('format.align.any') ?></option>
+          <option value="JUSTIFY"><?= t_('format.align.JUSTIFY') ?></option>
+          <option value="LEFT"><?= t_('format.align.LEFT') ?></option>
+        </select>
+        <label for="rule-indent"><?= t_('format.rules.indent') ?></label><input id="rule-indent" type="number" step="0.05" min="0">
+        <label class="rules-check"><input id="rule-black" type="checkbox"> <?= t_('format.rules.black') ?></label>
+
+        <b class="rules-head"><?= t_('format.rules.page') ?></b>
+        <label class="rules-check"><input id="rule-a4" type="checkbox"> <?= t_('format.rules.a4') ?></label>
+        <span class="rules-wide muted"><?= t_('format.rules.margins') ?></span>
+        <label for="rule-margin-top"><?= t_('format.rules.top') ?></label><input id="rule-margin-top" type="number" step="0.1" min="0">
+        <label for="rule-margin-right"><?= t_('format.rules.right') ?></label><input id="rule-margin-right" type="number" step="0.1" min="0">
+        <label for="rule-margin-bottom"><?= t_('format.rules.bottom') ?></label><input id="rule-margin-bottom" type="number" step="0.1" min="0">
+        <label for="rule-margin-left"><?= t_('format.rules.left') ?></label><input id="rule-margin-left" type="number" step="0.1" min="0">
+
+        <b class="rules-head"><?= t_('format.rules.heading1') ?></b>
+        <label for="rule-h1-size"><?= t_('format.rules.size') ?></label><input id="rule-h1-size" type="number" step="0.5" min="0">
+        <label class="rules-check"><input id="rule-h1-bold" type="checkbox"> <?= t_('format.rules.bold') ?></label>
+        <label class="rules-check"><input id="rule-h1-upper" type="checkbox"> <?= t_('format.rules.uppercase') ?></label>
+
+        <b class="rules-head"><?= t_('format.rules.heading2') ?></b>
+        <label for="rule-h2-size"><?= t_('format.rules.size') ?></label><input id="rule-h2-size" type="number" step="0.5" min="0">
+        <label class="rules-check"><input id="rule-h2-bold" type="checkbox"> <?= t_('format.rules.bold') ?></label>
+
+        <b class="rules-head"><?= t_('format.rules.headings') ?></b>
+        <label class="rules-check"><input id="rule-no-period" type="checkbox"> <?= t_('format.rules.noHeadingPeriod') ?></label>
+        <label class="rules-check"><input id="rule-new-page" type="checkbox"> <?= t_('format.rules.chapterNewPage') ?></label>
+        <label for="rule-caption-size"><?= t_('format.rules.captionSize') ?></label><input id="rule-caption-size" type="number" step="0.5" min="0">
+      </div>
+      <div class="row buttons">
+        <button id="btn-save-rules" class="primary"><?= t_('format.rules.save') ?></button>
+      </div>
+    </details>
+    <div class="row buttons">
+      <button id="btn-check-format" class="primary"><?= t_('format.check') ?></button>
+    </div>
+    <div id="format-summary" class="muted hidden"></div>
+    <div id="format-groups"></div>
   </section>
 
   <section id="tab-sources" class="panel hidden">
