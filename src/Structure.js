@@ -148,17 +148,32 @@ function normalizeStructureRules_(input) {
 }
 
 function getStructureRules() {
+  const saved = readStructureRules_();
   return {
-    rules: readStructureRules_(),
-    defaults: {
-      type: 'review',
-      sections: { review: t_('structure.default.review'), research: t_('structure.default.research') },
-      toc: true,
-      numbering: true,
-      keywordsMin: 3,
-      keywordsMax: 5,
-    },
+    rules: saved || defaultStructureRules_('review'),
+    isDefault: !saved,
+    sections: { review: t_('structure.default.review'), research: t_('structure.default.research') },
   };
+}
+
+function resetStructureRules(type) {
+  docProps_().deleteProperty(STRUCTURE_RULES_PROP);
+  return defaultStructureRules_(type);
+}
+
+function defaultStructureRules_(type) {
+  const kind = STRUCTURE_TYPES.indexOf(type) >= 0 ? type : 'review';
+  return normalizeStructureRules_({
+    type: kind,
+    sections: t_('structure.default.' + kind),
+    toc: true,
+    numbering: true,
+    keywordsMin: 3,
+    keywordsMax: 5,
+    aimMin: 100,
+    aimMax: 200,
+    minPages: 30,
+  });
 }
 
 function saveStructureRules(input) {
@@ -179,8 +194,7 @@ function readStructureRules_() {
 }
 
 function checkStructure() {
-  const rules = readStructureRules_();
-  if (!rules) throw userError_('structure.err.noRules');
+  const rules = readStructureRules_() || defaultStructureRules_('review');
   const ctx = structureContext_();
   const groups = {};
   STRUCTURE_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [] }; });

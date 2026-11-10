@@ -1,8 +1,8 @@
 {
-  "version": "0.9.1",
-  "tag": "v0.9.1",
+  "version": "0.9.2",
+  "tag": "v0.9.2",
   "notes": {
-    "pl": "Przycisk „Wczytaj wymagania uczelni ze źródeł” na górze zakładki „Sprawdź” wypełnia teraz oba formularze: wymagania edytorskie i wymagania dotyczące struktury (wymagane części dla pracy poglądowej i badawczej, spis treści, numeracja, słowa kluczowe, długość celu pracy, minimalna liczba stron). Jeden przycisk „Zapisz wymagania” zapisuje oba.",
-    "en": "The \"Read university requirements from sources\" button at the top of the \"Check\" tab now fills in both forms: formatting requirements and structure requirements (required parts for a literature-review and a research thesis, table of contents, numbering, keywords, length of the aim, minimum number of pages). One \"Save requirements\" button saves both."
+    "pl": "Wymagania formatowania i struktury mają teraz domyślne wartości. Obowiązują od razu, więc sprawdzanie działa bez wpisywania czegokolwiek. Przycisk „Przywróć domyślne” w obu formularzach wraca do tych wartości.",
+    "en": "Formatting and structure requirements now have default values. They apply right away, so checks work without entering anything. The \"Restore defaults\" button in both forms brings these values back."
   }
 }

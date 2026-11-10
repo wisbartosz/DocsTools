@@ -45,6 +45,10 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   length of the abstract and the aim, and the number of pages. You enter the requirements
   once or read them from the guidelines among your sources (the same button as for the
   formatting requirements); they are saved in the document.
+- The default formatting and structure requirements come from the guidelines of the
+  university the toolkit was made for. They apply right away, with nothing to save. If your
+  university is different, change them in the forms or read them from your sources. The
+  "Restore defaults" button brings back the values from the guidelines.
 - The title page from your university stays safe. All checks skip
   everything before the first page break (you can turn this off in the "Check" tab).
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The

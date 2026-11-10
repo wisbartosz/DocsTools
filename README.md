@@ -43,6 +43,10 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   właściwej kolejności, ile jest słów kluczowych, jak długi jest abstrakt i cel pracy, ile
   stron ma praca. Wymagania wpisujesz raz albo wczytujesz z regulaminu wśród źródeł
   (tym samym przyciskiem co wymagania edytorskie); zapisują się w dokumencie.
+- Domyślne wymagania formatowania i struktury pochodzą z regulaminu i poradnika uczelni,
+  dla której powstał Przybornik. Obowiązują od razu, bez zapisywania. Jeśli piszesz pracę
+  na innej uczelni, zmień je w formularzach albo wczytaj ze źródeł. Przycisk „Przywróć
+  domyślne” wraca do wartości z regulaminu.
 - Strona tytułowa od uczelni jest bezpieczna. Wszystkie sprawdzenia pomijają
   wszystko przed pierwszym podziałem strony (można to wyłączyć w zakładce „Sprawdź”).
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny

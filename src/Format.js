@@ -9,16 +9,16 @@ const FORMAT_SIDES = ['top', 'right', 'bottom', 'left'];
 const FORMAT_ALIGNMENTS = ['', 'JUSTIFY', 'LEFT'];
 const FORMAT_CAPTION = /^\s*(tabela|tab\.|rycina|ryc\.|rysunek|rys\.|wykres|schemat|fotografia|table|figure|fig\.)\s*(nr\.?\s*)?\d+/i;
 const FORMAT_BACK_MATTER = /bibliograf|pi.miennictw|literatur|references|spis (rycin|tabel|rysunk)|aneks|za..cznik|appendix/i;
-const FORMAT_EXAMPLE_RULES = {
-  font: 'Times New Roman',
+const FORMAT_DEFAULT_RULES = {
+  font: 'Calibri',
   size: 12,
   black: true,
-  lineSpacing: 1.5,
+  lineSpacing: 1.15,
   alignment: 'JUSTIFY',
   indent: 1.25,
   a4: true,
-  margins: { top: 2.5, right: 2.5, bottom: 2.5, left: 2.5 },
-  heading1: { size: 14, bold: true, uppercase: false },
+  margins: { top: 2.5, right: 2.5, bottom: 2.5, left: 3.5 },
+  heading1: { size: 14, bold: true, uppercase: true },
   heading2: { size: 13, bold: true },
   captionSize: 10,
   noHeadingPeriod: true,
@@ -26,7 +26,13 @@ const FORMAT_EXAMPLE_RULES = {
 };
 
 function getFormatRules() {
-  return { rules: readFormatRules_(), example: FORMAT_EXAMPLE_RULES, skipTitlePage: skipTitlePage_() };
+  const saved = readFormatRules_();
+  return { rules: saved || normalizeFormatRules_(FORMAT_DEFAULT_RULES), isDefault: !saved, skipTitlePage: skipTitlePage_() };
+}
+
+function resetFormatRules() {
+  docProps_().deleteProperty(FORMAT_RULES_PROP);
+  return normalizeFormatRules_(FORMAT_DEFAULT_RULES);
 }
 
 function saveFormatRules(input) {
@@ -136,9 +142,7 @@ function fixFormatKind(kind) {
 }
 
 function requireFormatRules_() {
-  const rules = readFormatRules_();
-  if (!rules) throw userError_('format.err.noRules');
-  return rules;
+  return readFormatRules_() || normalizeFormatRules_(FORMAT_DEFAULT_RULES);
 }
 
 function formatContext_() {

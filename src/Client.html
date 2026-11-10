@@ -696,10 +696,15 @@
   async function loadFormatRules() {
     const data = await call('getFormatRules');
     $('skip-title-page').checked = data.skipTitlePage;
-    fillFormatRules(data.rules || data.example);
-    $('format-rules-example').classList.toggle('hidden', !!data.rules);
-    $('format-rules').open = !data.rules;
+    fillFormatRules(data.rules);
+    $('format-rules-example').classList.toggle('hidden', !data.isDefault);
     formatRulesLoaded = true;
+  }
+
+  async function resetFormatRules() {
+    fillFormatRules(await call('resetFormatRules'));
+    $('format-rules-example').classList.remove('hidden');
+    showMessage(t('rules.resetDone'), 'ok');
   }
 
   function fillFormatRules(rules) {
@@ -892,11 +897,16 @@
 
   async function loadStructureRules() {
     const data = await call('getStructureRules');
-    structureDefaults = data.defaults;
-    const rules = data.rules || Object.assign({}, data.defaults, { sections: data.defaults.sections.review });
-    fillStructureRules(rules);
-    $('structure-rules-example').classList.toggle('hidden', !!data.rules);
-    $('structure-rules').open = !data.rules;
+    structureDefaults = { sections: data.sections };
+    fillStructureRules(data.rules);
+    $('structure-rules-example').classList.toggle('hidden', !data.isDefault);
+  }
+
+  async function resetStructureRules() {
+    fillStructureRules(await call('resetStructureRules', $('srule-type').value));
+    importedSections = null;
+    $('structure-rules-example').classList.remove('hidden');
+    showMessage(t('rules.resetDone'), 'ok');
   }
 
   function fillStructureRules(rules) {
@@ -1015,6 +1025,8 @@
 
   $('srule-type').addEventListener('change', structureTypeChanged);
   $('btn-save-structure-rules').addEventListener('click', () => run(saveStructureRules));
+  $('btn-reset-structure-rules').addEventListener('click', () => run(resetStructureRules));
+  $('btn-reset-rules').addEventListener('click', () => run(resetFormatRules));
   $('btn-check-structure').addEventListener('click', () => run(checkStructure));
   $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
   $('skip-title-page').addEventListener('change', () => {
