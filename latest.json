@@ -1,8 +1,8 @@
 {
-  "version": "0.8.1",
-  "tag": "v0.8.1",
+  "version": "0.8.2",
+  "tag": "v0.8.2",
   "notes": {
-    "pl": "Wymagania edytorskie można teraz wczytać ze źródeł. W zakładce „Sprawdź” → „Wymagania edytorskie” kliknij „Wczytaj ze źródeł”, a Gemini wypełni formularz na podstawie regulaminu lub poradnika wśród Twoich źródeł. Gdy dokumenty podają różne wartości, wybierasz właściwą. Lista „Skąd te wartości” pokazuje cytaty. Nic się nie zapisuje, dopóki nie klikniesz „Zapisz wymagania”.",
-    "en": "Formatting requirements can now be read from your sources. In the \"Check\" tab, open \"Formatting requirements\" and click \"Read from sources\"; Gemini fills in the form from the guidelines among your sources. When documents disagree, you choose the value that applies, and \"Where these values come from\" shows the quotes. Nothing is saved until you click \"Save requirements\"."
+    "pl": "Strona tytułowa jest teraz bezpieczna. Typografia i formatowanie pomijają wszystko przed pierwszym podziałem strony, więc okładka przygotowana przez uczelnię nie trafia do sprawdzania ani do poprawek. Po okładce wstaw podział strony (Wstaw → Podział → Podział strony). Opcję „Pomijaj stronę tytułową” można wyłączyć w zakładce „Sprawdź”.",
+    "en": "The title page is now safe. Typography and formatting skip everything before the first page break, so the cover provided by your university is never checked or changed. Put a page break after the cover (Insert → Break → Page break). You can turn off \"Skip the title page\" in the \"Check\" tab."
   }
 }

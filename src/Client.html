@@ -676,6 +676,7 @@
 
   async function loadFormatRules() {
     const data = await call('getFormatRules');
+    $('skip-title-page').checked = data.skipTitlePage;
     fillFormatRules(data.rules || data.example);
     $('format-rules-example').classList.toggle('hidden', !!data.rules);
     $('format-rules').open = !data.rules;
@@ -827,6 +828,9 @@
   }
 
   $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
+  $('skip-title-page').addEventListener('change', () => {
+    call('saveSkipTitlePage', $('skip-title-page').checked).catch(e => showMessage(errorText(e), 'error'));
+  });
   $('btn-import-rules').addEventListener('click', () => runInBackground($('btn-import-rules'), importFormatRules));
   $('btn-check-format').addEventListener('click', () => run(checkFormatting));
   $('btn-check-typo').addEventListener('click', () => run(checkTypography));

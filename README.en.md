@@ -39,6 +39,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   letter case of titles. The requirements are saved in the document, so every thesis can
   have its own. The "Read from sources" button fills in the requirements from the
   guidelines among your sources (via Gemini); you can check and adjust them before saving.
+- The title page from your university stays safe. Typography and formatting skip
+  everything before the first page break (you can turn this off in the "Check" tab).
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
   The window and the sidebar work separately: threads from one don't show up in the other.

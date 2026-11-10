@@ -37,6 +37,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   i wielkość liter w tytułach. Wymagania zapisują się w dokumencie, więc każda praca może
   mieć własne. Przycisk „Wczytaj ze źródeł” wypełnia wymagania z regulaminu wśród źródeł
   (przez Gemini); przed zapisem możesz je sprawdzić i poprawić.
+- Strona tytułowa od uczelni jest bezpieczna. Typografia i formatowanie pomijają
+  wszystko przed pierwszym podziałem strony (można to wyłączyć w zakładce „Sprawdź”).
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.

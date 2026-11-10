@@ -26,7 +26,7 @@ const FORMAT_EXAMPLE_RULES = {
 };
 
 function getFormatRules() {
-  return { rules: readFormatRules_(), example: FORMAT_EXAMPLE_RULES };
+  return { rules: readFormatRules_(), example: FORMAT_EXAMPLE_RULES, skipTitlePage: skipTitlePage_() };
 }
 
 function saveFormatRules(input) {
@@ -147,8 +147,9 @@ function formatContext_() {
   ['NORMAL', 'HEADING1', 'HEADING2'].forEach(function (name) {
     styles[name] = body.getHeadingAttributes(DocumentApp.ParagraphHeading[name]) || {};
   });
-  const paragraphs = [];
-  collectParagraphs_(body, [], false, paragraphs);
+  const all = [];
+  collectParagraphs_(body, [], false, all);
+  const paragraphs = outsideTitlePage_(all, titlePageEnd_(body));
   let seenHeading = false;
   let backMatter = false;
   paragraphs.forEach(function (entry) {

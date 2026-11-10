@@ -6,6 +6,8 @@ const MESSAGES = {
     'tab.settings': 'Ustawienia',
     'tab.assistant': 'Asystent',
     'tab.check': 'Sprawdź',
+    'check.skipTitle': 'Pomijaj stronę tytułową',
+    'check.skipTitleHint': 'Typografia i formatowanie pomijają wszystko przed pierwszym podziałem strony. Po okładce wstaw podział strony (Wstaw → Podział → Podział strony).',
 
     'typo.title': 'Polska typografia',
     'typo.hint': 'Sprawdza treść pracy i przypisy. Niczego nie zmienia, dopóki nie klikniesz „Popraw”. Kliknięcie fragmentu pokazuje go w dokumencie.',
@@ -277,6 +279,8 @@ const MESSAGES = {
     'tab.settings': 'Settings',
     'tab.assistant': 'Assistant',
     'tab.check': 'Check',
+    'check.skipTitle': 'Skip the title page',
+    'check.skipTitleHint': 'Typography and formatting skip everything before the first page break. Put a page break after the cover (Insert → Break → Page break).',
 
     'typo.title': 'Polish typography',
     'typo.hint': 'Checks the body of your thesis and the footnotes. Nothing changes until you click "Fix". Click a passage to see it in the document.',

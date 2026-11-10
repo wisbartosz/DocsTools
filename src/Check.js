@@ -83,10 +83,42 @@ function countByKind_(issues) {
   return counts;
 }
 
+const SKIP_TITLE_PAGE_PROP = 'skipTitlePage';
+const TITLE_PAGE_MAX_ELEMENTS = 80;
+
+function skipTitlePage_() {
+  return docProps_().getProperty(SKIP_TITLE_PAGE_PROP) !== 'false';
+}
+
+function saveSkipTitlePage(skip) {
+  docProps_().setProperty(SKIP_TITLE_PAGE_PROP, skip ? 'true' : 'false');
+  return !!skip;
+}
+
+function titlePageEnd_(body) {
+  if (!skipTitlePage_()) return -1;
+  const count = Math.min(body.getNumChildren(), TITLE_PAGE_MAX_ELEMENTS);
+  for (let i = 0; i < count; i++) {
+    const child = castElement_(body.getChild(i));
+    if (child && (child.type === 'PARAGRAPH' || child.type === 'LIST_ITEM') &&
+        child.element.findElement(DocumentApp.ElementType.PAGE_BREAK)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function outsideTitlePage_(entries, end) {
+  if (end < 0) return entries;
+  return entries.filter(function (entry) { return entry.location.footnote >= 0 || entry.location.path[0] > end; });
+}
+
 function typographyTexts_() {
   const doc = DocumentApp.getActiveDocument();
-  const out = [];
-  collectTexts_(doc.getBody(), { footnote: -1, path: [] }, out);
+  const body = doc.getBody();
+  const bodyTexts = [];
+  collectTexts_(body, { footnote: -1, path: [] }, bodyTexts);
+  const out = outsideTitlePage_(bodyTexts, titlePageEnd_(body));
   doc.getFootnotes().forEach(function (footnote, index) {
     const contents = footnote.getFootnoteContents();
     if (contents) collectTexts_(contents, { footnote: index, path: [] }, out);
