@@ -43,7 +43,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   to date, heading levels, chapter numbering in order (with a one-click fix), required parts
   (Introduction, Conclusion, References…) in the right order, the number of keywords, the
   length of the abstract and the aim, and the number of pages. You enter the requirements
-  once; they are saved in the document.
+  once or read them from the guidelines among your sources (the same button as for the
+  formatting requirements); they are saved in the document.
 - The title page from your university stays safe. All checks skip
   everything before the first page break (you can turn this off in the "Check" tab).
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The

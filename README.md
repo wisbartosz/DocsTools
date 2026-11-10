@@ -41,7 +41,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   czy nagłówki mają właściwe poziomy, czy numeracja rozdziałów idzie po kolei (z poprawką
   jednym kliknięciem), czy są wymagane części (Wstęp, Zakończenie, Bibliografia…) we
   właściwej kolejności, ile jest słów kluczowych, jak długi jest abstrakt i cel pracy, ile
-  stron ma praca. Wymagania wpisujesz raz, zapisują się w dokumencie.
+  stron ma praca. Wymagania wpisujesz raz albo wczytujesz z regulaminu wśród źródeł
+  (tym samym przyciskiem co wymagania edytorskie); zapisują się w dokumencie.
 - Strona tytułowa od uczelni jest bezpieczna. Wszystkie sprawdzenia pomijają
   wszystko przed pierwszym podziałem strony (można to wyłączyć w zakładce „Sprawdź”).
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny

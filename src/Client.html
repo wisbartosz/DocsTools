@@ -659,7 +659,8 @@
   }
 
   function setRuleInput(path, value) {
-    const input = $(RULE_FIELDS[path]);
+    const input = path.indexOf('structure.') === 0 ? $(STRUCTURE_FIELDS[path.slice(10)]) : $(RULE_FIELDS[path]);
+    if (!input) return;
     if (input.type === 'checkbox') input.checked = value === true || value === 'true';
     else if (value === null || value === undefined) input.value = '';
     else input.value = input.type === 'number' ? String(value).replace(',', '.').replace(/[^\d.]/g, '') : value;
@@ -667,6 +668,22 @@
 
   function ruleLabel(path) {
     const [group, key] = path.split('.');
+    if (group === 'structure') {
+      const labels = {
+        sectionsReview: t('structure.rules.title') + ': ' + t('structure.type.review'),
+        sectionsResearch: t('structure.rules.title') + ': ' + t('structure.type.research'),
+        toc: t('structure.rules.toc'),
+        numbering: t('structure.rules.numbering'),
+        keywordsMin: t('structure.rules.keywords') + ': ' + t('structure.from'),
+        keywordsMax: t('structure.rules.keywords') + ': ' + t('structure.to'),
+        abstractMin: t('structure.rules.abstract') + ': ' + t('structure.from'),
+        abstractMax: t('structure.rules.abstract') + ': ' + t('structure.to'),
+        aimMin: t('structure.rules.aim') + ': ' + t('structure.from'),
+        aimMax: t('structure.rules.aim') + ': ' + t('structure.to'),
+        minPages: t('structure.rules.minPages'),
+      };
+      return labels[key] || path;
+    }
     if (path === 'size') return t('format.rules.text') + ': ' + t('format.rules.size');
     if (group === 'margins') return t('format.rules.margins') + ': ' + t('format.rules.' + key);
     if (group === 'heading1' || group === 'heading2') {
@@ -702,18 +719,52 @@
   }
 
   async function importFormatRules() {
+    if (!formatRulesLoaded) await Promise.all([loadFormatRules(), loadStructureRules()]);
     const result = await callGemini($('btn-import-rules'), 'importFormatRules');
     if (!result) return;
     fillFormatRules(result.rules);
+    fillImportedStructure(result.structure);
     $('format-rules-example').classList.add('hidden');
+    $('structure-rules-example').classList.add('hidden');
+    document.querySelectorAll('.check-section').forEach(section => {
+      if (section.dataset.section !== 'typography') section.open = true;
+    });
+    $('format-rules').open = true;
+    $('structure-rules').open = true;
     renderRulesImport(result);
-    showMessage(t('format.rules.imported', { count: result.rules.found.length }), 'ok');
+    showMessage(t('format.rules.imported', { count: result.found }), 'ok');
+  }
+
+  let importedSections = null;
+
+  function fillImportedStructure(imported) {
+    importedSections = imported.sections;
+    const sections = imported.sections[$('srule-type').value];
+    if (sections) $('srule-sections').value = sections;
+    if (imported.toc !== null) $('srule-toc').checked = imported.toc;
+    if (imported.numbering !== null) $('srule-numbering').checked = imported.numbering;
+    ['keywordsMin', 'keywordsMax', 'abstractMin', 'abstractMax', 'aimMin', 'aimMax', 'minPages'].forEach(key => {
+      $(STRUCTURE_FIELDS[key]).value = imported[key] === null ? '' : imported[key];
+    });
+  }
+
+  async function saveAllRules() {
+    await call('saveFormatRules', readFormatRules());
+    await call('saveStructureRules', readStructureRules());
+    $('rules-import-result').classList.add('hidden');
+    showMessage(t('format.rules.bothSaved'), 'ok');
   }
 
   function renderRulesImport(result) {
     const box = $('rules-import-result');
     box.innerHTML = '';
-    box.classList.toggle('hidden', !result.conflicts.length && !result.evidence.length);
+    box.classList.remove('hidden');
+    box.append(el('div', 'typo-desc', t('format.rules.reviewHint')));
+    const save = el('button', 'primary', t('format.rules.saveBoth'));
+    save.addEventListener('click', () => run(saveAllRules));
+    const row = el('div', 'row buttons');
+    row.append(save);
+    box.append(row);
     if (result.conflicts.length) {
       box.append(el('div', 'rules-conflicts-title', t('format.rules.conflicts')));
       result.conflicts.forEach((conflict, index) => {
@@ -869,9 +920,10 @@
   function structureTypeChanged() {
     if (!structureDefaults) return;
     const sections = $('srule-sections');
-    const defaults = Object.values(structureDefaults.sections);
-    if (!sections.value.trim() || defaults.includes(sections.value)) {
-      sections.value = structureDefaults.sections[$('srule-type').value];
+    const type = $('srule-type').value;
+    const known = Object.values(structureDefaults.sections).concat(importedSections ? Object.values(importedSections) : []);
+    if (!sections.value.trim() || known.includes(sections.value)) {
+      sections.value = (importedSections && importedSections[type]) || structureDefaults.sections[type];
     }
   }
 

@@ -47,6 +47,11 @@
   <section id="tab-check" class="panel hidden">
     <label class="rules-check check-option"><input id="skip-title-page" type="checkbox" checked> <?= t_('check.skipTitle') ?></label>
     <div class="muted small"><?= t_('check.skipTitleHint') ?></div>
+    <div class="row buttons">
+      <button id="btn-import-rules"><?= t_('format.rules.import') ?></button>
+    </div>
+    <div class="muted small"><?= t_('format.rules.importHint') ?></div>
+    <div id="rules-import-result" class="typo-group hidden"></div>
     <details class="check-section" data-section="structure">
       <summary><?= t_('structure.title') ?></summary>
       <div class="muted small"><?= t_('structure.hint') ?></div>
@@ -100,11 +105,6 @@
       <summary><?= t_('format.rules.title') ?></summary>
       <div class="typo-desc"><?= t_('format.rules.hint') ?></div>
       <div id="format-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
-      <div class="row buttons">
-        <button id="btn-import-rules"><?= t_('format.rules.import') ?></button>
-      </div>
-      <div class="typo-desc"><?= t_('format.rules.importHint') ?></div>
-      <div id="rules-import-result" class="hidden"></div>
       <div class="rules-grid">
         <b class="rules-head"><?= t_('format.rules.text') ?></b>
         <label for="rule-font"><?= t_('format.rules.font') ?></label><input id="rule-font" type="text">
