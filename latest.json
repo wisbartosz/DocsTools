@@ -1,8 +1,8 @@
 {
-  "version": "0.8.2",
-  "tag": "v0.8.2",
+  "version": "0.9.0",
+  "tag": "v0.9.0",
   "notes": {
-    "pl": "Strona tytułowa jest teraz bezpieczna. Typografia i formatowanie pomijają wszystko przed pierwszym podziałem strony, więc okładka przygotowana przez uczelnię nie trafia do sprawdzania ani do poprawek. Po okładce wstaw podział strony (Wstaw → Podział → Podział strony). Opcję „Pomijaj stronę tytułową” można wyłączyć w zakładce „Sprawdź”.",
-    "en": "The title page is now safe. Typography and formatting skip everything before the first page break, so the cover provided by your university is never checked or changed. Put a page break after the cover (Insert → Break → Page break). You can turn off \"Skip the title page\" in the \"Check\" tab."
+    "pl": "W zakładce „Sprawdź” jest nowa sekcja „Struktura pracy”. Przybornik sprawdza, czy automatyczny spis treści jest aktualny, czy nagłówki mają właściwe poziomy, czy numeracja rozdziałów idzie po kolei, czy praca ma wymagane części we właściwej kolejności, ile jest słów kluczowych, jak długi jest abstrakt i cel pracy oraz ile stron ma praca. Numerację i tytuły bez stylu nagłówka można poprawić jednym kliknięciem.\n\nSekcje zakładki „Sprawdź” są teraz zwijane.",
+    "en": "The \"Check\" tab has a new \"Thesis structure\" section. The toolkit checks whether the automatic table of contents is up to date, heading levels, chapter numbering, whether the thesis has the required parts in the right order, the number of keywords, the length of the abstract and the aim, and the number of pages. Numbering and titles without a heading style can be fixed with one click.\n\nThe sections of the \"Check\" tab can now be collapsed."
   }
 }

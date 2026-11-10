@@ -39,7 +39,12 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   letter case of titles. The requirements are saved in the document, so every thesis can
   have its own. The "Read from sources" button fills in the requirements from the
   guidelines among your sources (via Gemini); you can check and adjust them before saving.
-- The title page from your university stays safe. Typography and formatting skip
+- Thesis structure, also in the "Check" tab: whether the automatic table of contents is up
+  to date, heading levels, chapter numbering in order (with a one-click fix), required parts
+  (Introduction, Conclusion, References…) in the right order, the number of keywords, the
+  length of the abstract and the aim, and the number of pages. You enter the requirements
+  once; they are saved in the document.
+- The title page from your university stays safe. All checks skip
   everything before the first page break (you can turn this off in the "Check" tab).
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
@@ -230,6 +235,9 @@ no subfolders, so the manual installation can recreate them.
   paragraphs, titles, margins and page size.
 - `FormatImport.js`: "Read from sources" – picks the passages about formatting from your
   sources and asks Gemini to fill in the requirements (JSON), with conflicts and quotes.
+- `Structure.js`: thesis structure – table of contents, heading levels and numbering,
+  required parts, keywords, lengths, page count (via PDF export). The pure functions can be
+  tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.

@@ -130,7 +130,9 @@
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     $('btn-feedback').classList.toggle('active', name === 'feedback');
     hideMessage();
-    if (name === 'check' && !formatRulesLoaded) loadFormatRules().catch(e => showMessage(errorText(e), 'error'));
+    if (name === 'check' && !formatRulesLoaded) {
+      Promise.all([loadFormatRules(), loadStructureRules()]).catch(e => showMessage(errorText(e), 'error'));
+    }
   }
 
   async function sendFeedback() {
@@ -827,6 +829,141 @@
     }
   }
 
+  let structure = null;
+  let structureDefaults = null;
+  const structureOpen = new Set();
+  const STRUCTURE_FIELDS = {
+    type: 'srule-type', sections: 'srule-sections', toc: 'srule-toc', numbering: 'srule-numbering',
+    keywordsMin: 'srule-keywords-min', keywordsMax: 'srule-keywords-max',
+    abstractMin: 'srule-abstract-min', abstractMax: 'srule-abstract-max',
+    aimMin: 'srule-aim-min', aimMax: 'srule-aim-max', minPages: 'srule-min-pages',
+  };
+
+  async function loadStructureRules() {
+    const data = await call('getStructureRules');
+    structureDefaults = data.defaults;
+    const rules = data.rules || Object.assign({}, data.defaults, { sections: data.defaults.sections.review });
+    fillStructureRules(rules);
+    $('structure-rules-example').classList.toggle('hidden', !!data.rules);
+    $('structure-rules').open = !data.rules;
+  }
+
+  function fillStructureRules(rules) {
+    Object.keys(STRUCTURE_FIELDS).forEach(key => {
+      const input = $(STRUCTURE_FIELDS[key]);
+      const value = rules[key];
+      if (input.type === 'checkbox') input.checked = !!value;
+      else input.value = value === null || value === undefined ? '' : value;
+    });
+  }
+
+  function readStructureRules() {
+    const rules = {};
+    Object.keys(STRUCTURE_FIELDS).forEach(key => {
+      const input = $(STRUCTURE_FIELDS[key]);
+      rules[key] = input.type === 'checkbox' ? input.checked : input.value;
+    });
+    return rules;
+  }
+
+  function structureTypeChanged() {
+    if (!structureDefaults) return;
+    const sections = $('srule-sections');
+    const defaults = Object.values(structureDefaults.sections);
+    if (!sections.value.trim() || defaults.includes(sections.value)) {
+      sections.value = structureDefaults.sections[$('srule-type').value];
+    }
+  }
+
+  async function saveStructureRules() {
+    const rules = await call('saveStructureRules', readStructureRules());
+    fillStructureRules(rules);
+    $('structure-rules-example').classList.add('hidden');
+    showMessage(t('structure.rules.saved'), 'ok');
+  }
+
+  async function checkStructure() {
+    const button = $('btn-check-structure');
+    button.classList.add('loading');
+    try {
+      structure = await call('checkStructure');
+      renderStructure();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  function renderStructure() {
+    const groups = structure.groups.filter(g => g.count > 0);
+    const total = groups.reduce((sum, g) => sum + g.count, 0);
+    const summary = $('structure-summary');
+    summary.textContent = total ? t('structure.summary', { count: formatNumber(total) }) : t('structure.none');
+    if (structure.pages !== null) summary.append(el('div', 'typo-desc', t('structure.pagesInfo', { count: structure.pages })));
+    summary.classList.remove('hidden');
+    const box = $('structure-groups');
+    box.innerHTML = '';
+    groups.forEach(group => box.append(renderStructureGroup(group)));
+  }
+
+  function renderStructureGroup(group) {
+    const card = el('details', 'typo-group');
+    card.open = structureOpen.has(group.kind);
+    card.addEventListener('toggle', () => card.open ? structureOpen.add(group.kind) : structureOpen.delete(group.kind));
+    card.append(el('summary', '', t('structure.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
+    card.append(el('div', 'typo-desc', t('structure.kind.' + group.kind + '.desc')));
+    const fixable = group.items.filter(item => item.fixable).length;
+    if (fixable) {
+      const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(fixable) }));
+      fixAll.addEventListener('click', () => run(() => fixStructureKind(group.kind, fixAll)));
+      const row = el('div', 'row buttons');
+      row.append(fixAll);
+      card.append(row);
+    }
+    const list = el('ul', 'list');
+    group.items.forEach(item => list.append(renderStructureItem(item)));
+    card.append(list);
+    return card;
+  }
+
+  function renderStructureItem(item) {
+    const li = el('li');
+    const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
+    snippet.append(el('div', '', item.preview));
+    if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
+    if (item.showable) {
+      snippet.title = t('typo.show');
+      snippet.addEventListener('click', () => {
+        hideMessage();
+        call('showStructureIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
+      });
+    }
+    li.append(snippet);
+    if (item.fixable) {
+      const fix = el('button', 'link', t('typo.fix'));
+      fix.addEventListener('click', () => run(async () => {
+        structure = await call('fixStructureIssue', item.ref);
+        renderStructure();
+      }));
+      li.append(fix);
+    }
+    return li;
+  }
+
+  async function fixStructureKind(kind, button) {
+    button.classList.add('loading');
+    try {
+      const response = await call('fixStructureKind', kind);
+      structure = response.result;
+      renderStructure();
+      showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  $('srule-type').addEventListener('change', structureTypeChanged);
+  $('btn-save-structure-rules').addEventListener('click', () => run(saveStructureRules));
+  $('btn-check-structure').addEventListener('click', () => run(checkStructure));
   $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
   $('skip-title-page').addEventListener('change', () => {
     call('saveSkipTitlePage', $('skip-title-page').checked).catch(e => showMessage(errorText(e), 'error'));

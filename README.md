@@ -37,7 +37,12 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   i wielkość liter w tytułach. Wymagania zapisują się w dokumencie, więc każda praca może
   mieć własne. Przycisk „Wczytaj ze źródeł” wypełnia wymagania z regulaminu wśród źródeł
   (przez Gemini); przed zapisem możesz je sprawdzić i poprawić.
-- Strona tytułowa od uczelni jest bezpieczna. Typografia i formatowanie pomijają
+- Struktura pracy, też w zakładce „Sprawdź”: czy jest aktualny automatyczny spis treści,
+  czy nagłówki mają właściwe poziomy, czy numeracja rozdziałów idzie po kolei (z poprawką
+  jednym kliknięciem), czy są wymagane części (Wstęp, Zakończenie, Bibliografia…) we
+  właściwej kolejności, ile jest słów kluczowych, jak długi jest abstrakt i cel pracy, ile
+  stron ma praca. Wymagania wpisujesz raz, zapisują się w dokumencie.
+- Strona tytułowa od uczelni jest bezpieczna. Wszystkie sprawdzenia pomijają
   wszystko przed pierwszym podziałem strony (można to wyłączyć w zakładce „Sprawdź”).
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
@@ -229,6 +234,9 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   formatowania akapitów, tytułów, marginesów i formatu strony.
 - `FormatImport.js`: „Wczytaj ze źródeł” – wybiera ze źródeł fragmenty o formatowaniu
   i prosi Gemini o wypełnienie wymagań (JSON), z listą sprzeczności i cytatami.
+- `Structure.js`: struktura pracy – spis treści, poziomy i numeracja nagłówków, wymagane
+  części, słowa kluczowe, długości, liczba stron (eksport do PDF). Czyste funkcje są
+  testowalne w Node.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.

@@ -47,15 +47,54 @@
   <section id="tab-check" class="panel hidden">
     <label class="rules-check check-option"><input id="skip-title-page" type="checkbox" checked> <?= t_('check.skipTitle') ?></label>
     <div class="muted small"><?= t_('check.skipTitleHint') ?></div>
-    <h3><?= t_('typo.title') ?></h3>
+    <details class="check-section" data-section="structure">
+      <summary><?= t_('structure.title') ?></summary>
+      <div class="muted small"><?= t_('structure.hint') ?></div>
+      <details id="structure-rules" class="typo-group">
+        <summary><?= t_('structure.rules.title') ?></summary>
+        <div class="typo-desc"><?= t_('structure.rules.hint') ?></div>
+        <div id="structure-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
+        <div class="rules-grid">
+          <label for="srule-type"><?= t_('structure.rules.type') ?></label>
+          <select id="srule-type">
+            <option value="review"><?= t_('structure.type.review') ?></option>
+            <option value="research"><?= t_('structure.type.research') ?></option>
+          </select>
+          <span class="rules-wide muted"><?= t_('structure.rules.sections') ?></span>
+          <textarea id="srule-sections" class="rules-wide" rows="6"></textarea>
+          <label class="rules-check"><input id="srule-toc" type="checkbox"> <?= t_('structure.rules.toc') ?></label>
+          <label class="rules-check"><input id="srule-numbering" type="checkbox"> <?= t_('structure.rules.numbering') ?></label>
+          <span class="rules-wide muted"><?= t_('structure.rules.keywords') ?></span>
+          <input id="srule-keywords-min" type="number" min="0" step="1"><input id="srule-keywords-max" type="number" min="0" step="1">
+          <span class="rules-wide muted"><?= t_('structure.rules.abstract') ?></span>
+          <input id="srule-abstract-min" type="number" min="0" step="10"><input id="srule-abstract-max" type="number" min="0" step="10">
+          <span class="rules-wide muted"><?= t_('structure.rules.aim') ?></span>
+          <input id="srule-aim-min" type="number" min="0" step="10"><input id="srule-aim-max" type="number" min="0" step="10">
+          <label for="srule-min-pages"><?= t_('structure.rules.minPages') ?></label><input id="srule-min-pages" type="number" min="0" step="1">
+        </div>
+        <div class="row buttons">
+          <button id="btn-save-structure-rules" class="primary"><?= t_('format.rules.save') ?></button>
+        </div>
+      </details>
+      <div class="row buttons">
+        <button id="btn-check-structure" class="primary"><?= t_('structure.check') ?></button>
+      </div>
+      <div id="structure-summary" class="muted hidden"></div>
+      <div id="structure-groups"></div>
+    </details>
+
+    <details class="check-section" data-section="typography">
+    <summary><?= t_('typo.title') ?></summary>
     <div class="muted small"><?= t_('typo.hint') ?></div>
     <div class="row buttons">
       <button id="btn-check-typo" class="primary"><?= t_('typo.check') ?></button>
     </div>
     <div id="typo-summary" class="muted hidden"></div>
     <div id="typo-groups"></div>
+    </details>
 
-    <h3><?= t_('format.title') ?></h3>
+    <details class="check-section" data-section="format">
+    <summary><?= t_('format.title') ?></summary>
     <div class="muted small"><?= t_('format.hint') ?></div>
     <details id="format-rules" class="typo-group">
       <summary><?= t_('format.rules.title') ?></summary>
@@ -111,6 +150,7 @@
     </div>
     <div id="format-summary" class="muted hidden"></div>
     <div id="format-groups"></div>
+    </details>
   </section>
 
   <section id="tab-sources" class="panel hidden">
