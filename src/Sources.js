@@ -102,11 +102,14 @@ function currentSourceFiles_() {
 
 function collectFiles_(folder, out) {
   const files = folder.getFiles();
-  while (files.hasNext()) out.push(files.next());
+  while (files.hasNext()) {
+    const file = files.next();
+    if (!file.isTrashed()) out.push(file);
+  }
   const folders = folder.getFolders();
   while (folders.hasNext()) {
     const sub = folders.next();
-    if (!isDataFolderName_(sub.getName())) collectFiles_(sub, out);
+    if (!sub.isTrashed() && !isDataFolderName_(sub.getName())) collectFiles_(sub, out);
   }
 }
 
@@ -159,7 +162,7 @@ function convertAndExport_(file, workFolderId) {
   try {
     return exportAsText_(copy.id);
   } finally {
-    Drive.Files.remove(copy.id, { supportsAllDrives: true });
+    storeTrash_(copy.id);
   }
 }
 

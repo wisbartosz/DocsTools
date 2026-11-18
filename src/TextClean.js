@@ -1,4 +1,4 @@
-const TEXT_PIPELINE_VERSION = 2;
+const TEXT_PIPELINE_VERSION = 3;
 const FOOTER_MAX_LINE_LENGTH = 120;
 const FOOTER_SEED_MIN = 3;
 const FOOTER_MIN_PAGES = 5;
@@ -23,21 +23,28 @@ function cleanSourceText_(raw) {
 }
 
 function removeDocsComments_(text) {
-  const anchor = /([^\s[])\[([a-z]{1,3})\]/g;
+  const lines = text.split('\n');
   const labels = {};
-  text.replace(anchor, function (match, before, label) {
-    labels[label] = true;
+  let blockStart = lines.length;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const comment = line.match(/^\[([a-z]{1,3})\]/);
+    if (!comment) break;
+    labels[comment[1]] = true;
+    blockStart = i;
+  }
+  if (!Object.keys(labels).length) return text;
+  const anchored = {};
+  const body = lines.slice(0, blockStart).join('\n');
+  body.replace(/([^\s[])\[([a-z]{1,3})\]/g, function (match, before, label) {
+    if (labels[label]) anchored[label] = true;
     return match;
   });
-  if (!Object.keys(labels).length) return text;
-  return text
-    .split('\n')
-    .filter(function (line) {
-      const comment = line.match(/^\[([a-z]{1,3})\]/);
-      return !(comment && labels[comment[1]]);
-    })
-    .join('\n')
-    .replace(anchor, '$1');
+  if (!Object.keys(anchored).length) return text;
+  return body.replace(/([^\s[])\[([a-z]{1,3})\]/g, function (match, before, label) {
+    return anchored[label] ? before : match;
+  });
 }
 
 function footerTokens_(line) {

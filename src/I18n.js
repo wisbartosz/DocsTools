@@ -1,6 +1,7 @@
 const UI_LANGUAGES = ['pl', 'en'];
 
 let uiLanguageCache_ = null;
+let uiMessagesCache_ = null;
 
 function uiLanguage_() {
   if (uiLanguageCache_) return uiLanguageCache_;
@@ -33,7 +34,11 @@ function t_(key, params) {
 }
 
 function uiMessages_() {
-  return Object.assign({}, MESSAGES.pl, MESSAGES[uiLanguage_()]);
+  const language = uiLanguage_();
+  if (!uiMessagesCache_ || uiMessagesCache_.language !== language) {
+    uiMessagesCache_ = { language: language, messages: Object.assign({}, MESSAGES.pl, MESSAGES[language]) };
+  }
+  return uiMessagesCache_.messages;
 }
 
 function formatMessage_(text, params) {

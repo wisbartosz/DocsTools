@@ -9,11 +9,17 @@ const TYPO_RULES = {
     });
   },
   quotes: function (text) {
+    const polish = [];
+    const span = /„[^„”\n\r\u000b]{0,300}”/g;
+    let found;
+    while ((found = span.exec(text)) !== null) polish.push([found.index, found.index + found[0].length]);
     return matchAll_(text, /([„"])([^„“”"\n\r\u000b]{1,300})([“”"])/g, function (m) {
       const open = m[1];
       const close = m[3];
       if (open === '„' && close === '”') return null;
       const end = m.index + m[0].length;
+      const nested = polish.some(function (p) { return m.index >= p[0] && end <= p[1]; });
+      if (nested) return null;
       const edits = [];
       if (close !== '”') edits.push({ at: end - 1, remove: 1, insert: '”' });
       if (open !== '„') edits.push({ at: m.index, remove: 1, insert: '„' });
@@ -24,14 +30,8 @@ const TYPO_RULES = {
     const spaced = matchAll_(text, /(?<=\S) - (?=\S)/g, function (m) {
       return { start: m.index, end: m.index + 3, edits: [{ at: m.index + 1, remove: 1, insert: '–' }] };
     });
-    const ranges = matchAll_(text, /(?<=(?:^|[^\w\-\/.])(?:\d{1,4}|(?:s|ss|str|pp|p)\.\s?\d{1,4}))-(?=\d{1,4}(?![\w\-\/]))/g, function (m) {
-      const before = /\d+$/.exec(text.slice(0, m.index));
-      const after = /^\d+/.exec(text.slice(m.index + 1));
-      return {
-        start: m.index - before[0].length,
-        end: m.index + 1 + after[0].length,
-        edits: [{ at: m.index, remove: 1, insert: '–' }],
-      };
+    const ranges = matchAll_(text, /(\d{1,4})-(\d{1,4})(?![\w\-\/])/g, function (m) {
+      return numberRange_(text, m);
     });
     return spaced.concat(ranges).sort(function (a, b) { return a.start - b.start; });
   },
@@ -56,6 +56,22 @@ const TYPO_RULES = {
     return before.concat(after).sort(function (a, b) { return a.start - b.start; });
   },
 };
+
+function numberRange_(text, m) {
+  const start = m.index;
+  const first = m[1];
+  const second = m[2];
+  const before = text.slice(Math.max(0, start - 12), start);
+  const previous = start > 0 ? text.charAt(start - 1) : '';
+  const afterPagePrefix = /(?:^|[^\w])(?:s|ss|str|pp|p)\.\s?$/.test(before);
+  if (previous && /[\w\-\/.]/.test(previous) && !afterPagePrefix) return null;
+  if (/(?:issn|isbn|tel)\.?:?\s*$/i.test(before)) return null;
+  if (/^0/.test(first) || /^0/.test(second)) return null;
+  if (first.length === 2 && second.length === 3) return null;
+  const isYear = function (value) { return value.length === 4 && Number(value) >= 1000 && Number(value) <= 2099; };
+  if ((first.length === 4 || second.length === 4) && !(isYear(first) && isYear(second))) return null;
+  return { start: start, end: start + m[0].length, edits: [{ at: start + first.length, remove: 1, insert: '–' }] };
+}
 
 function findTypographyIssues_(text, kinds) {
   const issues = [];

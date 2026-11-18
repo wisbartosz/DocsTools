@@ -21,7 +21,11 @@ function dataFolderId_(create) {
   }
   const sourceFolder = DriveApp.getFolderById(getSourceFolderId_());
   const existing = sourceFolder.getFoldersByName(DATA_FOLDER_NAME);
-  let id = existing.hasNext() ? existing.next().getId() : null;
+  let id = null;
+  while (!id && existing.hasNext()) {
+    const folder = existing.next();
+    if (!folder.isTrashed()) id = folder.getId();
+  }
   if (!id && create) id = createFolder_(DATA_FOLDER_NAME, sourceFolder.getId(), true);
   if (id) props.setProperty(PROP.DATA_FOLDER, id);
   return id;
@@ -31,7 +35,10 @@ function storeFolderId_(name, create) {
   const rootId = dataFolderId_(create);
   if (!rootId) return null;
   const existing = DriveApp.getFolderById(rootId).getFoldersByName(name);
-  if (existing.hasNext()) return existing.next().getId();
+  while (existing.hasNext()) {
+    const folder = existing.next();
+    if (!folder.isTrashed()) return folder.getId();
+  }
   return create ? createFolder_(name, rootId, false) : null;
 }
 
@@ -73,7 +80,8 @@ function storeWriteBlob_(folderId, fileId, name, mimeType, blob) {
       Drive.Files.update({ name: name }, fileId, blob, { supportsAllDrives: true });
       return fileId;
     } catch (e) {
-      console.warn('Plik ' + fileId + ' niedostępny, tworzę nowy: ' + e.message);
+      if (!/not ?found|404/i.test(e.message)) throw e;
+      console.warn('Plik ' + fileId + ' nie istnieje, tworzę nowy: ' + e.message);
     }
   }
   return Drive.Files.create({ name: name, mimeType: mimeType, parents: [folderId] }, blob, { supportsAllDrives: true }).id;

@@ -76,7 +76,8 @@ function t_(key, params) {
 
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile('Page');
-  template.scriptId = (e && e.parameter && e.parameter.scriptId) || '';
+  const scriptId = String((e && e.parameter && e.parameter.scriptId) || '').trim();
+  template.scriptId = /^[A-Za-z0-9_-]{20,100}$/.test(scriptId) ? scriptId : '';
   template.lang = lang_();
   template.texts = texts_();
   return template.evaluate().setTitle(t_('title'));
@@ -114,8 +115,9 @@ function installIntoDocument(link) {
   const match = String(link || '').match(/\/document\/d\/([A-Za-z0-9_-]+)/) || String(link || '').match(/^([A-Za-z0-9_-]{25,})$/);
   if (!match) throw new Error(t_('err.badDoc'));
   const latest = latestRelease_();
+  const files = releaseFiles_(latest.tag);
   const project = scriptApi_('post', '', { title: ADDON_TITLE, parentId: match[1] }, 'err.createFailed');
-  scriptApi_('put', project.scriptId + '/content', { files: releaseFiles_(latest.tag) });
+  scriptApi_('put', project.scriptId + '/content', { files: files });
   return { version: latest.version };
 }
 

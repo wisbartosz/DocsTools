@@ -1,8 +1,8 @@
 {
-  "version": "0.9.3",
-  "tag": "v0.9.3",
+  "version": "0.9.4",
+  "tag": "v0.9.4",
   "notes": {
-    "pl": "Poprawki po przeglądzie kodu: sprawdzanie struktury uwzględnia wybrany typ pracy także przed zapisem wymagań; „Przywróć domyślne” tylko wpisuje wartości do formularza i niczego nie kasuje bez „Zapisz”; wczytywanie wymagań ze źródeł nie czyści pól, których źródła nie podają; wróciły zamienne nazwy części (np. „Literatura”, „Metodologia”); liczba stron jest liczona tylko przy „Sprawdź strukturę”, więc poprawki działają szybciej.",
-    "en": "Fixes after a code review: the structure check uses the selected thesis type even before the requirements are saved; \"Restore defaults\" only fills in the form and deletes nothing until you click Save; reading requirements from sources no longer clears fields the sources don't mention; alternative part names are back (for example \"Literatura\", \"Methods\"); pages are counted only on \"Check structure\", so fixes are faster."
+    "pl": "Poprawki po przeglądzie starszego kodu. Typografia nie zamienia już dywizów w numerach ISSN, kodach pocztowych i telefonach, a cytat w polskim cytacie zostaje bez zmian. Pliki z kosza nie są traktowane jako źródła. Chwilowy błąd Dysku nie tworzy już zdublowanych plików roboczych. Czyszczenie tekstu nie wycina wyliczeń typu [i], [ii] z PDF-ów, dlatego źródła trzeba przetworzyć ponownie (zakładka Źródła → Przetwórz). Instalator jest bezpieczniejszy i nie zostawia pustych projektów po błędzie pobierania.",
+    "en": "Fixes after a review of older code. Typography no longer changes hyphens in ISSN numbers, postal codes and phone numbers, and a quote inside a Polish quote stays as it is. Files in the trash are no longer treated as sources. A temporary Drive error no longer creates duplicate working files. Text cleanup no longer removes [i], [ii] lists from PDFs, so sources need processing again (Sources tab → Process). The installer is safer and no longer leaves empty projects after a download error."
   }
 }
