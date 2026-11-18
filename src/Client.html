@@ -702,9 +702,14 @@
   }
 
   async function resetFormatRules() {
-    fillFormatRules(await call('resetFormatRules'));
-    $('format-rules-example').classList.remove('hidden');
+    fillFormatRules(await call('getDefaultFormatRules'));
+    hideRulesImport();
     showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  function hideRulesImport() {
+    $('rules-import-result').innerHTML = '';
+    $('rules-import-result').classList.add('hidden');
   }
 
   function fillFormatRules(rules) {
@@ -727,7 +732,7 @@
     if (!formatRulesLoaded) await Promise.all([loadFormatRules(), loadStructureRules()]);
     const result = await callGemini($('btn-import-rules'), 'importFormatRules');
     if (!result) return;
-    fillFormatRules(result.rules);
+    result.rules.found.forEach(path => setRuleInput(path, ruleValue(result.rules, path)));
     fillImportedStructure(result.structure);
     $('format-rules-example').classList.add('hidden');
     $('structure-rules-example').classList.add('hidden');
@@ -749,7 +754,7 @@
     if (imported.toc !== null) $('srule-toc').checked = imported.toc;
     if (imported.numbering !== null) $('srule-numbering').checked = imported.numbering;
     ['keywordsMin', 'keywordsMax', 'abstractMin', 'abstractMax', 'aimMin', 'aimMax', 'minPages'].forEach(key => {
-      $(STRUCTURE_FIELDS[key]).value = imported[key] === null ? '' : imported[key];
+      if (imported[key] !== null) $(STRUCTURE_FIELDS[key]).value = imported[key];
     });
   }
 
@@ -903,9 +908,9 @@
   }
 
   async function resetStructureRules() {
-    fillStructureRules(await call('resetStructureRules', $('srule-type').value));
+    fillStructureRules(await call('getDefaultStructureRules', $('srule-type').value));
     importedSections = null;
-    $('structure-rules-example').classList.remove('hidden');
+    hideRulesImport();
     showMessage(t('rules.resetDone'), 'ok');
   }
 
@@ -948,11 +953,21 @@
     const button = $('btn-check-structure');
     button.classList.add('loading');
     try {
-      structure = await call('checkStructure');
+      structure = await call('checkStructure', { type: $('srule-type').value, pages: true });
       renderStructure();
     } finally {
       button.classList.remove('loading');
     }
+  }
+
+  function withPreviousPages(next) {
+    if (next.pages === null && structure && structure.pages !== null) {
+      next.pages = structure.pages;
+      next.groups = next.groups.map(group => group.kind === 'pages'
+        ? structure.groups.find(previous => previous.kind === 'pages') || group
+        : group);
+    }
+    return next;
   }
 
   function renderStructure() {
@@ -1003,7 +1018,7 @@
     if (item.fixable) {
       const fix = el('button', 'link', t('typo.fix'));
       fix.addEventListener('click', () => run(async () => {
-        structure = await call('fixStructureIssue', item.ref);
+        structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('srule-type').value));
         renderStructure();
       }));
       li.append(fix);
@@ -1014,8 +1029,8 @@
   async function fixStructureKind(kind, button) {
     button.classList.add('loading');
     try {
-      const response = await call('fixStructureKind', kind);
-      structure = response.result;
+      const response = await call('fixStructureKind', kind, $('srule-type').value);
+      structure = withPreviousPages(response.result);
       renderStructure();
       showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
     } finally {

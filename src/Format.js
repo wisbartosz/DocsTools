@@ -27,12 +27,19 @@ const FORMAT_DEFAULT_RULES = {
 
 function getFormatRules() {
   const saved = readFormatRules_();
-  return { rules: saved || normalizeFormatRules_(FORMAT_DEFAULT_RULES), isDefault: !saved, skipTitlePage: skipTitlePage_() };
+  return { rules: saved || defaultFormatRules_(), isDefault: !saved, skipTitlePage: skipTitlePage_() };
 }
 
-function resetFormatRules() {
-  docProps_().deleteProperty(FORMAT_RULES_PROP);
+function getDefaultFormatRules() {
+  return defaultFormatRules_();
+}
+
+function defaultFormatRules_() {
   return normalizeFormatRules_(FORMAT_DEFAULT_RULES);
+}
+
+function currentFormatRules_() {
+  return readFormatRules_() || defaultFormatRules_();
 }
 
 function saveFormatRules(input) {
@@ -79,7 +86,7 @@ function normalizeFormatRules_(input) {
 }
 
 function checkFormatting() {
-  const rules = requireFormatRules_();
+  const rules = currentFormatRules_();
   const ctx = formatContext_();
   const groups = {};
   FORMAT_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [] }; });
@@ -108,7 +115,7 @@ function showFormatIssue(ref) {
 }
 
 function fixFormatIssue(ref) {
-  const rules = requireFormatRules_();
+  const rules = currentFormatRules_();
   const ctx = formatContext_();
   if (FORMAT_DOCUMENT_KINDS[ref.kind]) {
     applyDocumentFormatFix_(ref.kind, rules, ctx);
@@ -124,7 +131,7 @@ function fixFormatIssue(ref) {
 
 function fixFormatKind(kind) {
   if (FORMAT_KINDS.indexOf(kind) < 0) throw userError_('format.err.changed');
-  const rules = requireFormatRules_();
+  const rules = currentFormatRules_();
   const ctx = formatContext_();
   let fixed = 0;
   if (FORMAT_DOCUMENT_KINDS[kind]) {
@@ -139,10 +146,6 @@ function fixFormatKind(kind) {
     });
   }
   return { fixed: fixed, result: checkFormatting() };
-}
-
-function requireFormatRules_() {
-  return readFormatRules_() || normalizeFormatRules_(FORMAT_DEFAULT_RULES);
 }
 
 function formatContext_() {

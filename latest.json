@@ -1,8 +1,8 @@
 {
-  "version": "0.9.2",
-  "tag": "v0.9.2",
+  "version": "0.9.3",
+  "tag": "v0.9.3",
   "notes": {
-    "pl": "Wymagania formatowania i struktury mają teraz domyślne wartości. Obowiązują od razu, więc sprawdzanie działa bez wpisywania czegokolwiek. Przycisk „Przywróć domyślne” w obu formularzach wraca do tych wartości.",
-    "en": "Formatting and structure requirements now have default values. They apply right away, so checks work without entering anything. The \"Restore defaults\" button in both forms brings these values back."
+    "pl": "Poprawki po przeglądzie kodu: sprawdzanie struktury uwzględnia wybrany typ pracy także przed zapisem wymagań; „Przywróć domyślne” tylko wpisuje wartości do formularza i niczego nie kasuje bez „Zapisz”; wczytywanie wymagań ze źródeł nie czyści pól, których źródła nie podają; wróciły zamienne nazwy części (np. „Literatura”, „Metodologia”); liczba stron jest liczona tylko przy „Sprawdź strukturę”, więc poprawki działają szybciej.",
+    "en": "Fixes after a code review: the structure check uses the selected thesis type even before the requirements are saved; \"Restore defaults\" only fills in the form and deletes nothing until you click Save; reading requirements from sources no longer clears fields the sources don't mention; alternative part names are back (for example \"Literatura\", \"Methods\"); pages are counted only on \"Check structure\", so fixes are faster."
   }
 }

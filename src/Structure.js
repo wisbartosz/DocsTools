@@ -156,9 +156,12 @@ function getStructureRules() {
   };
 }
 
-function resetStructureRules(type) {
-  docProps_().deleteProperty(STRUCTURE_RULES_PROP);
+function getDefaultStructureRules(type) {
   return defaultStructureRules_(type);
+}
+
+function currentStructureRules_(type) {
+  return readStructureRules_() || defaultStructureRules_(type);
 }
 
 function defaultStructureRules_(type) {
@@ -193,8 +196,9 @@ function readStructureRules_() {
   }
 }
 
-function checkStructure() {
-  const rules = readStructureRules_() || defaultStructureRules_('review');
+function checkStructure(options) {
+  const opts = options || {};
+  const rules = currentStructureRules_(opts.type);
   const ctx = structureContext_();
   const groups = {};
   STRUCTURE_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [] }; });
@@ -292,7 +296,7 @@ function checkStructure() {
   });
 
   let pages = null;
-  if (rules.minPages) {
+  if (rules.minPages && opts.pages !== false) {
     pages = countPages_();
     if (pages !== null && pages < rules.minPages) {
       add('pages', plainItem('pages', t_('structure.pages.detail', { count: pages, min: rules.minPages }), ''));
@@ -316,18 +320,18 @@ function showStructureIssue(ref) {
   doc.setSelection(doc.newRange().addElement(element).build());
 }
 
-function fixStructureIssue(ref) {
+function fixStructureIssue(ref, type) {
   applyStructureFix_(ref.kind, ref);
-  return checkStructure();
+  return checkStructure({ type: type, pages: false });
 }
 
-function fixStructureKind(kind) {
+function fixStructureKind(kind, type) {
   if (!STRUCTURE_FIXABLE[kind]) throw userError_('format.err.changed');
-  const result = checkStructure();
+  const result = checkStructure({ type: type, pages: false });
   const group = result.groups.filter(function (g) { return g.kind === kind; })[0];
   const refs = group.items.filter(function (item) { return item.fixable; }).map(function (item) { return item.ref; });
   refs.slice().reverse().forEach(function (ref) { applyStructureFix_(kind, ref); });
-  return { fixed: refs.length, result: checkStructure() };
+  return { fixed: refs.length, result: checkStructure({ type: type, pages: false }) };
 }
 
 function applyStructureFix_(kind, ref) {

@@ -46,7 +46,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 - Domyślne wymagania formatowania i struktury pochodzą z regulaminu i poradnika uczelni,
   dla której powstał Przybornik. Obowiązują od razu, bez zapisywania. Jeśli piszesz pracę
   na innej uczelni, zmień je w formularzach albo wczytaj ze źródeł. Przycisk „Przywróć
-  domyślne” wraca do wartości z regulaminu.
+  domyślne” wpisuje do formularza wartości z regulaminu; obowiązują po kliknięciu „Zapisz
+  wymagania”, więc przypadkowe kliknięcie niczego nie kasuje.
 - Strona tytułowa od uczelni jest bezpieczna. Wszystkie sprawdzenia pomijają
   wszystko przed pierwszym podziałem strony (można to wyłączyć w zakładce „Sprawdź”).
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
