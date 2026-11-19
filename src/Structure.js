@@ -1,4 +1,5 @@
 const STRUCTURE_RULES_PROP = 'structureRules';
+const STRUCTURE_TYPE_PROP = 'structureType';
 const STRUCTURE_TYPES = ['review', 'research'];
 const STRUCTURE_KINDS = ['toc', 'hierarchy', 'numbering', 'missing', 'order', 'untagged', 'keywords', 'length', 'pages'];
 const STRUCTURE_FIXABLE = { numbering: true, untagged: true };
@@ -150,7 +151,7 @@ function normalizeStructureRules_(input) {
 function getStructureRules() {
   const saved = readStructureRules_();
   return {
-    rules: saved || defaultStructureRules_('review'),
+    rules: saved || defaultStructureRules_(savedStructureType_()),
     isDefault: !saved,
     sections: { review: t_('structure.default.review'), research: t_('structure.default.research') },
   };
@@ -161,7 +162,11 @@ function getDefaultStructureRules(type) {
 }
 
 function currentStructureRules_(type) {
-  return readStructureRules_() || defaultStructureRules_(type);
+  return readStructureRules_() || defaultStructureRules_(type || savedStructureType_());
+}
+
+function savedStructureType_() {
+  return docProps_().getProperty(STRUCTURE_TYPE_PROP) || 'review';
 }
 
 function defaultStructureRules_(type) {
@@ -181,8 +186,12 @@ function defaultStructureRules_(type) {
 
 function saveStructureRules(input) {
   const rules = normalizeStructureRules_(input);
-  docProps_().setProperty(STRUCTURE_RULES_PROP, JSON.stringify(rules));
-  return rules;
+  const props = docProps_();
+  props.setProperty(STRUCTURE_TYPE_PROP, rules.type);
+  const isDefault = JSON.stringify(rules) === JSON.stringify(defaultStructureRules_(rules.type));
+  if (isDefault) props.deleteProperty(STRUCTURE_RULES_PROP);
+  else props.setProperty(STRUCTURE_RULES_PROP, JSON.stringify(rules));
+  return { rules: rules, isDefault: isDefault };
 }
 
 function readStructureRules_() {

@@ -97,8 +97,9 @@ function installUpdate(scriptId) {
   const files = readContent_(scriptId);
   const current = pdzVersion_(files);
   const latest = latestRelease_();
+  const release = releaseFiles_(latest.tag);
   scriptApi_('post', scriptId + '/versions', { description: BACKUP_PREFIX + ' ' + current + ' ' + new Date().toISOString() });
-  scriptApi_('put', scriptId + '/content', { files: releaseFiles_(latest.tag) });
+  scriptApi_('put', scriptId + '/content', { files: release });
   return { version: latest.version };
 }
 

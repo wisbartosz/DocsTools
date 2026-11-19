@@ -44,8 +44,10 @@ function currentFormatRules_() {
 
 function saveFormatRules(input) {
   const rules = normalizeFormatRules_(input);
-  docProps_().setProperty(FORMAT_RULES_PROP, JSON.stringify(rules));
-  return rules;
+  const isDefault = JSON.stringify(rules) === JSON.stringify(defaultFormatRules_());
+  if (isDefault) docProps_().deleteProperty(FORMAT_RULES_PROP);
+  else docProps_().setProperty(FORMAT_RULES_PROP, JSON.stringify(rules));
+  return { rules: rules, isDefault: isDefault };
 }
 
 function readFormatRules_() {

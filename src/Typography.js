@@ -67,9 +67,12 @@ function numberRange_(text, m) {
   if (previous && /[\w\-\/.]/.test(previous) && !afterPagePrefix) return null;
   if (/(?:issn|isbn|tel)\.?:?\s*$/i.test(before)) return null;
   if (/^0/.test(first) || /^0/.test(second)) return null;
-  if (first.length === 2 && second.length === 3) return null;
+  const following = text.slice(start + m[0].length, start + m[0].length + 3);
+  const postalCode = first.length === 2 && second.length === 3 && /^\s+[A-ZÀ-ſ]/.test(following) && !/^\s+[a-z]/.test(following);
+  if (postalCode && !afterPagePrefix) return null;
   const isYear = function (value) { return value.length === 4 && Number(value) >= 1000 && Number(value) <= 2099; };
-  if ((first.length === 4 || second.length === 4) && !(isYear(first) && isYear(second))) return null;
+  const pageRange = afterPagePrefix || previous === ':' || (Number(second) > Number(first) && Number(second) - Number(first) <= 300);
+  if ((first.length === 4 || second.length === 4) && !(isYear(first) && isYear(second)) && !pageRange) return null;
   return { start: start, end: start + m[0].length, edits: [{ at: start + first.length, remove: 1, insert: '–' }] };
 }
 

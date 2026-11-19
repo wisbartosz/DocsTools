@@ -759,9 +759,11 @@
   }
 
   async function saveAllRules() {
-    await call('saveFormatRules', readFormatRules());
-    await call('saveStructureRules', readStructureRules());
-    $('rules-import-result').classList.add('hidden');
+    const format = await call('saveFormatRules', readFormatRules());
+    const saved = await call('saveStructureRules', readStructureRules());
+    $('format-rules-example').classList.toggle('hidden', !format.isDefault);
+    $('structure-rules-example').classList.toggle('hidden', !saved.isDefault);
+    hideRulesImport();
     showMessage(t('format.rules.bothSaved'), 'ok');
   }
 
@@ -808,9 +810,9 @@
   }
 
   async function saveFormatRules() {
-    const rules = await call('saveFormatRules', readFormatRules());
-    fillFormatRules(rules);
-    $('format-rules-example').classList.add('hidden');
+    const saved = await call('saveFormatRules', readFormatRules());
+    fillFormatRules(saved.rules);
+    $('format-rules-example').classList.toggle('hidden', !saved.isDefault);
     showMessage(t('format.rules.saved'), 'ok');
   }
 
@@ -943,9 +945,9 @@
   }
 
   async function saveStructureRules() {
-    const rules = await call('saveStructureRules', readStructureRules());
-    fillStructureRules(rules);
-    $('structure-rules-example').classList.add('hidden');
+    const saved = await call('saveStructureRules', readStructureRules());
+    fillStructureRules(saved.rules);
+    $('structure-rules-example').classList.toggle('hidden', !saved.isDefault);
     showMessage(t('structure.rules.saved'), 'ok');
   }
 

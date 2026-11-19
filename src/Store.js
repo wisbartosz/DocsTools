@@ -20,12 +20,7 @@ function dataFolderId_(create) {
     }
   }
   const sourceFolder = DriveApp.getFolderById(getSourceFolderId_());
-  const existing = sourceFolder.getFoldersByName(DATA_FOLDER_NAME);
-  let id = null;
-  while (!id && existing.hasNext()) {
-    const folder = existing.next();
-    if (!folder.isTrashed()) id = folder.getId();
-  }
+  let id = activeChildFolderId_(sourceFolder, DATA_FOLDER_NAME);
   if (!id && create) id = createFolder_(DATA_FOLDER_NAME, sourceFolder.getId(), true);
   if (id) props.setProperty(PROP.DATA_FOLDER, id);
   return id;
@@ -34,12 +29,18 @@ function dataFolderId_(create) {
 function storeFolderId_(name, create) {
   const rootId = dataFolderId_(create);
   if (!rootId) return null;
-  const existing = DriveApp.getFolderById(rootId).getFoldersByName(name);
-  while (existing.hasNext()) {
-    const folder = existing.next();
-    if (!folder.isTrashed()) return folder.getId();
-  }
+  const id = activeChildFolderId_(DriveApp.getFolderById(rootId), name);
+  if (id) return id;
   return create ? createFolder_(name, rootId, false) : null;
+}
+
+function activeChildFolderId_(parent, name) {
+  const found = parent.searchFolders('title = "' + driveQueryValue_(name) + '" and trashed = false');
+  return found.hasNext() ? found.next().getId() : null;
+}
+
+function driveQueryValue_(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function createFolder_(name, parentId, fallbackToRoot) {
@@ -54,7 +55,7 @@ function createFolder_(name, parentId, fallbackToRoot) {
 }
 
 function storeReadJson_(folderId, name) {
-  const files = DriveApp.getFolderById(folderId).getFilesByName(name);
+  const files = DriveApp.getFolderById(folderId).searchFiles('title = "' + driveQueryValue_(name) + '" and trashed = false');
   if (!files.hasNext()) return { fileId: null, data: {} };
   const file = files.next();
   return { fileId: file.getId(), data: JSON.parse(file.getBlob().getDataAsString('UTF-8') || '{}') };
@@ -77,7 +78,7 @@ function storeReadText_(fileId) {
 function storeWriteBlob_(folderId, fileId, name, mimeType, blob) {
   if (fileId) {
     try {
-      Drive.Files.update({ name: name }, fileId, blob, { supportsAllDrives: true });
+      Drive.Files.update({ name: name, trashed: false }, fileId, blob, { supportsAllDrives: true });
       return fileId;
     } catch (e) {
       if (!/not ?found|404/i.test(e.message)) throw e;

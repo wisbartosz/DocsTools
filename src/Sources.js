@@ -101,15 +101,12 @@ function currentSourceFiles_() {
 }
 
 function collectFiles_(folder, out) {
-  const files = folder.getFiles();
-  while (files.hasNext()) {
-    const file = files.next();
-    if (!file.isTrashed()) out.push(file);
-  }
-  const folders = folder.getFolders();
+  const files = folder.searchFiles('trashed = false');
+  while (files.hasNext()) out.push(files.next());
+  const folders = folder.searchFolders('trashed = false');
   while (folders.hasNext()) {
     const sub = folders.next();
-    if (!sub.isTrashed() && !isDataFolderName_(sub.getName())) collectFiles_(sub, out);
+    if (!isDataFolderName_(sub.getName())) collectFiles_(sub, out);
   }
 }
 

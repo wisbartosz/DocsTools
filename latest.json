@@ -1,8 +1,8 @@
 {
-  "version": "0.9.4",
-  "tag": "v0.9.4",
+  "version": "0.9.5",
+  "tag": "v0.9.5",
   "notes": {
-    "pl": "Poprawki po przeglądzie starszego kodu. Typografia nie zamienia już dywizów w numerach ISSN, kodach pocztowych i telefonach, a cytat w polskim cytacie zostaje bez zmian. Pliki z kosza nie są traktowane jako źródła. Chwilowy błąd Dysku nie tworzy już zdublowanych plików roboczych. Czyszczenie tekstu nie wycina wyliczeń typu [i], [ii] z PDF-ów, dlatego źródła trzeba przetworzyć ponownie (zakładka Źródła → Przetwórz). Instalator jest bezpieczniejszy i nie zostawia pustych projektów po błędzie pobierania.",
-    "en": "Fixes after a review of older code. Typography no longer changes hyphens in ISSN numbers, postal codes and phone numbers, and a quote inside a Polish quote stays as it is. Files in the trash are no longer treated as sources. A temporary Drive error no longer creates duplicate working files. Text cleanup no longer removes [i], [ii] lists from PDFs, so sources need processing again (Sources tab → Process). The installer is safer and no longer leaves empty projects after a download error."
+    "pl": "Poprawki poprzedniej wersji. Czyszczenie tekstu źródeł znowu poprawnie usuwa komentarze z Worda i Dokumentów Google (także z odpowiedziami) i nigdy nie ucina końcówki tekstu – źródła trzeba przetworzyć ponownie (zakładka Źródła → Przetwórz). Typografia znowu wyłapuje zakresy stron w bibliografii (np. s. 95-102, 2101-2110). Zapisanie wymagań równych domyślnym przywraca tryb domyślny, więc dokument dostaje przyszłe poprawki wymagań. Instalator nie tworzy zbędnej kopii zapasowej, gdy pobranie wersji się nie uda.",
+    "en": "Fixes to the previous version. Source text cleanup again removes Word and Google Docs comments properly (including replies) and never cuts off the end of a text – sources need processing again (Sources tab → Process). Typography again catches page ranges in the bibliography (e.g. s. 95-102, 2101-2110). Saving requirements equal to the defaults switches back to default mode, so the document gets future updates of the requirements. The installer no longer creates a needless backup when downloading a version fails."
   }
 }
