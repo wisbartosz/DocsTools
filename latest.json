@@ -1,8 +1,8 @@
 {
-  "version": "0.10.0",
-  "tag": "v0.10.0",
+  "version": "0.10.1",
+  "tag": "v0.10.1",
   "notes": {
-    "pl": "Pytania do źródeł działają lepiej przy przeciążonym Gemini. Przy długich źródłach do Gemini trafiają tylko fragmenty związane z pytaniem (kilka razy mniej tekstu, szybsze odpowiedzi), a cytaty i strony dalej są sprawdzane w pełnym tekście. Gdy wybrany model jest przeciążony albo niedostępny, Przybornik sam próbuje modeli zapasowych i pisze przy odpowiedzi, który odpowiedział (można to wyłączyć w ustawieniach). Lista modeli ma grupę „Polecane”. Uwaga: Google wycofuje Gemini 2.5 Flash – wybierz model z grupy „Polecane”.",
-    "en": "Questions to sources cope better with an overloaded Gemini. With long sources only the passages related to the question go to Gemini (several times less text, faster answers), while quotes and pages are still checked against the full text. When the chosen model is overloaded or unavailable, the toolkit tries backup models on its own and says next to the answer which one replied (you can turn this off in the settings). The model list has a \"Recommended\" group. Note: Google is retiring Gemini 2.5 Flash – pick a model from the \"Recommended\" group."
+    "pl": "Poprawki obsługi Gemini po przeglądzie kodu. Komunikaty mówią właściwą przyczynę: brak klucza, wyczerpany limit albo wycofany model, a „wszystkie przeciążone” pojawia się tylko przy prawdziwym przeciążeniu. Błąd modelu zapasowego nie przerywa już szukania kolejnego. Cytaty z fragmentów źródeł są poprawnie odnajdywane i mają właściwe numery stron, a pytania o konkretny paragraf (np. „§ 12”) trafiają we właściwe miejsce.",
+    "en": "Gemini handling fixes after a code review. Messages give the real cause: a missing key, a used-up limit or a retired model, and \"all overloaded\" appears only on real overload. An error from a backup model no longer stops the search for the next one. Quotes from source passages are found correctly with the right page numbers, and questions about a specific section (e.g. \"§ 12\") land in the right place."
   }
 }

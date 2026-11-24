@@ -20,7 +20,7 @@ function indexSourceWords_(text) {
 }
 
 function quoteWords_(quote) {
-  return (String(quote || '').normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) || []);
+  return (String(quote || '').replace(/\[\[str\. \d+\]\]/g, ' ').normalize('NFC').toLowerCase().match(/[\p{L}\p{N}]+/gu) || []);
 }
 
 function pageAt_(markers, pos) {

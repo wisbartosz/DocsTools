@@ -330,7 +330,7 @@ const MESSAGES = {
     'gemini.modelNotFound': 'Model „{model}” nie istnieje albo nie jest dostępny. Wybierz inny model w ustawieniach.',
     'gemini.quota': 'Wyczerpano limit zapytań darmowego planu Gemini. Odczekaj minutę (limit na minutę) albo spróbuj jutro (limit dzienny).',
     'gemini.overloaded': 'Serwery Gemini są chwilowo przeciążone. Spróbuj ponownie za kilka minut.',
-    'gemini.allBusy': 'Wszystkie wypróbowane modele Gemini są teraz przeciążone albo niedostępne ({models}). To przeciążenie po stronie Google, częste na darmowym planie, a nie błąd Przybornika. Pytanie zostało w polu – spróbuj ponownie za kilka minut.',
+    'gemini.allBusy': 'Wszystkie wypróbowane modele Gemini są teraz przeciążone ({models}). To przeciążenie po stronie Google, częste na darmowym planie, a nie błąd Przybornika. Spróbuj ponownie za kilka minut.',
     'gemini.other': 'Błąd Gemini ({code}): {message}',
 
     'src.unsupported': 'Nieobsługiwany typ pliku.',
@@ -670,7 +670,7 @@ const MESSAGES = {
     'gemini.modelNotFound': 'Model "{model}" does not exist or is not available. Choose another model in the settings.',
     'gemini.quota': 'The free Gemini request limit is used up. Wait a minute (per-minute limit) or try again tomorrow (daily limit).',
     'gemini.overloaded': 'Gemini servers are overloaded right now. Try again in a few minutes.',
-    'gemini.allBusy': 'All Gemini models tried are overloaded or unavailable right now ({models}). This is overload on Google\'s side, common on the free tier, not a toolkit error. Your question is still in the box – try again in a few minutes.',
+    'gemini.allBusy': 'All Gemini models tried are overloaded right now ({models}). This is overload on the Google side, common on the free tier, not a toolkit error. Try again in a few minutes.',
     'gemini.other': 'Gemini error ({code}): {message}',
 
     'src.unsupported': 'Unsupported file type.',

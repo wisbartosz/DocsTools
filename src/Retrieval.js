@@ -25,7 +25,7 @@ function retrievalTerms_(text) {
     .replace(RETRIEVAL_COMBINING, '')
     .replace(RETRIEVAL_L_STROKE, 'l')
     .split(/[^a-z0-9]+/)
-    .filter(function (word) { return word.length >= RETRIEVAL_MIN_WORD && !RETRIEVAL_STOPWORDS[word]; })
+    .filter(function (word) { return /^\d+$/.test(word) || (word.length >= RETRIEVAL_MIN_WORD && !RETRIEVAL_STOPWORDS[word]); })
     .map(function (word) { return /^\d+$/.test(word) ? word : word.slice(0, RETRIEVAL_STEM_CHARS); });
 }
 
@@ -48,9 +48,8 @@ function splitChunks_(text, size) {
       flush();
       chunkPage = page;
     }
-    for (let start = 0; start < paragraph.length; start += limit) {
-      const piece = paragraph.slice(start, start + limit);
-      if (start > 0) {
+    paragraphPieces_(paragraph, limit).forEach(function (piece, index) {
+      if (index > 0) {
         flush();
         chunkPage = page;
       }
@@ -58,10 +57,25 @@ function splitChunks_(text, size) {
       let marker;
       RETRIEVAL_PAGE_MARKER.lastIndex = 0;
       while ((marker = RETRIEVAL_PAGE_MARKER.exec(piece)) !== null) page = Number(marker[1]);
-    }
+    });
   });
   flush();
   return chunks;
+}
+
+function paragraphPieces_(text, limit) {
+  const pieces = [];
+  let rest = text;
+  while (rest.length > limit) {
+    let cut = rest.lastIndexOf(' ', limit);
+    if (cut < limit / 2) cut = limit;
+    const open = rest.lastIndexOf('[[', cut);
+    if (open > 0 && rest.indexOf(']]', open) + 2 > cut) cut = open;
+    pieces.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) pieces.push(rest);
+  return pieces;
 }
 
 function selectPassages_(sources, query, budget) {
@@ -108,7 +122,12 @@ function selectPassages_(sources, query, budget) {
       if (other.source === chunk.source && Math.abs(other.position - chunk.position) === 1) take(other, budget);
     });
   });
-  if (!chosen.length) chunks.forEach(function (chunk) { take(chunk, budget / 4); });
+  if (!chosen.length) {
+    const last = chunks.reduce(function (max, chunk) { return Math.max(max, chunk.position); }, 0);
+    for (let position = 0; position <= last; position++) {
+      chunks.forEach(function (chunk) { if (chunk.position === position) take(chunk, budget / 4); });
+    }
+  }
   return sources.map(function (source, sourceIndex) {
     return chosen
       .filter(function (chunk) { return chunk.source === sourceIndex; })

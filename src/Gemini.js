@@ -1,9 +1,12 @@
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_ATTEMPTS_PER_MODEL = 2;
+const GEMINI_ATTEMPTS_LAST_MODEL = 3;
 const GEMINI_MAX_WAIT_MS = 20000;
+const GEMINI_MAX_WAIT_LAST_MS = 60000;
 const GEMINI_RETRY_BUDGET_MS = 120000;
 const GEMINI_MAX_FALLBACKS = 3;
 const GEMINI_UNAVAILABLE_PREFIX = 'geminiOff:';
+const GEMINI_NO_THINKING_PREFIX = 'geminiNoThinking:';
 const GEMINI_MIN_FALLBACK_VERSION = 3;
 const GEMINI_MODELS_CACHE_KEY = 'geminiModelIds';
 const GEMINI_MODELS_CACHE_SECONDS = 6 * 60 * 60;
@@ -11,34 +14,39 @@ const GEMINI_UNSTABLE = /preview|exp|latest|tts|image|embedding|live|audio|nativ
 
 function geminiGenerate_(request, options) {
   const opts = options || {};
-  const primary = getModel_();
-  const models = opts.fallback === false || !fallbackEnabled_()
-    ? [primary]
-    : [primary].concat(fallbackModels_(primary));
   const deadline = Date.now() + GEMINI_RETRY_BUDGET_MS;
+  const apiKey = getApiKey_();
+  const primary = getModel_();
+  const useFallback = opts.fallback !== false && fallbackEnabled_();
   const inputChars = JSON.stringify(request.contents || []).length;
-  let lastError = null;
+  const models = [primary];
   const tried = [];
+  let primaryError = null;
   let allBusy = true;
   for (let i = 0; i < models.length; i++) {
-    const outcome = callGeminiModel_(models[i], request, opts, deadline);
+    const last = !useFallback || (i > 0 && i === models.length - 1);
+    const outcome = callGeminiModel_(models[i], request, opts, deadline, apiKey, last);
     if (outcome.data) return geminiResult_(outcome.data, models[i], primary, opts, inputChars, outcome.ms);
-    lastError = outcome.error;
     tried.push(models[i]);
-    allBusy = allBusy && outcome.switchModel;
-    if (!outcome.switchModel || Date.now() >= deadline) break;
+    if (i === 0) primaryError = outcome.error;
+    allBusy = allBusy && outcome.busy;
+    if (i === 0 && !outcome.switchModel) break;
+    if (Date.now() >= deadline) break;
+    if (i === 0 && useFallback) Array.prototype.push.apply(models, fallbackModels_(primary));
     if (i + 1 < models.length) console.warn('Gemini: model ' + models[i] + ' niedostępny, próbuję ' + models[i + 1]);
   }
   if (allBusy && tried.length > 1) throw userError_('gemini.allBusy', { models: tried.join(', ') });
-  throw lastError;
+  throw primaryError;
 }
 
-function callGeminiModel_(model, request, opts, deadline) {
+function callGeminiModel_(model, request, opts, deadline, apiKey, last) {
   const url = GEMINI_BASE_URL + '/models/' + encodeURIComponent(model) + ':generateContent';
-  let body = withThinking_(request, model, opts.thinking);
-  const attempts = opts.maxAttempts || GEMINI_ATTEMPTS_PER_MODEL;
+  const cache = CacheService.getUserCache();
+  let body = cache.get(GEMINI_NO_THINKING_PREFIX + model) ? request : withThinking_(request, model, opts.thinking);
+  const attempts = opts.maxAttempts || (last ? GEMINI_ATTEMPTS_LAST_MODEL : GEMINI_ATTEMPTS_PER_MODEL);
+  const maxWait = last ? GEMINI_MAX_WAIT_LAST_MS : GEMINI_MAX_WAIT_MS;
   const started = Date.now();
-  for (let attempt = 1; ; attempt++) {
+  for (let attempt = 1; attempt <= attempts; ) {
     let response;
     try {
       response = UrlFetchApp.fetch(url, {
@@ -46,11 +54,12 @@ function callGeminiModel_(model, request, opts, deadline) {
         contentType: 'application/json',
         payload: JSON.stringify(body),
         muteHttpExceptions: true,
-        headers: { 'x-goog-api-key': getApiKey_() },
+        headers: { 'x-goog-api-key': apiKey },
       });
     } catch (e) {
+      if (/too many times|quota|limit exceeded/i.test(e.message)) throw e;
       console.warn('Gemini ' + model + ': brak odpowiedzi (' + e.message + ')');
-      return { error: userError_('gemini.overloaded'), switchModel: true };
+      return { error: userError_('gemini.overloaded'), switchModel: true, busy: true };
     }
     const code = response.getResponseCode();
     console.log('Gemini ' + model + ' HTTP ' + code + ' po ' + (Date.now() - started) + ' ms (próba ' + attempt + ')');
@@ -58,24 +67,28 @@ function callGeminiModel_(model, request, opts, deadline) {
     const message = geminiErrorMessage_(response);
     if (code === 400 && body !== request && /thinking/i.test(message)) {
       console.warn('Gemini ' + model + ' nie przyjmuje ustawień myślenia, wysyłam bez nich: ' + message);
+      cache.put(GEMINI_NO_THINKING_PREFIX + model, '1', GEMINI_MODELS_CACHE_SECONDS);
       body = request;
       continue;
     }
+    const error = geminiError_(code, message, model);
     if (code === 404 || (code === 429 && !hasRetryInfo_(response))) {
       markModelUnavailable_(model);
-      return { error: geminiError_(code, message, model), switchModel: true };
+      return { error: error, switchModel: true, busy: false };
     }
-    const retryable = code === 429 || code === 500 || code === 503 || code === 504;
-    if (retryable && attempt < attempts) {
-      const waitMs = retryDelayMs_(response, attempt);
+    const busy = code === 500 || code === 503 || code === 504;
+    if ((busy || code === 429) && attempt < attempts) {
+      const waitMs = retryDelayMs_(response, attempt, maxWait);
       if (waitMs !== null && Date.now() + waitMs < deadline) {
         console.warn('Gemini ' + model + ' HTTP ' + code + ', ponawiam za ' + waitMs + ' ms');
         Utilities.sleep(waitMs);
+        attempt++;
         continue;
       }
     }
-    return { error: geminiError_(code, message, model), switchModel: retryable || code === 404 };
+    return { error: error, switchModel: busy || code === 429, busy: busy };
   }
+  return { error: userError_('gemini.overloaded'), switchModel: true, busy: true };
 }
 
 function geminiResult_(data, model, primary, opts, inputChars, ms) {
@@ -114,7 +127,7 @@ function withThinking_(request, model, level) {
   return copy;
 }
 
-function retryDelayMs_(response, attempt) {
+function retryDelayMs_(response, attempt, maxWait) {
   let delayMs = 2000 * Math.pow(2, attempt - 1);
   try {
     const details = JSON.parse(response.getContentText()).error.details || [];
@@ -123,7 +136,7 @@ function retryDelayMs_(response, attempt) {
   } catch (e) {
     console.warn('Brak RetryInfo w odpowiedzi Gemini: ' + e.message);
   }
-  return delayMs > GEMINI_MAX_WAIT_MS ? null : delayMs;
+  return delayMs > (maxWait || GEMINI_MAX_WAIT_MS) ? null : delayMs;
 }
 
 function hasRetryInfo_(response) {
