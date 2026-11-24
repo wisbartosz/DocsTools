@@ -197,6 +197,7 @@ const MESSAGES = {
     'assistant.quote.missing': 'nie znaleziono dosłownie w źródle',
     'assistant.unknownSource': 'nieznane źródło: {name}',
     'assistant.rawNote': 'Nie udało się odczytać odpowiedzi w zwykłym formacie. Poniżej surowa odpowiedź Gemini.',
+    'assistant.excerptsNote': 'Źródła były długie, więc do Gemini trafiły tylko fragmenty najbardziej związane z pytaniem. Jeśli odpowiedź jest niepełna, zapytaj konkretniej albo zaznacz mniej źródeł.',
     'assistant.err.emptyQuestion': 'Wpisz pytanie.',
     'assistant.err.noSources': 'Zaznacz co najmniej jedno źródło.',
     'assistant.err.noSelection': 'Najpierw zaznacz w dokumencie fragment pracy, o który chcesz zapytać.',
@@ -267,6 +268,11 @@ const MESSAGES = {
     'settings.model.test': 'Testuj połączenie',
     'settings.model.hint': 'Limity darmowego planu zależą od modelu – sprawdzisz je w Google AI Studio.',
     'settings.model.saved': 'Model zapisany: {model}',
+    'settings.model.recommended': 'Polecane',
+    'settings.model.stable': 'Inne stabilne',
+    'settings.model.unstable': 'Testowe i aliasy (mogą być wolne lub przeciążone)',
+    'settings.model.fallback': 'Gdy model jest przeciążony, użyj zapasowego',
+    'settings.model.fallbackHint': 'Przybornik sam przełączy się na inny stabilny model (najpierw Flash-Lite) i napisze przy odpowiedzi, który model odpowiedział.',
 
     'update.title': 'Aktualizacje',
     'update.check': 'Sprawdź ponownie',
@@ -297,6 +303,7 @@ const MESSAGES = {
     'settings.language.save': 'Zapisz język',
 
     'ai.testOk': 'Połączenie działa. Model {model} odpowiedział: „{reply}”.',
+    'ai.fallbackUsed': 'Wybrany model był niedostępny, odpowiedział model zapasowy {model}.',
     'ai.testPrompt': 'Odpowiedz jednym słowem: działa',
 
     'notice.title': 'Zanim użyjesz AI',
@@ -323,6 +330,7 @@ const MESSAGES = {
     'gemini.modelNotFound': 'Model „{model}” nie istnieje albo nie jest dostępny. Wybierz inny model w ustawieniach.',
     'gemini.quota': 'Wyczerpano limit zapytań darmowego planu Gemini. Odczekaj minutę (limit na minutę) albo spróbuj jutro (limit dzienny).',
     'gemini.overloaded': 'Serwery Gemini są chwilowo przeciążone. Spróbuj ponownie za kilka minut.',
+    'gemini.allBusy': 'Wszystkie wypróbowane modele Gemini są teraz przeciążone albo niedostępne ({models}). To przeciążenie po stronie Google, częste na darmowym planie, a nie błąd Przybornika. Pytanie zostało w polu – spróbuj ponownie za kilka minut.',
     'gemini.other': 'Błąd Gemini ({code}): {message}',
 
     'src.unsupported': 'Nieobsługiwany typ pliku.',
@@ -529,6 +537,7 @@ const MESSAGES = {
     'assistant.quote.missing': 'not found verbatim in the source',
     'assistant.unknownSource': 'unknown source: {name}',
     'assistant.rawNote': 'Could not read the answer in the usual format. Below is the raw Gemini reply.',
+    'assistant.excerptsNote': 'The sources were long, so only the passages most related to the question were sent to Gemini. If the answer is incomplete, ask more specifically or select fewer sources.',
     'assistant.err.emptyQuestion': 'Type a question.',
     'assistant.err.noSources': 'Select at least one source.',
     'assistant.err.noSelection': 'First select the part of your thesis you want to ask about.',
@@ -599,6 +608,11 @@ const MESSAGES = {
     'settings.model.test': 'Test connection',
     'settings.model.hint': 'Free tier limits depend on the model – you can check them in Google AI Studio.',
     'settings.model.saved': 'Model saved: {model}',
+    'settings.model.recommended': 'Recommended',
+    'settings.model.stable': 'Other stable models',
+    'settings.model.unstable': 'Preview models and aliases (may be slow or overloaded)',
+    'settings.model.fallback': 'Use a backup model when this one is overloaded',
+    'settings.model.fallbackHint': 'The toolkit switches to another stable model on its own (Flash-Lite first) and says next to the answer which model replied.',
 
     'update.title': 'Updates',
     'update.check': 'Check again',
@@ -629,6 +643,7 @@ const MESSAGES = {
     'settings.language.save': 'Save language',
 
     'ai.testOk': 'Connection works. Model {model} replied: "{reply}".',
+    'ai.fallbackUsed': 'The chosen model was unavailable, so the backup model {model} replied.',
     'ai.testPrompt': 'Reply with one word: works',
 
     'notice.title': 'Before you use AI',
@@ -655,6 +670,7 @@ const MESSAGES = {
     'gemini.modelNotFound': 'Model "{model}" does not exist or is not available. Choose another model in the settings.',
     'gemini.quota': 'The free Gemini request limit is used up. Wait a minute (per-minute limit) or try again tomorrow (daily limit).',
     'gemini.overloaded': 'Gemini servers are overloaded right now. Try again in a few minutes.',
+    'gemini.allBusy': 'All Gemini models tried are overloaded or unavailable right now ({models}). This is overload on Google\'s side, common on the free tier, not a toolkit error. Your question is still in the box – try again in a few minutes.',
     'gemini.other': 'Gemini error ({code}): {message}',
 
     'src.unsupported': 'Unsupported file type.',

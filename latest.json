@@ -1,8 +1,8 @@
 {
-  "version": "0.9.5",
-  "tag": "v0.9.5",
+  "version": "0.10.0",
+  "tag": "v0.10.0",
   "notes": {
-    "pl": "Poprawki poprzedniej wersji. Czyszczenie tekstu źródeł znowu poprawnie usuwa komentarze z Worda i Dokumentów Google (także z odpowiedziami) i nigdy nie ucina końcówki tekstu – źródła trzeba przetworzyć ponownie (zakładka Źródła → Przetwórz). Typografia znowu wyłapuje zakresy stron w bibliografii (np. s. 95-102, 2101-2110). Zapisanie wymagań równych domyślnym przywraca tryb domyślny, więc dokument dostaje przyszłe poprawki wymagań. Instalator nie tworzy zbędnej kopii zapasowej, gdy pobranie wersji się nie uda.",
-    "en": "Fixes to the previous version. Source text cleanup again removes Word and Google Docs comments properly (including replies) and never cuts off the end of a text – sources need processing again (Sources tab → Process). Typography again catches page ranges in the bibliography (e.g. s. 95-102, 2101-2110). Saving requirements equal to the defaults switches back to default mode, so the document gets future updates of the requirements. The installer no longer creates a needless backup when downloading a version fails."
+    "pl": "Pytania do źródeł działają lepiej przy przeciążonym Gemini. Przy długich źródłach do Gemini trafiają tylko fragmenty związane z pytaniem (kilka razy mniej tekstu, szybsze odpowiedzi), a cytaty i strony dalej są sprawdzane w pełnym tekście. Gdy wybrany model jest przeciążony albo niedostępny, Przybornik sam próbuje modeli zapasowych i pisze przy odpowiedzi, który odpowiedział (można to wyłączyć w ustawieniach). Lista modeli ma grupę „Polecane”. Uwaga: Google wycofuje Gemini 2.5 Flash – wybierz model z grupy „Polecane”.",
+    "en": "Questions to sources cope better with an overloaded Gemini. With long sources only the passages related to the question go to Gemini (several times less text, faster answers), while quotes and pages are still checked against the full text. When the chosen model is overloaded or unavailable, the toolkit tries backup models on its own and says next to the answer which one replied (you can turn this off in the settings). The model list has a \"Recommended\" group. Note: Google is retiring Gemini 2.5 Flash – pick a model from the \"Recommended\" group."
   }
 }

@@ -146,7 +146,7 @@ function importFormatRules() {
     systemInstruction: { parts: [{ text: FORMAT_IMPORT_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: blocks.join('\n\n') }] }],
     generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: FORMAT_IMPORT_SCHEMA },
-  }, { feature: 'formatRules' });
+  }, { feature: 'formatRules', thinking: 'LOW' });
 
   let parsed;
   try {
@@ -160,6 +160,7 @@ function importFormatRules() {
   const structure = importedStructure_(parsed.structure || {});
   return {
     model: result.model,
+    fallback: result.fallback,
     rules: rules,
     structure: structure,
     found: rules.found.length + structure.found.length,

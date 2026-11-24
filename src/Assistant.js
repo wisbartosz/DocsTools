@@ -3,11 +3,16 @@ const ASSISTANT_WARN_CHARS = 400000;
 const ASSISTANT_HISTORY_TURNS = 4;
 const ASSISTANT_WINDOW = { width: 900, height: 680 };
 const ASSISTANT_MAX_FRAGMENT_CHARS = 20000;
+const ASSISTANT_FULL_TEXT_CHARS = 60000;
+const ASSISTANT_EXCERPT_BUDGET = 40000;
 
 const ASSISTANT_SYSTEM_PROMPT = [
   'You are a research assistant helping a student who is writing a thesis.',
-  'You receive the full texts of the student\'s sources. Each source starts with a header line',
-  '"=== SOURCE: <file name> ===" followed by a note saying whether the text contains page markers.',
+  'You receive the student\'s sources. Each source starts with a header line "=== SOURCE: <file name> ==="',
+  'followed by a note saying whether the text contains page markers and whether it is the full text or only',
+  'the passages most related to the question (passages are separated by [...]). When you only have passages and',
+  'they do not answer the question, set "found" to false and suggest asking more specifically or selecting fewer',
+  'sources.',
   'A page marker looks like [[str. 12]] and means that the text after it is on page 12.',
   '',
   'Rules:',
@@ -119,7 +124,11 @@ function askAssistant(question, sourceIds, history, fragment) {
   if (!sources.length) throw userError_('assistant.err.noSources');
   sources.forEach(function (s) { s.text = storeReadText_(s.textFileId); });
 
-  const parts = [{ text: buildSourcesBlock_(sources) }];
+  const total = sources.reduce(function (sum, s) { return sum + s.text.length; }, 0);
+  const excerpts = total > ASSISTANT_FULL_TEXT_CHARS
+    ? selectPassages_(sources, [text, piece, lastQuestion_(history)].join(' '), ASSISTANT_EXCERPT_BUDGET)
+    : null;
+  const parts = [{ text: buildSourcesBlock_(sources, excerpts) }];
   const earlier = buildHistoryBlock_(history);
   if (earlier) parts.push({ text: earlier });
   if (piece) parts.push({ text: 'FRAGMENT OF THE STUDENT\'S THESIS (selected by the student, not a source):\n<<<\n' + piece + '\n>>>' });
@@ -133,17 +142,19 @@ function askAssistant(question, sourceIds, history, fragment) {
       responseMimeType: 'application/json',
       responseSchema: ASSISTANT_RESPONSE_SCHEMA,
     },
-  }, { feature: 'assistant' });
+  }, { feature: 'assistant', thinking: 'LOW' });
 
   let parsed;
   try {
     parsed = JSON.parse(result.text);
   } catch (e) {
     console.warn('Odpowiedź asystenta nie jest poprawnym JSON: ' + e.message);
-    return { model: result.model, raw: result.text };
+    return { model: result.model, fallback: result.fallback, excerpts: !!excerpts, raw: result.text };
   }
   return {
     model: result.model,
+    fallback: result.fallback,
+    excerpts: !!excerpts,
     found: parsed.found !== false,
     answer: String(parsed.answer || ''),
     citations: (parsed.citations || []).map(function (c) { return resolveCitation_(c, sources); }),
@@ -160,10 +171,18 @@ function buildHistoryBlock_(history) {
   }).join('\n\n');
 }
 
-function buildSourcesBlock_(sources) {
-  return sources.map(function (s) {
-    const note = s.pages ? 'This text contains page markers.' : 'This text has no page markers.';
-    return '=== SOURCE: ' + s.name + ' ===\n' + note + '\n\n' + s.text;
+function lastQuestion_(history) {
+  const turns = history || [];
+  return turns.length ? String(turns[turns.length - 1].question || '') : '';
+}
+
+function buildSourcesBlock_(sources, excerpts) {
+  return sources.map(function (s, index) {
+    const pages = s.pages ? 'This text contains page markers.' : 'This text has no page markers.';
+    if (!excerpts) return '=== SOURCE: ' + s.name + ' ===\n' + pages + ' Full text.\n\n' + s.text;
+    const passages = excerpts[index];
+    const body = passages.length ? passages.join('\n[...]\n') : '(no passages related to the question)';
+    return '=== SOURCE: ' + s.name + ' ===\n' + pages + ' Only passages related to the question.\n\n' + body;
   }).join('\n\n');
 }
 

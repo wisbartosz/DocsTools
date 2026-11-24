@@ -20,7 +20,9 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   znamy). Dodatek sam sprawdza, czy cytat naprawdę jest w tekście źródła. Gdy w źródłach
   nie ma odpowiedzi, asystent mówi to wprost. Nie napisze za Ciebie fragmentu pracy.
   Pytanie można pociągnąć dalej przyciskiem „Dopytaj”, a podczas czekania na odpowiedź
-  normalnie korzystać z innych zakładek.
+  normalnie korzystać z innych zakładek. Przy długich źródłach do Gemini trafiają tylko
+  fragmenty związane z pytaniem, a gdy wybrany model jest przeciążony, Przybornik sam
+  przełącza się na zapasowy i pisze o tym przy odpowiedzi.
 - Pytanie o fragment pracy. Zaznaczasz akapit w dokumencie i klikasz „Dołącz zaznaczony
   fragment pracy”. Możesz zapytać o niego wprost albo zostawić pole pytania puste. Wtedy
   asystent sprawdzi, co z tego fragmentu potwierdzają źródła, czego w nich nie ma i co
@@ -187,9 +189,14 @@ dodatek oznaczy go do ponownego przetworzenia.
 
 ## Kilka rzeczy, o których warto wiedzieć
 
-**Darmowy Gemini bywa wolny.** Zwłaszcza najnowsze modele i aliasy typu
-`gemini-flash-latest` potrafią długo nie odpowiadać albo zwracać błąd przeciążenia.
-Lepiej wybrać konkretną wersję modelu z listy. Limity zapytań sprawdzisz w AI Studio.
+**Darmowy Gemini bywa przeciążony.** Na darmowym planie Google często odrzuca zapytania
+z powodu dużego ruchu, zwłaszcza wieczorem polskiego czasu i przy najnowszych modelach
+Flash. Przybornik wtedy sam próbuje modeli zapasowych (najpierw Flash-Lite, który zwykle
+jest najmniej obciążony), ale gdy przeciążone są wszystkie, trzeba spróbować za kilka
+minut. Wybierz model z grupy „Polecane”. Jeśli przeciążenia bardzo przeszkadzają, możesz
+w AI Studio włączyć płatny plan z limitem wydatków: przy naszych zapytaniach to grosze
+za pytanie, a na płatnym planie przeciążenia zwykle zdarzają się rzadziej. Limity
+zapytań sprawdzisz w AI Studio.
 
 **Dane a darmowy plan.** Na darmowym planie Gemini Google może wykorzystywać wysłane
 treści do ulepszania swoich usług. Dodatek przypomina o tym przy pierwszym użyciu AI
@@ -231,6 +238,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   odpowiedź w ustalonym formacie (JSON) i dopasowuje cytaty do źródeł.
 - `Quotes.js`: odnajdywanie cytatu w tekście źródła (dokładnie albo w przybliżeniu)
   i ustalanie strony ze znaczników. Bez wywołań Google.
+- `Retrieval.js`: wybór fragmentów źródeł związanych z pytaniem, gdy źródła są długie
+  (prosty ranking słów, bez wywołań Google).
 - `Feedback.js`: wysyłka uwag z panelu do usługi pośredniczącej (`feedback/`).
 - `Typography.js`: reguły typografii na zwykłym tekście. Bez wywołań Google.
 - `Check.js`: zakładka „Sprawdź”. Przechodzi po tekście dokumentu i przypisów, pokazuje

@@ -153,6 +153,7 @@
 
   function renderSettings() {
     if (!settings) return;
+    $('fallback-toggle').checked = settings.fallback !== false;
     $('folder-current').textContent = settings.sourceFolderId
       ? (settings.sourceFolderName ? t('settings.folder.current', { name: settings.sourceFolderName }) : t('settings.folder.inaccessible'))
       : t('settings.folder.none');
@@ -173,11 +174,22 @@
     empty.value = '';
     empty.textContent = models.length ? t('settings.model.choose') : t('settings.model.none');
     select.appendChild(empty);
-    models.forEach(m => {
-      const option = document.createElement('option');
-      option.value = m.id;
-      option.textContent = m.label + ' (' + m.id + ')';
-      select.appendChild(option);
+    const groups = [
+      [t('settings.model.recommended'), models.filter(m => m.recommended)],
+      [t('settings.model.stable'), models.filter(m => m.stable && !m.recommended)],
+      [t('settings.model.unstable'), models.filter(m => !m.stable)],
+    ];
+    groups.forEach(([label, list]) => {
+      if (!list.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      list.forEach(m => {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.label + ' (' + m.id + ')';
+        group.appendChild(option);
+      });
+      select.appendChild(group);
     });
     if (settings.model && !models.some(m => m.id === settings.model)) {
       const option = document.createElement('option');
@@ -389,7 +401,7 @@
     const turn = el('div', 'turn');
     turn.append(el('div', 'bubble', question));
     if (result.raw) {
-      turn.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw));
+      turn.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw), ...answerNotes(result));
       thread.turns.push({ question: question, answer: result.raw });
       thread.turnsElement.append(turn);
       return;
@@ -406,8 +418,16 @@
       cites.append(list);
       turn.append(cites);
     }
+    turn.append(...answerNotes(result));
     thread.turns.push({ question: question, answer: result.answer });
     thread.turnsElement.append(turn);
+  }
+
+  function answerNotes(result) {
+    const notes = [];
+    if (result.excerpts) notes.push(el('div', 'answer-note', t('assistant.excerptsNote')));
+    if (result.fallback) notes.push(el('div', 'answer-note', t('ai.fallbackUsed', { model: result.model })));
+    return notes;
   }
 
   function renderCitation(c) {
@@ -507,6 +527,12 @@
     if (!result) return;
     showMessage(t('ai.testOk', { model: result.model, reply: result.reply }), 'ok');
   }));
+
+  $('fallback-toggle').addEventListener('change', () => {
+    call('saveFallback', $('fallback-toggle').checked)
+      .then(updated => { settings = updated; })
+      .catch(e => showMessage(errorText(e), 'error'));
+  });
 
   $('btn-save-language').addEventListener('click', () => run(() => call('saveUiLanguage', $('language-select').value)));
 
@@ -742,7 +768,7 @@
     $('format-rules').open = true;
     $('structure-rules').open = true;
     renderRulesImport(result);
-    showMessage(t('format.rules.imported', { count: result.found }), 'ok');
+    showMessage(t('format.rules.imported', { count: result.found }) + (result.fallback ? ' ' + t('ai.fallbackUsed', { model: result.model }) : ''), 'ok');
   }
 
   let importedSections = null;

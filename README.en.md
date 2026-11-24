@@ -22,6 +22,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   in the source text. If the sources don't answer the question, the assistant says so
   plainly. It won't write any part of your thesis for you. You can continue a question
   with "Follow up", and keep using the other tabs while you wait for an answer.
+  With long sources only the passages related to the question go to Gemini, and when the
+  chosen model is overloaded, the toolkit switches to a backup model and says so next to the answer.
 - Questions about a passage of your thesis. Select a paragraph in the document and click
   "Attach the selected passage of your thesis". You can ask about it directly, or leave
   the question empty. Then the assistant checks what in the passage your sources support,
@@ -189,10 +191,14 @@ marks it for processing again.
 
 ## Good to know
 
-**Free Gemini can be slow.** The newest models and aliases like `gemini-flash-latest`
-in particular can take a long time to answer or return an overload error. It's better
-to pick a specific model version from the list. You can check your request limits in
-AI Studio.
+**Free Gemini is often overloaded.** On the free tier Google often turns requests down
+because of heavy traffic, especially in the European evening and with the newest Flash
+models. The toolkit then tries backup models on its own (Flash-Lite first, which is
+usually the least busy), but when all of them are overloaded you have to try again in a
+few minutes. Pick a model from the "Recommended" group. If overload gets in the way a lot,
+you can turn on a paid plan with a spending limit in AI Studio: our requests cost a
+fraction of a cent each, and overload is usually rarer on the paid plan. You can check
+your request limits in AI Studio.
 
 **Your data on the free tier.** On the free Gemini tier Google may use the content you
 send to improve its services. The add-on reminds you about this the first time you use
@@ -232,6 +238,8 @@ no subfolders, so the manual installation can recreate them.
   receives the answer in a fixed format (JSON) and matches quotes to sources.
 - `Quotes.js`: finding a quote in the source text (exactly or approximately) and working
   out the page from the markers. No Google calls.
+- `Retrieval.js`: picks the passages of long sources that relate to the question (simple
+  word ranking, no Google calls).
 - `Feedback.js`: sends feedback from the sidebar to the relay service (`feedback/`).
 - `Typography.js`: typography rules on plain text. No Google calls.
 - `Check.js`: the "Check" tab. Goes through the text of the document and the footnotes,

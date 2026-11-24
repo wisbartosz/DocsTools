@@ -5,6 +5,7 @@ const PROP = {
   UI_LANGUAGE: 'uiLanguage',
   SOURCE_FOLDER: 'sourceFolderId',
   DATA_FOLDER: 'dataFolderId',
+  FALLBACK: 'geminiFallback',
 };
 
 function userProps_() {
@@ -28,6 +29,7 @@ function getSettings() {
   return {
     hasApiKey: !!userProps_().getProperty(PROP.API_KEY),
     model: userProps_().getProperty(PROP.MODEL) || '',
+    fallback: userProps_().getProperty(PROP.FALLBACK) !== 'false',
     aiNoticeAccepted: userProps_().getProperty(PROP.AI_NOTICE) === 'true',
     uiLanguageSetting: savedUiLanguage_(),
     updateUrl: updateUrl_(),
