@@ -13,34 +13,50 @@
     <button class="tab tab-icon" data-tab="settings" title="<?= t_('tab.settings') ?>" aria-label="<?= t_('tab.settings') ?>"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
   </nav>
 
+  <div id="update-banner" class="update-banner hidden">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v12M6 10l6 6 6-6M5 20h14"/></svg>
+    <span id="update-banner-text"></span>
+    <button id="btn-update-banner" class="link"><?= t_('update.bannerAction') ?></button>
+  </div>
   <div id="message" class="message hidden"></div>
 
   <section id="tab-assistant" class="panel hidden">
-    <div id="assistant-no-sources" class="hint hidden"><?= t_('assistant.noSources') ?></div>
+    <div id="assistant-start" class="assistant-start hidden">
+      <div class="start-title"><?= t_('assistant.start.title') ?></div>
+      <div class="muted small"><?= t_('assistant.start.text') ?></div>
+      <ol id="start-steps" class="start-steps"></ol>
+    </div>
     <div id="assistant-content" class="hidden">
-      <details id="assistant-sources">
+      <details id="assistant-sources" class="sources-chip">
         <summary id="assistant-sources-summary"></summary>
-        <div class="row buttons">
-          <button id="btn-select-all" class="link"><?= t_('assistant.selectAll') ?></button>
-          <button id="btn-select-none" class="link"><?= t_('assistant.selectNone') ?></button>
+        <div class="sources-panel">
+          <div class="row buttons">
+            <button id="btn-select-all" class="link"><?= t_('assistant.selectAll') ?></button>
+            <button id="btn-select-none" class="link"><?= t_('assistant.selectNone') ?></button>
+          </div>
+          <ul id="assistant-source-list" class="checklist"></ul>
         </div>
-        <ul id="assistant-source-list" class="checklist"></ul>
       </details>
-      <button id="btn-attach-fragment" class="link"><?= t_('assistant.fragment.attach') ?></button>
-      <div id="fragment-box" class="fragment hidden">
-        <div class="fragment-head">
-          <span id="fragment-title"></span>
-          <button id="btn-remove-fragment" class="link"><?= t_('assistant.fragment.remove') ?></button>
+      <div id="answers" data-empty="<?= t_('assistant.empty') ?>"></div>
+      <div class="composer">
+        <div id="fragment-box" class="fragment hidden">
+          <div class="fragment-head">
+            <span id="fragment-title"></span>
+            <button id="btn-remove-fragment" class="link"><?= t_('assistant.fragment.remove') ?></button>
+          </div>
+          <div id="fragment-text" class="fragment-text"></div>
         </div>
-        <div id="fragment-text" class="fragment-text"></div>
+        <div class="composer-box">
+          <label for="question" class="visually-hidden"><?= t_('assistant.placeholder') ?></label>
+          <textarea id="question" rows="2" placeholder="<?= t_('assistant.placeholder') ?>"></textarea>
+          <button id="btn-ask" class="primary send-btn" aria-label="<?= t_('assistant.ask') ?>" title="<?= t_('assistant.ask') ?>"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="composer-meta">
+          <button id="btn-attach-fragment" class="link"><?= t_('assistant.fragment.attach') ?></button>
+          <span id="assistant-size" class="muted small"></span>
+        </div>
+        <div id="assistant-size-warning" class="message warn hidden"><?= t_('assistant.sizeWarning') ?></div>
       </div>
-      <textarea id="question" rows="3" placeholder="<?= t_('assistant.placeholder') ?>"></textarea>
-      <div class="row ask-row">
-        <button id="btn-ask" class="primary"><?= t_('assistant.ask') ?></button>
-        <span id="assistant-size" class="muted small"></span>
-      </div>
-      <div id="assistant-size-warning" class="message warn hidden"><?= t_('assistant.sizeWarning') ?></div>
-      <div id="answers"></div>
     </div>
   </section>
 
@@ -244,56 +260,83 @@
   </section>
 
   <section id="tab-settings" class="panel hidden">
-    <h3><?= t_('settings.folder.title') ?></h3>
-    <div id="folder-current" class="muted"></div>
-    <input id="folder-input" type="text" placeholder="<?= t_('settings.folder.placeholder') ?>">
-    <div class="row buttons">
-      <button id="btn-save-folder" class="primary"><?= t_('settings.folder.save') ?></button>
+    <div class="settings-card">
+      <div class="card-title"><?= t_('settings.card.sources') ?></div>
+      <div class="card-row">
+        <span class="card-main"><span><?= t_('settings.folder.title') ?></span><span id="folder-current" class="muted small"></span></span>
+        <button id="btn-change-folder" class="link"><?= t_('settings.change') ?></button>
+      </div>
+      <div id="folder-editor" class="card-editor hidden">
+        <input id="folder-input" type="text" placeholder="<?= t_('settings.folder.placeholder') ?>">
+        <div class="row buttons">
+          <button id="btn-save-folder" class="primary"><?= t_('settings.folder.save') ?></button>
+        </div>
+      </div>
     </div>
 
-    <h3><?= t_('settings.key.title') ?></h3>
-    <div id="key-status" class="muted"></div>
-    <input id="key-input" type="password" placeholder="<?= t_('settings.key.placeholder') ?>" autocomplete="off">
-    <div class="row buttons">
-      <button id="btn-save-key" class="primary"><?= t_('settings.key.save') ?></button>
-      <button id="btn-clear-key"><?= t_('settings.key.clear') ?></button>
-    </div>
-    <div class="muted small">
-      <?= t_('settings.key.hint') ?> <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
-      <?= t_('settings.key.storage') ?>
+    <div class="settings-card">
+      <div class="card-title"><?= t_('settings.card.gemini') ?></div>
+      <div class="card-row">
+        <span class="card-main"><span><?= t_('settings.key.label') ?></span><span id="key-status" class="muted small"></span></span>
+        <button id="btn-change-key" class="link"><?= t_('settings.change') ?></button>
+      </div>
+      <div id="key-editor" class="card-editor hidden">
+        <input id="key-input" type="password" placeholder="<?= t_('settings.key.placeholder') ?>" autocomplete="off">
+        <div class="row buttons">
+          <button id="btn-save-key" class="primary"><?= t_('settings.key.save') ?></button>
+          <button id="btn-clear-key"><?= t_('settings.key.clear') ?></button>
+        </div>
+        <div class="muted small">
+          <?= t_('settings.key.hint') ?> <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
+          <?= t_('settings.key.storage') ?>
+        </div>
+      </div>
+      <div class="card-field">
+        <label for="model-select"><?= t_('settings.model.title') ?></label>
+        <select id="model-select" disabled>
+          <option value=""><?= t_('settings.model.needKey') ?></option>
+        </select>
+        <div class="muted small"><?= t_('settings.model.hint') ?></div>
+      </div>
+      <label class="card-toggle">
+        <span class="card-main"><span><?= t_('settings.model.fallback') ?></span><span class="muted small"><?= t_('settings.model.fallbackHint') ?></span></span>
+        <input id="fallback-toggle" type="checkbox" checked>
+      </label>
+      <div class="card-row">
+        <span class="card-main muted small"><?= t_('settings.test.hint') ?></span>
+        <button id="btn-test" class="link"><?= t_('settings.model.test') ?></button>
+      </div>
     </div>
 
-    <h3><?= t_('settings.model.title') ?></h3>
-    <select id="model-select" disabled>
-      <option value=""><?= t_('settings.model.needKey') ?></option>
-    </select>
-    <div class="row buttons">
-      <button id="btn-save-model" class="primary"><?= t_('settings.model.save') ?></button>
-      <button id="btn-test"><?= t_('settings.model.test') ?></button>
+    <div class="settings-card">
+      <div class="card-title"><?= t_('update.title') ?></div>
+      <div class="card-body">
+        <div id="update-status" class="muted"><?= t_('update.checking') ?></div>
+        <div id="update-notes" class="update-notes hidden"></div>
+        <div class="row buttons">
+          <button id="btn-install-update" class="primary hidden"><?= t_('update.install') ?></button>
+          <button id="btn-check-update"><?= t_('update.check') ?></button>
+        </div>
+        <div id="update-install-hint" class="muted small hidden"><?= t_('update.installHint') ?></div>
+        <div class="small"><a id="link-installer" href="#" target="_blank"><?= t_('update.openInstaller') ?></a></div>
+      </div>
     </div>
-    <div class="muted small"><?= t_('settings.model.hint') ?></div>
-    <label class="rules-check check-option"><input id="fallback-toggle" type="checkbox" checked> <?= t_('settings.model.fallback') ?></label>
-    <div class="muted small"><?= t_('settings.model.fallbackHint') ?></div>
 
-    <h3><?= t_('update.title') ?></h3>
-    <div id="update-status" class="muted"><?= t_('update.checking') ?></div>
-    <div id="update-notes" class="update-notes hidden"></div>
-    <div class="row buttons">
-      <button id="btn-install-update" class="primary hidden"><?= t_('update.install') ?></button>
-      <button id="btn-check-update"><?= t_('update.check') ?></button>
+    <div class="settings-card">
+      <div class="card-title"><?= t_('settings.card.panel') ?></div>
+      <div class="card-field">
+        <label for="language-select"><?= t_('settings.language.title') ?></label>
+        <select id="language-select">
+          <option value=""><?= t_('settings.language.auto') ?></option>
+          <option value="pl">Polski</option>
+          <option value="en">English</option>
+        </select>
+        <div class="row buttons">
+          <button id="btn-save-language"><?= t_('settings.language.save') ?></button>
+        </div>
+      </div>
     </div>
-    <div id="update-install-hint" class="muted small hidden"><?= t_('update.installHint') ?></div>
-    <div class="small"><a id="link-installer" href="#" target="_blank"><?= t_('update.openInstaller') ?></a></div>
-
-    <h3><?= t_('settings.language.title') ?></h3>
-    <select id="language-select">
-      <option value=""><?= t_('settings.language.auto') ?></option>
-      <option value="pl">Polski</option>
-      <option value="en">English</option>
-    </select>
-    <div class="row buttons">
-      <button id="btn-save-language" class="primary"><?= t_('settings.language.save') ?></button>
-    </div>
+    <div class="muted small"><?= t_('settings.autosave') ?></div>
   </section>
 
   <section id="tab-feedback" class="panel hidden">

@@ -4,6 +4,7 @@
   let settings = null;
   let sources = [];
   let assistant = { sources: [], warnChars: 0 };
+  let assistantLoaded = false;
   let busy = false;
 
   function $(id) { return document.getElementById(id); }
@@ -42,7 +43,7 @@
   async function run(action) {
     if (busy) return;
     busy = true;
-    const buttons = [...document.querySelectorAll('button:not(.tab), #check-type')].filter(b => !b.classList.contains('loading'));
+    const buttons = [...document.querySelectorAll('button:not(.tab), #check-type, #model-select')].filter(b => !b.classList.contains('loading'));
     buttons.forEach(b => b.disabled = true);
     hideMessage();
     try {
@@ -132,6 +133,9 @@
     }
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     $('btn-feedback').classList.toggle('active', name === 'feedback');
+    const lastThread = name === 'assistant' ? document.querySelector('#answers > .thread:last-child') : null;
+    if (lastThread) lastThread.scrollIntoView({ block: 'start' });
+    else window.scrollTo(0, 0);
     hideMessage();
     if (name === 'check') loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
   }
@@ -161,11 +165,61 @@
     $('key-status').textContent = settings.hasApiKey ? t('settings.key.present') : t('settings.key.missing');
     $('btn-clear-key').disabled = busy || !settings.hasApiKey;
     $('model-select').disabled = busy || !settings.hasApiKey;
-    $('btn-save-model').disabled = busy || !settings.hasApiKey;
     $('btn-test').disabled = busy || !settings.hasApiKey || !settings.model;
     const hasFolder = !!(settings.sourceFolderId && settings.sourceFolderName);
     $('sources-no-folder').classList.toggle('hidden', hasFolder);
     $('sources-content').classList.toggle('hidden', !hasFolder);
+    const hasFolderId = !!settings.sourceFolderId;
+    if (editorState.folder !== hasFolderId) $('folder-editor').classList.toggle('hidden', hasFolderId);
+    if (editorState.key !== settings.hasApiKey) $('key-editor').classList.toggle('hidden', !!settings.hasApiKey);
+    editorState.folder = hasFolderId;
+    editorState.key = settings.hasApiKey;
+    $('btn-change-folder').textContent = t(hasFolderId ? 'settings.change' : 'settings.add');
+    $('btn-change-key').textContent = t(settings.hasApiKey ? 'settings.change' : 'settings.add');
+    renderAssistantStart();
+  }
+
+  const editorState = { folder: null, key: null };
+
+  function openEditor(editor, input) {
+    switchTab('settings');
+    $(editor).classList.remove('hidden');
+    $(input).focus();
+  }
+
+  function renderAssistantStart() {
+    if (!settings) return;
+    const hasFolder = !!settings.sourceFolderName;
+    const hasSources = !!(assistant && assistant.sources && assistant.sources.length);
+    const hasKey = !!settings.hasApiKey;
+    const ready = hasFolder && hasSources && hasKey;
+    $('assistant-start').classList.toggle('hidden', ready || (hasFolder && !assistantLoaded));
+    $('assistant-content').classList.toggle('hidden', !ready);
+    const steps = [
+      { done: hasFolder, title: 'assistant.start.folder', detail: hasFolder ? t('assistant.start.folderDone', { name: settings.sourceFolderName }) : t('assistant.start.folderTodo'),
+        action: 'assistant.start.folderAction', run: () => openEditor('folder-editor', 'folder-input') },
+      { done: hasSources, title: 'assistant.start.sources',
+        detail: hasSources ? t('assistant.start.sourcesDone', { count: assistant.sources.length }) : t('assistant.start.sourcesTodo'),
+        action: 'assistant.start.sourcesAction', run: () => switchTab('sources'), needs: hasFolder },
+      { done: hasKey, title: 'assistant.start.key', detail: hasKey ? t('assistant.start.keyDone') : t('assistant.start.keyTodo'),
+        action: 'assistant.start.keyAction', run: () => openEditor('key-editor', 'key-input') },
+    ];
+    const current = steps.findIndex(step => !step.done && step.needs !== false);
+    const list = $('start-steps');
+    list.innerHTML = '';
+    steps.forEach((step, i) => {
+      const li = el('li', 'start-step' + (step.done ? ' done' : '') + (i === current ? ' current' : ''));
+      const mark = el('span', 'start-mark', step.done ? '' : String(i + 1));
+      const body = el('span', 'start-body');
+      body.append(el('span', 'start-name', t(step.title)), el('span', 'start-detail', step.detail));
+      if (i === current) {
+        const button = el('button', 'primary start-action', t(step.action));
+        button.addEventListener('click', step.run);
+        body.append(button);
+      }
+      li.append(mark, body);
+      list.append(li);
+    });
   }
 
   function fillModels(models) {
@@ -252,15 +306,21 @@
   }
 
   async function loadAssistant() {
-    if (!settings.sourceFolderName) return;
-    assistant = await call('getAssistantSources');
-    renderAssistant();
+    if (!settings.sourceFolderName) {
+      assistantLoaded = true;
+      renderAssistantStart();
+      return;
+    }
+    try {
+      assistant = await call('getAssistantSources');
+    } finally {
+      assistantLoaded = true;
+      renderAssistant();
+    }
   }
 
   function renderAssistant() {
-    const hasSources = assistant.sources.length > 0;
-    $('assistant-no-sources').classList.toggle('hidden', hasSources || !settings.sourceFolderName);
-    $('assistant-content').classList.toggle('hidden', !hasSources);
+    renderAssistantStart();
     const list = $('assistant-source-list');
     list.innerHTML = '';
     assistant.sources.forEach(s => {
@@ -343,8 +403,9 @@
     };
     thread.element = renderThread(thread, question);
     document.querySelectorAll('#answers > .thread').forEach(card => { card.open = false; });
-    $('answers').prepend(thread.element);
+    $('answers').append(thread.element);
     addTurn(thread, question, result);
+    thread.element.scrollIntoView({ block: 'start' });
     $('question').value = '';
     notifyAssistant();
   }
@@ -413,6 +474,7 @@
     turn.append(answer);
     if (result.citations.length) {
       const cites = el('details', 'cites');
+      cites.open = true;
       cites.append(el('summary', '', t('assistant.citations', { count: result.citations.length })));
       const list = el('ol');
       result.citations.forEach(c => list.append(renderCitation(c)));
@@ -487,27 +549,39 @@
         (failed ? t('sources.doneWithErrors', { count: failed }) : t('sources.done')) + removedNote,
         failed ? 'error' : 'ok'
       );
-      await loadAssistant();
     } finally {
       progress.classList.add('hidden');
+      await loadAssistant();
     }
   }
 
   document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
 
-  $('btn-refresh').addEventListener('click', () => run(loadSources));
+  $('btn-refresh').addEventListener('click', () => run(async () => {
+    try {
+      await loadSources();
+    } finally {
+      await loadAssistant();
+    }
+  }));
   $('btn-process').addEventListener('click', () => run(processSources));
 
   $('btn-save-folder').addEventListener('click', () => run(async () => {
     settings = await call('saveSourceFolder', $('folder-input').value);
     $('folder-input').value = '';
+    $('folder-editor').classList.add('hidden');
     showMessage(t('settings.folder.saved', { name: settings.sourceFolderName }), 'ok');
-    await loadSources();
+    try {
+      await loadSources();
+    } finally {
+      await loadAssistant();
+    }
   }));
 
   $('btn-save-key').addEventListener('click', () => run(async () => {
     settings = await call('saveApiKey', $('key-input').value);
     $('key-input').value = '';
+    $('key-editor').classList.add('hidden');
     showMessage(t('settings.key.saved'), 'ok');
     await loadModels();
   }));
@@ -516,11 +590,6 @@
     settings = await call('clearApiKey');
     fillModels([]);
     showMessage(t('settings.key.removed'), 'ok');
-  }));
-
-  $('btn-save-model').addEventListener('click', () => run(async () => {
-    settings = await call('saveModel', $('model-select').value);
-    showMessage(t('settings.model.saved', { model: settings.model }), 'ok');
   }));
 
   $('btn-test').addEventListener('click', () => run(async () => {
@@ -561,6 +630,8 @@
     $('update-notes').classList.toggle('hidden', !available || !update.notes);
     $('btn-install-update').classList.toggle('hidden', !available);
     $('update-install-hint').classList.toggle('hidden', !available);
+    $('update-banner').classList.toggle('hidden', !available);
+    $('update-banner-text').textContent = available ? t('update.banner', { latest: update.latest }) : '';
     const tab = document.querySelector('.tab[data-tab="settings"]');
     tab.querySelectorAll('.tab-dot').forEach(node => node.remove());
     if (available) tab.append(el('span', 'tab-dot'));
@@ -568,6 +639,27 @@
 
   $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
   $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
+  $('btn-update-banner').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
+  $('btn-change-folder').addEventListener('click', () => {
+    $('folder-editor').classList.toggle('hidden');
+    if (!$('folder-editor').classList.contains('hidden')) $('folder-input').focus();
+  });
+  $('btn-change-key').addEventListener('click', () => {
+    $('key-editor').classList.toggle('hidden');
+    if (!$('key-editor').classList.contains('hidden')) $('key-input').focus();
+  });
+  $('model-select').addEventListener('change', () => {
+    if (!$('model-select').value) return;
+    run(async () => {
+      try {
+        settings = await call('saveModel', $('model-select').value);
+        showMessage(t('settings.model.saved', { model: settings.model }), 'ok');
+      } finally {
+        $('model-select').value = settings.model || '';
+      }
+    });
+  });
+
 
   function makeExpandable(node, collapsedClass) {
     const collapsed = () => node.classList.contains(collapsedClass);

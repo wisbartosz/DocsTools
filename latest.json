@@ -1,8 +1,8 @@
 {
-  "version": "0.16.0",
-  "tag": "v0.16.0",
+  "version": "0.17.0",
+  "tag": "v0.17.0",
   "notes": {
-    "pl": "Nowy ekran „Wymagania uczelni” – trzeci etap przebudowy panelu. Sekcje Ogólne, Struktura, Bibliografia i Format przełącza się jednym przełącznikiem, wszystkie wymagania zapisuje jeden przycisk „Zapisz”, a panel pokazuje, czy obowiązują wymagania domyślne i czy są niezapisane zmiany. W oknie „Powiększ” wszystkie sekcje widać naraz.",
-    "en": "A new \"University requirements\" screen – the third step of the panel redesign. The General, Structure, References and Format sections are switched with one control, one \"Save\" button saves all requirements, and the panel shows whether the default requirements apply and whether there are unsaved changes. In the \"Enlarge\" window all sections are shown at once."
+    "pl": "Nowy Asystent i Ustawienia – czwarty etap przebudowy panelu. Asystent na start pokazuje trzy kroki (folder, przetworzenie źródeł, klucz Gemini) z przyciskiem do następnego, pole pytania jest przypięte na dole jak w czacie, źródła wybiera się z przycisku u góry, a cytaty pod odpowiedzią są od razu widoczne. Ustawienia są podzielone na karty, model i modele zapasowe zapisują się od razu, a o nowej wersji informuje pasek na górze panelu.",
+    "en": "A new Assistant and Settings – the fourth step of the panel redesign. At first the assistant shows three steps (folder, processing the sources, Gemini key) with a button for the next one, the question box is pinned at the bottom like in a chat, the sources are chosen from a button at the top, and the quotes under an answer are shown at once. Settings are split into cards, the model and backup models are saved at once, and a bar at the top of the panel tells you about a new version."
   }
 }

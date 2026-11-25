@@ -81,6 +81,7 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 - „Zgłoś uwagę” w stopce. Piszesz, co nie działa albo czego brakuje, klikasz „Wyślij”
   i wiadomość trafia prosto do autora. Nie trzeba mieć konta na GitHubie.
 - Ustawienia w panelu: folder ze źródłami, klucz Gemini, wybór modelu i test połączenia.
+  Model i modele zapasowe zapisują się od razu, klucz i język – przyciskiem.
 - Polski i angielski interfejs. Dodatek sam wybiera język według ustawień konta Google,
   a w ustawieniach można go zmienić.
 - Przetwarzanie źródeł. Dodatek wyciąga tekst z PDF-ów (także skanów), plików Word,
@@ -129,8 +130,9 @@ koncie (https://script.google.com/home/usersettings). To jeden przełącznik, us
 
 ### Aktualizacje
 
-Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, przy ikonie ustawień (⚙)
-pojawia się kropka, a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”. Przycisk
+Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, na górze panelu pojawia się
+pasek „Jest nowa wersja” z przyciskiem „Zaktualizuj”, przy ikonie ustawień (⚙) kropka,
+a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”. Przycisk
 otwiera instalator, który podmieni Przybornik w Twoim dokumencie na najnowszą wersję.
 Praca, ustawienia i przetworzone źródła zostają. Gdyby nowa wersja sprawiała kłopoty,
 w Ustawieniach jest link do instalatora z przyciskiem „Przywróć poprzednią wersję”. Po aktualizacji odśwież
@@ -205,6 +207,8 @@ w edytorze skryptów, bo następne wgranie nadpisze te zmiany.
 4. Wklej klucz z https://aistudio.google.com/apikey, wybierz model i kliknij
    „Testuj połączenie”.
 5. W zakładce Źródła kliknij „Przetwórz źródła”.
+
+Zakładka Asystent do tego czasu pokazuje te kroki z postępem i przyciskiem do następnego.
 
 Przetworzone teksty lądują w podfolderze `PDZ – dane` wewnątrz folderu ze źródłami.
 Ten podfolder nie jest traktowany jako źródło. Jeśli usuniesz jakiś plik ze źródeł,

@@ -84,6 +84,7 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
 - "Send feedback" in the footer. Write what isn't working or what's missing, click "Send"
   and the message goes straight to the author. No GitHub account needed.
 - Settings in the sidebar: sources folder, Gemini key, model choice and a connection test.
+  The model and backup models are saved at once, the key and language with a button.
 - Polish and English interface. The add-on picks the language of your Google account,
   and you can change it in the settings.
 - Source processing. The add-on extracts text from PDFs (scans included), Word, ODT and
@@ -133,8 +134,9 @@ account (https://script.google.com/home/usersettings). It's a single switch you 
 
 ### Updates
 
-The toolkit checks for a newer version on its own. When there is one, a dot appears on the
-settings icon (⚙), and the Updates section shows what's new and an "Update" button. The button
+The toolkit checks for a newer version on its own. When there is one, a "Version … is available"
+bar with an "Update" button appears at the top of the panel, a dot appears on the settings
+icon (⚙), and the Updates section shows what's new and an "Update" button. The button
 opens the installer, which replaces the toolkit in your document with the latest version.
 Your work, settings and processed sources stay. If the new version gives you trouble,
 Settings has a link to the installer with a "Restore the previous version" button. Reload the document after updating.
@@ -208,6 +210,8 @@ the script editor, because the next push will overwrite your changes.
 4. Paste the key from https://aistudio.google.com/apikey, choose a model and click
    "Test connection".
 5. In the Sources tab, click "Process sources".
+
+Until then, the Assistant tab shows these steps with progress and a button for the next one.
 
 The processed texts go into a `PDZ – dane` subfolder inside your sources folder. That
 subfolder is not treated as a source. If you remove a file from your sources, its text
