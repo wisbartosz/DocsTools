@@ -568,14 +568,48 @@
 
   function fixAllButton(count, handler) {
     const button = el('button', 'btn-tonal', t('typo.fixAll', { count: formatNumber(count) }));
-    button.addEventListener('click', () => run(() => handler(button)));
+    button.addEventListener('click', () => {
+      pendingResultFocus = focusFrom(button);
+      run(() => handler(button));
+    });
     return button;
+  }
+
+  let pendingResultFocus = null;
+
+  function focusFrom(node) {
+    const group = node.closest('.result-group');
+    if (!group) return null;
+    const item = node.closest('.result-item');
+    const items = [...group.querySelectorAll('.result-item')];
+    return { kind: group.dataset.kind, index: item ? items.indexOf(item) : -1, part: node.classList.contains('btn-small') ? 'fix' : 'snippet' };
+  }
+
+  function rememberResultFocus(box) {
+    if (pendingResultFocus) {
+      const pending = pendingResultFocus;
+      pendingResultFocus = null;
+      return pending;
+    }
+    const active = document.activeElement;
+    return active && box.contains(active) ? focusFrom(active) : null;
+  }
+
+  function restoreResultFocus(box, focus) {
+    if (!focus) return;
+    const group = [...box.querySelectorAll('.result-group')].find(g => g.dataset.kind === focus.kind);
+    if (!group) return;
+    const items = [...group.querySelectorAll('.result-item')];
+    const item = focus.index >= 0 && items.length ? items[Math.min(focus.index, items.length - 1)] : null;
+    const target = item ? (focus.part === 'fix' && item.querySelector('.btn-small')) || item.querySelector('.result-snippet') : group.querySelector('.result-head');
+    if (target) target.focus();
   }
 
   function renderCheckResult(spec) {
     const data = spec.data();
     const summary = $(spec.summaryId);
     const box = $(spec.groupsId);
+    const focus = rememberResultFocus(box);
     summary.classList.remove('hidden');
     box.innerHTML = '';
     const empty = spec.empty ? spec.empty(data) : '';
@@ -588,16 +622,20 @@
     summary.textContent = problems ? t(spec.summaryKey, { count: formatNumber(problems) }) : t(spec.noneKey);
     (spec.notes ? spec.notes(data) : []).forEach(text => summary.append(el('div', 'result-note', text)));
     groups.forEach(group => box.append(renderResultGroup(spec, group)));
+    restoreResultFocus(box, focus);
   }
 
   function renderResultGroup(spec, group) {
     const card = el('details', 'result-group');
+    card.dataset.kind = group.kind;
     card.open = spec.open.has(group.kind);
     card.addEventListener('toggle', () => card.open ? spec.open.add(group.kind) : spec.open.delete(group.kind));
     const head = el('summary', 'result-head');
     const level = group.info ? 'review' : 'fix';
     const mark = el('span', 'sev sev-' + level);
     mark.title = level === 'review' ? t('check.level.review') : t('check.level.fix');
+    mark.setAttribute('role', 'img');
+    mark.setAttribute('aria-label', mark.title);
     head.append(mark, el('span', 'result-title', t(spec.kindKey + group.kind + '.title')), el('span', 'result-count', formatNumber(group.count)));
     card.append(head);
     card.append(el('div', 'result-desc', t(spec.kindKey + group.kind + '.desc')));
@@ -628,15 +666,28 @@
     }
     if (showable) {
       snippet.title = t('typo.show');
-      snippet.addEventListener('click', () => {
+      snippet.tabIndex = 0;
+      snippet.setAttribute('role', 'button');
+      const show = () => {
+        if (busy) return;
         hideMessage();
         call(spec.showFn, item.ref).catch(e => showMessage(errorText(e), 'error'));
+      };
+      snippet.addEventListener('click', show);
+      snippet.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          show();
+        }
       });
     }
     li.append(snippet);
     if (spec.fixable && spec.fixable(item)) {
       const fix = el('button', 'btn-small', t('typo.fix'));
-      fix.addEventListener('click', () => run(() => spec.fixItem(item)));
+      fix.addEventListener('click', () => {
+        pendingResultFocus = focusFrom(fix);
+        run(() => spec.fixItem(item));
+      });
       li.append(fix);
     }
     return li;

@@ -1,8 +1,8 @@
 {
-  "version": "0.14.0",
-  "tag": "v0.14.0",
+  "version": "0.14.1",
+  "tag": "v0.14.1",
   "notes": {
-    "pl": "Nowy wygląd wyników w zakładce „Sprawdź” – pierwszy etap przebudowy panelu. Wyniki wszystkich modułów mają wspólny wygląd: karty z oznaczeniem ważności (czerwona kropka – do poprawy, bursztynowy romb – do przejrzenia), poprawki w jasnych polach i nowe przyciski. Stopka panelu jest zawsze na dole, a w oknie „Powiększ” wyniki układają się w dwóch kolumnach.",
-    "en": "A new look for results in the \"Check\" tab – the first step of the panel redesign. Results of all modules share one look: cards with a severity mark (red dot – to fix, amber diamond – to review), fixes in light boxes and new buttons. The panel footer always stays at the bottom, and in the \"Enlarge\" window the results are laid out in two columns."
+    "pl": "Poprawki nowego wyglądu wyników: strzałki i znaczniki kart nie nachodzą już na pasek zakładek przy przewijaniu, komunikaty zostają widoczne pod zakładkami, wyniki można obsługiwać z klawiatury (Tab, Enter) i po poprawce zaznaczenie wraca w to samo miejsce listy. Drobne poprawki wyglądu przycisków, pól i okna „Powiększ”.",
+    "en": "Fixes for the new results look: card arrows and marks no longer draw over the tab bar while scrolling, messages stay visible under the tabs, results work with the keyboard (Tab, Enter) and after a fix the focus returns to the same place in the list. Small look fixes for buttons, fields and the \"Enlarge\" window."
   }
 }
