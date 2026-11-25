@@ -60,6 +60,12 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   citation and quotes in italics, and lists for review longer paragraphs without a
   citation in the theoretical part, citations in Results, and a Discussion built mostly
   on new works.
+- Tables, figures and appendices, also in the "Check" tab. The add-on finds tables and images
+  with their captions and shows: objects without a caption or with the caption below, without
+  a source ("Źródło: …" / "Opracowanie własne"), web sources without an access date, numbering
+  out of order (including "Tabela 2.1"), references in the text to numbers that do not exist,
+  objects nothing refers to, mismatches with the list of tables and figures, and appendices
+  without a "(Załącznik N)" reference. Tables and figures in the annex are skipped.
 - The default formatting and structure requirements come from the guidelines of the
   university the toolkit was made for. They apply right away, with nothing to save. If your
   university is different, change them in the forms or read them from your sources. The
@@ -92,7 +98,8 @@ with your sources.
 - search across your sources,
 - adding reference entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
-- consistent terminology, figure and table numbering, editorial notes,
+- renumbering tables and figures with one click and generating the list of tables and figures,
+- consistent terminology, editorial notes,
 - questions your supervisor might ask, and comparing your goals with your conclusions,
 - a progress counter.
 
@@ -265,6 +272,8 @@ no subfolders, so the manual installation can recreate them.
 - `Structure.js`: thesis structure – table of contents, heading levels and numbering,
   required parts, keywords, lengths, page count (via PDF export). The pure functions can be
   tested in Node.
+- `Figures.js`: tables, figures and appendices – captions, sources, numbering, references
+  in the text, list of tables and figures. The pure functions can be tested in Node.
 - `Bibliography.js`: references and Harvard citations – finding citations and entries,
   matching, alphabetical order, sorting, citation style and placement with fixes. The pure functions can be tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and

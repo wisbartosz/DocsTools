@@ -1,8 +1,8 @@
 {
-  "version": "0.12.0",
-  "tag": "v0.12.0",
+  "version": "0.13.0",
+  "tag": "v0.13.0",
   "notes": {
-    "pl": "Bibliografia i przypisy – zapis i rozmieszczenie przypisów. Dodatek sprawdza zapis przypisów według poradnika: kropkę po nawiasie, spacje w nawiasie, przecinek przed rokiem, „i in.” przy więcej niż dwóch autorach, przecinki i średniki, litery a/b przy roku oraz liczbę autorów zgodną z bibliografią. Błędy zapisu poprawia po kliknięciu, a kropkę, spacje i przecinek także wszystkie naraz. Pokazuje cytaty bez przypisu i cytaty w kursywie, a do przejrzenia: dłuższe akapity bez przypisu w części teoretycznej, przypisy w Wynikach i Dyskusję opartą głównie na nowych pracach.",
-    "en": "References and citations – citation style and placement. The add-on checks how citations are written according to the guidelines: full stop after the bracket, spaces in the bracket, comma before the year, \"i in.\" for more than two authors, commas and semicolons, year letters a/b and the number of authors matching the reference list. It fixes style mistakes with a click, and the full stop, spaces and comma also all at once. It shows quotes without a citation and quotes in italics, and for review: longer paragraphs without a citation in the theoretical part, citations in Results, and a Discussion built mostly on new works."
+    "pl": "Nowa sekcja „Tabele, ryciny i załączniki” w zakładce „Sprawdź”. Dodatek odnajduje tabele i ryciny z podpisami i pokazuje brak podpisu lub podpis pod obiektem, brak źródła, źródła internetowe bez daty, numerację nie po kolei, odwołania w tekście do nieistniejących numerów, obiekty bez odwołania, rozbieżności ze spisem tabel i rycin oraz załączniki bez odwołania.",
+    "en": "A new \"Tables, figures and appendices\" section in the \"Check\" tab. The add-on finds tables and figures with their captions and shows a missing caption or a caption below the object, a missing source, web sources without a date, numbering out of order, references in the text to numbers that do not exist, objects nothing refers to, mismatches with the list of tables and figures, and appendices nothing refers to."
   }
 }

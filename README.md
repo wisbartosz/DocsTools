@@ -57,6 +57,12 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   z bibliografią) z poprawką po kliknięciu, cytaty bez przypisu i cytaty w kursywie, a do
   przejrzenia pokazuje dłuższe akapity bez przypisu w części teoretycznej, przypisy
   w Wynikach i Dyskusję opartą głównie na nowych pracach.
+- Tabele, ryciny i załączniki, też w zakładce „Sprawdź”. Dodatek odnajduje tabele i obrazy
+  z podpisami i pokazuje: obiekty bez podpisu albo z podpisem pod spodem, bez źródła
+  („Źródło: …” / „Opracowanie własne”), źródła internetowe bez daty dostępu, numerację nie po
+  kolei (także „Tabela 2.1”), odwołania w tekście do nieistniejących numerów, obiekty bez
+  odwołania, zgodność ze spisem tabel i rycin oraz załączniki bez odwołania „(Załącznik N)”.
+  Tabele i ryciny w aneksie są pomijane.
 - Domyślne wymagania formatowania i struktury pochodzą z regulaminu i poradnika uczelni,
   dla której powstał Przybornik. Obowiązują od razu, bez zapisywania. Jeśli piszesz pracę
   na innej uczelni, zmień je w formularzach albo wczytaj ze źródeł. Przycisk „Przywróć
@@ -88,7 +94,8 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - wyszukiwarka w źródłach,
 - dodawanie pozycji bibliografii po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
-- spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
+- przenumerowanie tabel i rycin jednym kliknięciem i generowanie spisu tabel i rycin,
+- spójność terminologii, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
 - licznik postępu.
 
@@ -264,6 +271,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Structure.js`: struktura pracy – spis treści, poziomy i numeracja nagłówków, wymagane
   części, słowa kluczowe, długości, liczba stron (eksport do PDF). Czyste funkcje są
   testowalne w Node.
+- `Figures.js`: tabele, ryciny i załączniki – podpisy, źródła, numeracja, odwołania
+  w tekście, spis tabel i rycin. Czyste funkcje są testowalne w Node.
 - `Bibliography.js`: bibliografia i przypisy harwardzkie – odnajdywanie przypisów
   i pozycji, dopasowanie, kolejność alfabetyczna, sortowanie, zapis i rozmieszczenie
   przypisów z poprawkami. Czyste funkcje są

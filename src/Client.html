@@ -1213,6 +1213,60 @@
     }
   }
 
+  let figures = null;
+  const figuresOpen = new Set();
+
+  async function checkFigures() {
+    const button = $('btn-check-fig');
+    button.classList.add('loading');
+    try {
+      figures = await call('checkFigures', { type: $('srule-type').value });
+      renderFigures();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  function renderFigures() {
+    const summary = $('fig-summary');
+    summary.classList.remove('hidden');
+    const box = $('fig-groups');
+    box.innerHTML = '';
+    const groups = figures.groups.filter(g => g.count > 0);
+    const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
+    summary.textContent = problems ? t('fig.summary', { count: formatNumber(problems) }) : t('fig.none');
+    summary.append(el('div', 'typo-desc', t('fig.stats', figures.stats)));
+    groups.forEach(group => {
+      const card = el('details', 'typo-group');
+      card.open = figuresOpen.has(group.kind);
+      card.addEventListener('toggle', () => card.open ? figuresOpen.add(group.kind) : figuresOpen.delete(group.kind));
+      card.append(el('summary', '', t('fig.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
+      card.append(el('div', 'typo-desc', t('fig.kind.' + group.kind + '.desc')));
+      if (group.count > group.items.length) {
+        card.append(el('div', 'typo-desc', t('bib.more', { shown: group.items.length, count: formatNumber(group.count) })));
+      }
+      const list = el('ul', 'list');
+      group.items.forEach(item => {
+        const li = el('li');
+        const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
+        snippet.append(el('div', '', item.preview));
+        if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
+        if (item.showable) {
+          snippet.title = t('typo.show');
+          snippet.addEventListener('click', () => {
+            hideMessage();
+            call('showBibliographyIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
+          });
+        }
+        li.append(snippet);
+        list.append(li);
+      });
+      card.append(list);
+      box.append(card);
+    });
+  }
+
+  $('btn-check-fig').addEventListener('click', () => run(checkFigures));
   $('btn-save-bib-rules').addEventListener('click', () => run(saveBibliographyRules));
   $('btn-reset-bib-rules').addEventListener('click', () => run(resetBibliographyRules));
   $('btn-check-bib').addEventListener('click', () => run(checkBibliography));
