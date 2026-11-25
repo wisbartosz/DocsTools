@@ -72,7 +72,14 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   a source ("Źródło: …" / "Opracowanie własne"), web sources without an access date, numbering
   out of order (including "Tabela 2.1"), references in the text to numbers that do not exist,
   objects nothing refers to, mismatches with the list of tables and figures, and appendices
-  without a "(Załącznik N)" reference. Tables and figures in the annex are skipped.
+  without a "(Załącznik N)" reference. Tables and figures in the annex are skipped. The
+  "Renumber…" button next to the numbering shows a preview ("Tabela 4 → 3") and fixes the
+  numbers in captions, references in the text (footnotes and table cells too) and the list in
+  one click. Ambiguous references are left as they are and listed for you to fix. "Move
+  above" moves a caption from below a table or figure to above it (one or all at once), and
+  "Create the list…" / "Refresh the list…" inserts the list of tables and figures after the
+  references (or in place of the current one) with links to the captions and estimated page
+  numbers – Docs does not give scripts page numbers, so check them before you submit.
 - The default formatting and structure requirements come from the guidelines of the
   university the toolkit was made for. They apply right away, with nothing to save. If your
   university is different, change them in the forms or read them from your sources. The
@@ -287,7 +294,8 @@ no subfolders, so the manual installation can recreate them.
   required parts, keywords, lengths, page count (estimated from the layout, PDF export only near the minimum). The pure functions can be
   tested in Node.
 - `Figures.js`: tables, figures and appendices – captions, sources, numbering, references
-  in the text, list of tables and figures. The pure functions can be tested in Node.
+  in the text, list of tables and figures, renumbering (`renumberPlan_` – a pure function that
+  plans the changes). The pure functions can be tested in Node.
 - `Bibliography.js`: references and Harvard citations – finding citations and entries,
   matching, alphabetical order, sorting, citation style and placement with fixes. The pure functions can be tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and

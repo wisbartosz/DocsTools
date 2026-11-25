@@ -1,8 +1,8 @@
 {
-  "version": "0.19.1",
-  "tag": "v0.19.1",
+  "version": "0.20.0",
+  "tag": "v0.20.0",
   "notes": {
-    "pl": "Nowy wybór źródeł w Asystencie: rozwijane okienko w stylu reszty panelu, z rozmiarem każdego pliku i sumą zaznaczenia. Zamyka się kliknięciem obok albo klawiszem Esc.",
-    "en": "A new source picker in the assistant: a drop-down in the style of the rest of the panel, with the size of each file and the total of the selection. It closes when you click elsewhere or press Esc."
+    "pl": "Tabele i ryciny – krok 2. „Przenumeruj…” poprawia numery w podpisach, odwołaniach (także w przypisach i tabelach) i w spisie, z podglądem zmian. „Przenieś nad” przenosi podpis spod tabeli lub ryciny nad nią. „Utwórz spis…” / „Odśwież spis…” wstawia spis tabel i rycin po bibliografii, z linkami do podpisów i szacowanymi numerami stron (sprawdź je przed oddaniem).",
+    "en": "Tables and figures – step 2. \"Renumber…\" fixes the numbers in captions, references (footnotes and tables too) and the list, with a preview. \"Move above\" moves a caption from below a table or figure to above it. \"Create the list…\" / \"Refresh the list…\" inserts the list of tables and figures after the references, with links to the captions and estimated page numbers (check them before you submit)."
   }
 }

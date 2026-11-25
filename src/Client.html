@@ -85,7 +85,7 @@
   async function run(action) {
     if (busy) return;
     busy = true;
-    const buttons = [...document.querySelectorAll('button:not(.tab):not(.rail-item), #check-type, #model-select')].filter(b => !b.classList.contains('loading'));
+    const buttons = [...document.querySelectorAll('button:not(.tab):not(.rail-item), #check-type, #model-select')].filter(b => !b.classList.contains('loading') && !b.disabled);
     buttons.forEach(b => b.disabled = true);
     hideMessage();
     try {
@@ -93,7 +93,7 @@
     } catch (e) {
       showMessage(errorText(e), 'error');
     } finally {
-      buttons.forEach(b => b.disabled = false);
+      buttons.forEach(b => { b.disabled = false; });
       busy = false;
       renderSettings();
       if (overviewReady) renderOverview();
@@ -1054,7 +1054,7 @@
     }
     li.append(snippet);
     if (spec.fixable && spec.fixable(item)) {
-      const fix = el('button', 'btn-small', t('typo.fix'));
+      const fix = el('button', 'btn-small', spec.fixLabel ? spec.fixLabel(item) : t('typo.fix'));
       fix.addEventListener('click', () => {
         pendingResultFocus = focusFrom(fix);
         run(() => spec.fixItem(item));
@@ -1650,6 +1650,8 @@
   const figuresOpen = new Set();
 
   async function checkFigures() {
+    hideRenumberPreview();
+    hideListPreview();
     const button = $('btn-check-fig');
     button.classList.add('loading');
     try {
@@ -1671,7 +1673,192 @@
     open: figuresOpen,
     showFn: 'showBibliographyIssue',
     notes: data => [t('fig.stats', data.stats)],
+    fixable: item => !!item.fixable,
+    fixLabel: () => t('fig.moveAbove'),
+    fixItem: async item => {
+      figures = await call('moveFigureCaption', { type: $('check-type').value }, item.ref);
+      hideListPreview();
+      hideRenumberPreview();
+      renderFigures();
+      showMessage(t('fig.moved', { count: 1 }) + ' ' + t('typo.versionHint'), 'ok');
+    },
+    groupActions: group => {
+      if (group.kind === 'captionBelow') {
+        const fixable = group.items.filter(item => item.fixable).length;
+        if (!fixable) return [];
+        const all = el('button', 'btn-tonal', t('fig.moveAllAbove', { count: fixable }));
+        all.addEventListener('click', () => run(async () => {
+          all.classList.add('loading');
+          try {
+            const response = await call('moveAllFigureCaptions', { type: $('check-type').value });
+            figures = response.result;
+            hideListPreview();
+            hideRenumberPreview();
+            renderFigures();
+            showMessage(t('fig.moved', { count: response.moved }) + ' ' + t('typo.versionHint'), 'ok');
+          } finally {
+            all.classList.remove('loading');
+          }
+        }));
+        return [all];
+      }
+      if (['noList', 'listMissing', 'listExtra', 'listTitle'].includes(group.kind)) {
+        const list = el('button', 'btn-tonal', t(group.kind === 'noList' ? 'fig.list.create' : 'fig.list.refresh'));
+        list.addEventListener('click', () => run(async () => {
+          list.classList.add('loading');
+          try {
+            hideRenumberPreview();
+            renderListPreview(await call('previewFigureList'));
+          } finally {
+            list.classList.remove('loading');
+          }
+        }));
+        return [list];
+      }
+      if (group.kind !== 'numbering') return [];
+      const button = el('button', 'btn-tonal', t('fig.renumber'));
+      button.addEventListener('click', () => run(async () => {
+        button.classList.add('loading');
+        try {
+          hideListPreview();
+          renderRenumberPreview(await call('previewFigureRenumber'));
+        } finally {
+          button.classList.remove('loading');
+        }
+      }));
+      return [button];
+    },
   };
+
+  function hideListPreview() {
+    $('fig-list').classList.add('hidden');
+    $('fig-list').innerHTML = '';
+  }
+
+  function listToggle(title, hint, checked, disabled) {
+    const label = el('label', 'picker-row');
+    const text = el('span', 'picker-text');
+    text.append(el('span', 'picker-name', title), el('span', 'picker-meta', hint));
+    const box = el('input');
+    box.type = 'checkbox';
+    box.checked = checked;
+    box.disabled = disabled;
+    label.append(text, box);
+    return { label: label, box: box };
+  }
+
+  function renderListPreview(preview) {
+    const card = $('fig-list');
+    card.innerHTML = '';
+    card.append(el('div', 'renumber-title', t('fig.list.heading')));
+    card.append(el('div', 'small', t('fig.list.place.' + preview.place, { count: preview.existing })));
+    if (!preview.entries.length) card.append(el('div', 'renumber-warn small', t('err.figListEmpty')));
+    const list = el('div', 'list-preview');
+    preview.entries.forEach(entry => {
+      const row = el('div', 'list-preview-row');
+      row.append(el('span', 'list-preview-text', entry.text), el('span', 'list-preview-page', entry.page ? t('fig.list.pageApprox', { page: entry.page }) : '–'));
+      list.append(row);
+    });
+    card.append(list);
+    const toggles = el('div', 'list-toggles');
+    const pages = listToggle(t('fig.list.pages'), t(preview.pages ? 'fig.list.pagesHint' : 'fig.list.pagesNone'), preview.pages, !preview.pages);
+    const links = listToggle(t('fig.list.links'), t('fig.list.linksHint'), true, false);
+    pages.box.addEventListener('change', () => list.classList.toggle('no-pages', !pages.box.checked));
+    toggles.append(pages.label, links.label);
+    card.append(toggles);
+    const actions = el('div', 'renumber-actions');
+    const apply = el('button', 'primary', t(preview.place === 'replace' ? 'fig.list.replace' : 'fig.list.insert'));
+    apply.disabled = !preview.entries.length;
+    apply.addEventListener('click', () => run(async () => {
+      apply.classList.add('loading');
+      try {
+        const response = await call('insertFigureList', { type: $('check-type').value }, { pages: pages.box.checked, links: links.box.checked });
+        hideListPreview();
+        figures = response.result;
+        renderFigures();
+        showMessage(t('fig.list.done', { count: response.count }) + (response.pages ? ' ' + t('fig.list.pagesHint') + '.' : '') + ' ' + t('typo.versionHint'), 'ok');
+      } finally {
+        apply.classList.remove('loading');
+      }
+    }));
+    const cancel = el('button', 'link', t('fig.renumber.cancel'));
+    cancel.addEventListener('click', hideListPreview);
+    actions.append(apply, cancel);
+    card.append(actions);
+    card.classList.remove('hidden');
+    card.scrollIntoView({ block: 'nearest' });
+    apply.disabled ? cancel.focus() : apply.focus();
+  }
+
+  function hideRenumberPreview() {
+    $('fig-renumber').classList.add('hidden');
+    $('fig-renumber').innerHTML = '';
+  }
+
+  function renderRenumberPreview(preview) {
+    const card = $('fig-renumber');
+    card.innerHTML = '';
+    const pending = preview.changes.length + preview.entryCount;
+    if (!pending && !preview.unresolved.length && !preview.conflicts.length) {
+      hideRenumberPreview();
+      showMessage(t('fig.renumber.none'), 'ok');
+      return false;
+    }
+    card.append(el('div', 'renumber-title', t('fig.renumber.title')));
+    if (preview.changes.length) {
+      const list = el('ul', 'renumber-list');
+      preview.changes.slice(0, 12).forEach(change => {
+        const li = el('li');
+        li.append(el('span', 'renumber-label', change.label + ' '), el('span', 'fix-before', change.from), el('span', 'renumber-arrow', ' → '), el('span', 'fix-after', change.to));
+        list.append(li);
+      });
+      if (preview.changes.length > 12) list.append(el('li', 'muted', t('fig.renumber.more', { count: preview.changes.length - 12 })));
+      card.append(list);
+    }
+    const notes = [];
+    if (preview.refCount) notes.push(t('fig.renumber.refs', { count: preview.refCount }));
+    if (preview.entryCount) notes.push(t('fig.renumber.entries', { count: preview.entryCount }));
+    if (notes.length) card.append(el('div', 'muted small', notes.join(' ')));
+    preview.conflicts.forEach(label => card.append(el('div', 'renumber-warn small', t('fig.renumber.conflict', { label: label }))));
+    if (preview.unresolved.length) {
+      card.append(el('div', 'renumber-subtitle small', t('fig.renumber.unresolvedTitle')));
+      const list = el('ul', 'renumber-unresolved small');
+      preview.unresolved.slice(0, 8).forEach(item => {
+        const li = el('li');
+        li.append(el('span', 'renumber-raw', item.raw), ' – ' + t('fig.renumber.reason.' + item.reason, { number: item.number }));
+        list.append(li);
+      });
+      if (preview.unresolved.length > 8) list.append(el('li', 'muted', t('fig.renumber.more', { count: preview.unresolved.length - 8 })));
+      card.append(list);
+    }
+    const actions = el('div', 'renumber-actions');
+    const apply = el('button', 'primary', t('fig.renumber.apply'));
+    apply.disabled = !pending;
+    apply.addEventListener('click', () => run(async () => {
+      apply.classList.add('loading');
+      try {
+        const response = await call('renumberFigures', { type: $('check-type').value }, preview.fingerprint);
+        if (response.stale) {
+          if (renderRenumberPreview(response.preview)) showMessage(t('fig.renumber.stale'), 'warn');
+          return;
+        }
+        hideRenumberPreview();
+        figures = response.result;
+        renderFigures();
+        showMessage(t('fig.renumber.done', { captions: response.captions, refs: response.refs, entries: response.entries }) + ' ' + t('typo.versionHint'), 'ok');
+      } finally {
+        apply.classList.remove('loading');
+      }
+    }));
+    const cancel = el('button', 'link', t('fig.renumber.cancel'));
+    cancel.addEventListener('click', hideRenumberPreview);
+    actions.append(apply, cancel);
+    card.append(actions);
+    card.classList.remove('hidden');
+    card.scrollIntoView({ block: 'nearest' });
+    apply.disabled ? cancel.focus() : apply.focus();
+    return true;
+  }
 
   function renderFigures() {
     renderCheckResult(FIGURES_SPEC);

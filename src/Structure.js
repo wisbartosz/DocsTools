@@ -508,36 +508,98 @@ function pageStyles_(body) {
   return styles;
 }
 
+function pageLayout_() {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+  const width = body.getPageWidth() - body.getMarginLeft() - body.getMarginRight();
+  const height = body.getPageHeight() - body.getMarginTop() - body.getMarginBottom();
+  if (!(width > 0) || !(height > 0)) return null;
+  const styles = pageStyles_(body);
+  const blocks = [];
+  const count = body.getNumChildren();
+  for (let i = 0; i < count; i++) {
+    const child = body.getChild(i);
+    const type = String(child.getType());
+    let block = null;
+    if (type === 'PARAGRAPH' || type === 'LIST_ITEM') {
+      block = paragraphBlock_(type === 'PARAGRAPH' ? child.asParagraph() : child.asListItem(), width, styles);
+    } else if (type === 'TABLE') {
+      block = { height: tableHeight_(child.asTable(), width, styles) };
+    } else if (type === 'TABLE_OF_CONTENTS') {
+      const lines = child.asTableOfContents().getText().split('\n').length;
+      block = { height: lines * styles.NORMAL.size * 1.17 * 1.15 + 6 };
+    }
+    if (block) {
+      block.child = i;
+      blocks.push(block);
+    }
+  }
+  const byChild = {};
+  blocks.forEach(function (block) { byChild[block.child] = block; });
+  const footnotes = doc.getFootnotes().reduce(function (sum, footnote) {
+    const contents = footnote.getFootnoteContents();
+    const extra = contents ? textLines_(contents.getText(), width, 10, styles.NORMAL.family) * 10 * 1.17 : 0;
+    let node = footnote.getParent();
+    while (node && node.getParent() && node.getParent().getType() !== DocumentApp.ElementType.BODY_SECTION) node = node.getParent();
+    const anchor = node && node.getParent() ? byChild[body.getChildIndex(node)] : null;
+    if (anchor) {
+      anchor.height += extra;
+      return sum;
+    }
+    return sum + extra;
+  }, 0);
+  return { blocks: blocks, height: height, footnotes: footnotes };
+}
+
 function estimatePages_() {
   try {
-    const doc = DocumentApp.getActiveDocument();
-    const body = doc.getBody();
-    const width = body.getPageWidth() - body.getMarginLeft() - body.getMarginRight();
-    const height = body.getPageHeight() - body.getMarginTop() - body.getMarginBottom();
-    if (!(width > 0) || !(height > 0)) return null;
-    const styles = pageStyles_(body);
-    const blocks = [];
-    const count = body.getNumChildren();
-    for (let i = 0; i < count; i++) {
-      const child = body.getChild(i);
-      const type = String(child.getType());
-      if (type === 'PARAGRAPH' || type === 'LIST_ITEM') {
-        blocks.push(paragraphBlock_(type === 'PARAGRAPH' ? child.asParagraph() : child.asListItem(), width, styles));
-      } else if (type === 'TABLE') {
-        blocks.push({ height: tableHeight_(child.asTable(), width, styles) });
-      } else if (type === 'TABLE_OF_CONTENTS') {
-        const lines = child.asTableOfContents().getText().split('\n').length;
-        blocks.push({ height: lines * styles.NORMAL.size * 1.17 * 1.15 + 6 });
-      }
-    }
-    const footnotes = doc.getFootnotes().reduce(function (sum, footnote) {
-      const contents = footnote.getFootnoteContents();
-      return sum + (contents ? textLines_(contents.getText(), width, 10, styles.NORMAL.family) * 10 * 1.17 : 0);
-    }, 0);
-    if (footnotes) blocks.push({ height: footnotes });
-    return layoutPages_(blocks, height);
+    const layout = pageLayout_();
+    if (!layout) return null;
+    const blocks = layout.blocks.slice();
+    if (layout.footnotes) blocks.push({ height: layout.footnotes });
+    return layoutPages_(blocks, layout.height);
   } catch (e) {
     console.warn('Nie udało się oszacować liczby stron: ' + e.message);
+    return null;
+  }
+}
+
+function blockStartPages_(blocks, pageHeight) {
+  let pages = 0;
+  let y = 0;
+  return blocks.map(function (block) {
+    if (block.breakBefore && y > 0) {
+      pages++;
+      y = 0;
+    }
+    if (y >= pageHeight) {
+      pages++;
+      y = 0;
+    }
+    const start = pages + 1;
+    y += block.height;
+    while (y > pageHeight) {
+      pages++;
+      y -= pageHeight;
+    }
+    if (block.breakAfter) {
+      pages++;
+      y = 0;
+    }
+    return start;
+  });
+}
+
+function estimatedChildPages_() {
+  try {
+    const layout = pageLayout_();
+    if (!layout) return null;
+    const starts = blockStartPages_(layout.blocks, layout.height);
+    const pages = {};
+    layout.blocks.forEach(function (block, i) { pages[block.child] = starts[i]; });
+    return pages;
+  } catch (e) {
+    console.warn('Nie udało się oszacować stron: ' + e.message);
     return null;
   }
 }

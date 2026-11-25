@@ -69,7 +69,14 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   („Źródło: …” / „Opracowanie własne”), źródła internetowe bez daty dostępu, numerację nie po
   kolei (także „Tabela 2.1”), odwołania w tekście do nieistniejących numerów, obiekty bez
   odwołania, zgodność ze spisem tabel i rycin oraz załączniki bez odwołania „(Załącznik N)”.
-  Tabele i ryciny w aneksie są pomijane.
+  Tabele i ryciny w aneksie są pomijane. Przycisk „Przenumeruj…” przy numeracji pokazuje
+  podgląd („Tabela 4 → 3”) i jednym kliknięciem poprawia numery w podpisach, odwołaniach
+  w tekście (także w przypisach i komórkach tabel) i w spisie. Odwołań niejednoznacznych
+  nie zmienia – pokazuje je do poprawienia ręcznie. „Przenieś nad” przenosi podpis spod
+  tabeli lub ryciny nad nią (pojedynczo albo wszystkie naraz), a „Utwórz spis…” / „Odśwież
+  spis…” wstawia spis tabel i rycin po bibliografii (albo w miejsce obecnego) z linkami do
+  podpisów i szacowanymi numerami stron – Dokumenty nie podają skryptom numeru strony,
+  więc trzeba je sprawdzić przed oddaniem.
 - Domyślne wymagania formatowania i struktury pochodzą z regulaminu i poradnika uczelni,
   dla której powstał Przybornik. Obowiązują od razu, bez zapisywania. Jeśli piszesz pracę
   na innej uczelni, zmień je w formularzach albo wczytaj ze źródeł. Przycisk „Przywróć
@@ -286,7 +293,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   części, słowa kluczowe, długości, liczba stron (szacunek z układu strony, eksport do PDF tylko blisko minimum). Czyste funkcje są
   testowalne w Node.
 - `Figures.js`: tabele, ryciny i załączniki – podpisy, źródła, numeracja, odwołania
-  w tekście, spis tabel i rycin. Czyste funkcje są testowalne w Node.
+  w tekście, spis tabel i rycin, przenumerowanie (`renumberPlan_` – czysta funkcja planu zmian).
+  Czyste funkcje są testowalne w Node.
 - `Bibliography.js`: bibliografia i przypisy harwardzkie – odnajdywanie przypisów
   i pozycji, dopasowanie, kolejność alfabetyczna, sortowanie, zapis i rozmieszczenie
   przypisów z poprawkami. Czyste funkcje są

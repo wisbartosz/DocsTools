@@ -38,11 +38,16 @@ function parseCaption_(text) {
   return {
     kind: FIG_TABLE_LABEL.test(label) ? 'table' : 'figure',
     label: label,
-    labelKey: label.toLowerCase().replace(/\.$/, '').slice(0, 3),
+    labelKey: figureLabelKey_(label),
     number: number,
+    numberAt: match[0].length - (match[2].length + match[3].length + match[4].length),
     title: title,
     sourceInline: FIG_SOURCE_KEYWORD.test(title) || FIG_SOURCE_CITATION.test(title),
   };
+}
+
+function figureLabelKey_(label) {
+  return String(label).toLowerCase().replace(/\.$/, '').slice(0, 3);
 }
 
 function isSourceLine_(text) {
@@ -68,6 +73,7 @@ function numberList_(text, from, plural) {
   if (!first) return null;
   const numbers = [first[1]];
   let end = from + first[0].length;
+  const tokens = [{ number: first[1], start: end - first[1].length, range: false }];
   const next = new RegExp('^(\\s*(?:[-\\u2013]|,|\\s(?:i|oraz|and)\\s)\\s*)' + FIG_NUMBER + '(?![\\d%])(?!\\.\\d)', 'u');
   const after = /^(\s*$|\s*[),.;:!?](?!\d)|\s*[-–]\s*\d|\s+(i|oraz|and)\s+\d|,\s*\d)/u;
   for (;;) {
@@ -77,15 +83,17 @@ function numberList_(text, from, plural) {
     const tail = rest.slice(match[0].length);
     const connector = match[1].trim();
     if (!after.test(tail) && !(plural && connector !== ',' && /^\s+\p{Ll}/u.test(tail))) break;
-    if (connector === '-' || connector === '–') {
-      const range = expandRange_(numbers.pop(), match[2]);
-      Array.prototype.push.apply(numbers, range);
+    const range = connector === '-' || connector === '–';
+    if (range) {
+      const expanded = expandRange_(numbers.pop(), match[2]);
+      Array.prototype.push.apply(numbers, expanded);
     } else {
       numbers.push(match[2]);
     }
     end += match[0].length;
+    tokens.push({ number: match[2], start: end - match[2].length, range: range });
   }
-  return { numbers: numbers, end: end };
+  return { numbers: numbers, end: end, tokens: tokens };
 }
 
 function labelledReferences_(text, labels, kind) {
@@ -96,8 +104,9 @@ function labelledReferences_(text, labels, kind) {
     const list = numberList_(text, match.index + match[0].length, FIG_PLURAL.test(match[0]));
     if (!list) continue;
     const raw = text.slice(match.index, list.end);
+    const labelKey = figureLabelKey_(match[0]);
     list.numbers.forEach(function (number) {
-      refs.push({ kind: kind, number: number, start: match.index, end: list.end, raw: raw });
+      refs.push({ kind: kind, number: number, start: match.index, end: list.end, raw: raw, labelKey: labelKey, tokens: list.tokens });
     });
     pattern.lastIndex = list.end;
   }
@@ -358,7 +367,11 @@ function checkFigures(options) {
   let entries = null;
   ctx.objects.forEach(function (object) {
     if (!object.caption && !object.captionBelow) add('noCaption', blockItem(object.first, objectLabel(object), t_('fig.noCaption.detail')));
-    if (object.captionBelow) add('captionBelow', blockItem(object.captionBelow.block, objectLabel(object), t_('fig.captionBelow.detail')));
+    if (object.captionBelow) {
+      const item = blockItem(object.captionBelow.block, objectLabel(object), t_('fig.captionBelow.detail'));
+      item.fixable = object.captionBelow.block.type === 'paragraph';
+      add('captionBelow', item);
+    }
     const caption = object.caption || object.captionBelow;
     const inlineSource = caption && caption.parsed.sourceInline;
     if (!object.source && !inlineSource) {
@@ -461,4 +474,508 @@ function checkFigures(options) {
     },
     groups: FIG_KINDS.map(function (kind) { return groups[kind]; }),
   };
+}
+
+function renumberSeries_(captions) {
+  const series = [];
+  const tables = captions.filter(function (c) { return c.kind === 'table'; });
+  if (tables.length) series.push({ kind: 'table', labelKey: null, captions: tables });
+  const figures = captions.filter(function (c) { return c.kind === 'figure'; });
+  if (!figures.length) return series;
+  const byLabel = {};
+  figures.forEach(function (c) { (byLabel[c.labelKey] = byLabel[c.labelKey] || []).push(c); });
+  const keys = Object.keys(byLabel);
+  const separate = keys.length > 1 && keys.every(function (key) { return numberParts_(byLabel[key][0].number).n === 1; });
+  if (!separate) {
+    series.push({ kind: 'figure', labelKey: null, captions: figures });
+  } else {
+    keys.forEach(function (key) { series.push({ kind: 'figure', labelKey: key, captions: byLabel[key] }); });
+  }
+  return series;
+}
+
+function renumberPlan_(input) {
+  const out = { changes: [], edits: [], refCount: 0, entryCount: 0, unresolved: [], conflicts: [] };
+  const series = renumberSeries_(input.captions).map(function (group) {
+    let previous = null;
+    let previousNew = 0;
+    const items = group.captions.map(function (caption) {
+      const parts = numberParts_(caption.number);
+      if (previous && previous.chapter !== parts.chapter && !parts.chapter) {
+        previous = parts;
+        previousNew = parts.n;
+        return { caption: caption, assigned: caption.number };
+      }
+      const n = previous && previous.chapter === parts.chapter ? previousNew + 1 : 1;
+      previous = parts;
+      previousNew = n;
+      return { caption: caption, assigned: parts.chapter ? parts.chapter + '.' + n : String(n) };
+    });
+    const seen = {};
+    const conflict = items.some(function (item) {
+      const duplicate = seen[item.assigned];
+      seen[item.assigned] = true;
+      return duplicate;
+    });
+    const map = {};
+    items.forEach(function (item) {
+      const old = item.caption.number;
+      map[old] = Object.prototype.hasOwnProperty.call(map, old) ? null : item.assigned;
+    });
+    const created = {};
+    items.forEach(function (item) {
+      if (item.assigned !== item.caption.number) created[item.assigned] = true;
+    });
+    return { kind: group.kind, labelKey: group.labelKey, label: group.captions[0].label, items: items, map: map, created: created, conflict: conflict };
+  });
+
+  series.forEach(function (group) {
+    if (group.conflict) {
+      out.conflicts.push(group.label);
+      return;
+    }
+    group.items.forEach(function (item) {
+      const caption = item.caption;
+      if (item.assigned === caption.number) return;
+      out.changes.push({ kind: caption.kind, label: caption.label, from: caption.number, to: item.assigned });
+      out.edits.push({ target: caption.target, at: caption.numberAt, remove: caption.number.length, insert: item.assigned, expect: caption.number });
+    });
+  });
+
+  const seriesFor = function (kind, labelKey) {
+    const candidates = series.filter(function (group) { return group.kind === kind; });
+    if (candidates.length === 1 && candidates[0].labelKey === null) return candidates[0];
+    return candidates.filter(function (group) { return group.labelKey === labelKey; })[0] || null;
+  };
+  const lookup = function (group, number) {
+    return Object.prototype.hasOwnProperty.call(group.map, number) ? group.map[number] : undefined;
+  };
+  const unresolved = function (ref, reason, number) {
+    out.unresolved.push({ raw: ref.raw, reason: reason, number: number || '' });
+  };
+
+  input.refs.forEach(function (ref) {
+    const group = seriesFor(ref.kind, ref.labelKey);
+    if (!group) {
+      const changes = ref.tokens.some(function (token) {
+        return series.some(function (g) {
+          const value = g.kind === ref.kind ? lookup(g, token.number) : undefined;
+          return value !== undefined && value !== token.number;
+        });
+      });
+      if (changes) unresolved(ref, 'label');
+      return;
+    }
+    if (group.conflict) return;
+    const edits = [];
+    const tokens = ref.tokens;
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      const next = tokens[i + 1];
+      if (next && next.range) {
+        const numbers = expandRange_(token.number, next.number);
+        const mapped = numbers.map(function (number) { return lookup(group, number); });
+        i++;
+        if (mapped.every(function (value, k) { return value === undefined ? !group.created[numbers[k]] : value === numbers[k]; })) continue;
+        if (mapped.some(function (value) { return value === undefined; })) {
+          unresolved(ref, 'missing', token.number + '–' + next.number);
+          continue;
+        }
+        if (mapped.some(function (value) { return value === null; })) {
+          unresolved(ref, 'ambiguous', token.number + '–' + next.number);
+          continue;
+        }
+        const parts = mapped.map(numberParts_);
+        const contiguous = numbers.length > 1 && parts.every(function (p, k) {
+          return k === 0 || (p.chapter === parts[0].chapter && p.n === parts[k - 1].n + 1);
+        });
+        if (!contiguous) {
+          unresolved(ref, 'range', token.number + '–' + next.number);
+          continue;
+        }
+        if (mapped[0] !== token.number) edits.push({ target: ref.target, at: token.start, remove: token.number.length, insert: mapped[0], expect: token.number });
+        const last = mapped[mapped.length - 1];
+        if (last !== next.number) edits.push({ target: ref.target, at: next.start, remove: next.number.length, insert: last, expect: next.number });
+        continue;
+      }
+      const value = lookup(group, token.number);
+      if (value === undefined) {
+        if (group.created[token.number]) unresolved(ref, 'stale', token.number);
+        continue;
+      }
+      if (value === null) {
+        unresolved(ref, 'ambiguous', token.number);
+        continue;
+      }
+      if (value !== token.number) edits.push({ target: ref.target, at: token.start, remove: token.number.length, insert: value, expect: token.number });
+    }
+    if (edits.length) {
+      out.refCount++;
+      Array.prototype.push.apply(out.edits, edits);
+    }
+  });
+
+  input.entries.forEach(function (entry) {
+    const group = seriesFor(entry.kind, entry.labelKey);
+    if (!group || group.conflict) return;
+    const byTitle = group.items.filter(function (item) { return sameCaptionTitle_(item.caption.title, entry.title); });
+    const assigned = byTitle.length === 1 ? byTitle[0].assigned : lookup(group, entry.number);
+    if (assigned === undefined && group.created[entry.number]) {
+      out.unresolved.push({ raw: entry.raw || entry.title, reason: 'stale', number: entry.number });
+      return;
+    }
+    if (!assigned || assigned === entry.number) return;
+    out.entryCount++;
+    out.edits.push({ target: entry.target, at: entry.numberAt, remove: entry.number.length, insert: assigned, expect: entry.number });
+  });
+  return out;
+}
+
+function renumberFingerprint_(plan) {
+  return JSON.stringify(plan.edits.map(function (edit) { return [edit.target.key, edit.at, edit.expect, edit.insert]; }));
+}
+
+function renumberInput_(ctx) {
+  const paragraphTarget = function (key, element) {
+    return { key: key, text: function () { return element.editAsText(); } };
+  };
+  const captions = ctx.captions.map(function (c) {
+    const target = c.block.type === 'table'
+      ? paragraphTarget('t' + c.block.index + ':caption', c.block.element.getRow(0).getCell(0))
+      : paragraphTarget('b' + c.block.index, c.block.element);
+    return {
+      kind: c.parsed.kind, label: c.parsed.label, labelKey: c.parsed.labelKey, number: c.parsed.number,
+      numberAt: c.parsed.numberAt, title: c.parsed.title, target: target,
+    };
+  });
+
+  const refs = [];
+  const seen = {};
+  const addRefs = function (text, target, from) {
+    figureReferences_(text).forEach(function (ref) {
+      const id = target.key + '@' + ref.start;
+      if (ref.start < (from || 0) || seen[id]) return;
+      seen[id] = true;
+      refs.push({ kind: ref.kind, labelKey: ref.labelKey, raw: ref.raw, tokens: ref.tokens, target: target });
+    });
+  };
+  ctx.refs.forEach(function (ref) {
+    const target = paragraphTarget('b' + ref.block.index, ref.block.element);
+    const id = target.key + '@' + ref.start;
+    if (seen[id]) return;
+    seen[id] = true;
+    refs.push({ kind: ref.kind, labelKey: ref.labelKey, raw: ref.raw, tokens: ref.tokens, target: target });
+  });
+  ctx.objects.forEach(function (object) {
+    if (object.source && object.source.block.type === 'paragraph') {
+      addRefs(object.source.block.text, paragraphTarget('b' + object.source.block.index, object.source.block.element));
+    }
+  });
+  ctx.captions.forEach(function (c, i) {
+    const text = c.block.type === 'table' ? firstCellText_(c.block.element) : c.block.text;
+    addRefs(text, captions[i].target, c.parsed.numberAt + c.parsed.number.length);
+  });
+  ctx.blocks.forEach(function (block) {
+    if (block.type !== 'paragraph' || block.inAppendix || !block.text.trim() || !headingLevel_(block.heading)) return;
+    addRefs(block.text, paragraphTarget('b' + block.index, block.element));
+  });
+  ctx.blocks.forEach(function (block) {
+    if (block.type !== 'table' || block.inAppendix) return;
+    const table = block.element;
+    for (let r = 0; r < table.getNumRows(); r++) {
+      const row = table.getRow(r);
+      for (let c = 0; c < row.getNumCells(); c++) {
+        const cell = row.getCell(c);
+        for (let k = 0; k < cell.getNumChildren(); k++) {
+          const child = castElement_(cell.getChild(k));
+          if (!child || child.isText || child.type === 'TABLE') continue;
+          const text = child.element.getText();
+          if (!text.trim() || parseCaption_(text)) continue;
+          addRefs(text, paragraphTarget('t' + block.index + ':' + r + ':' + c + ':' + k, child.element));
+        }
+      }
+    }
+  });
+  const body = DocumentApp.getActiveDocument().getBody();
+  const blockAt = {};
+  ctx.blocks.forEach(function (block) { blockAt[block.index] = block; });
+  const anchorBlock = function (footnote) {
+    let node = footnote.getParent();
+    while (node && node.getParent() && node.getParent().getType() !== DocumentApp.ElementType.BODY_SECTION) node = node.getParent();
+    return node && node.getParent() ? blockAt[body.getChildIndex(node)] : null;
+  };
+  DocumentApp.getActiveDocument().getFootnotes().forEach(function (footnote, f) {
+    const anchor = anchorBlock(footnote);
+    if (!anchor || anchor.inAppendix) return;
+    const contents = footnote.getFootnoteContents();
+    if (!contents) return;
+    for (let k = 0; k < contents.getNumChildren(); k++) {
+      const child = castElement_(contents.getChild(k));
+      if (!child || child.isText || child.type === 'TABLE') continue;
+      addRefs(child.element.getText(), paragraphTarget('f' + f + ':' + k, child.element));
+    }
+  });
+
+  const entries = [];
+  ctx.lists.forEach(function (list) {
+    list.entries.forEach(function (entry) {
+      const lead = entry.block.text.length - entry.block.text.replace(/^\s+/, '').length;
+      entries.push({
+        raw: entry.block.text.trim().slice(0, 60),
+        kind: entry.parsed.kind, labelKey: entry.parsed.labelKey, number: entry.parsed.number,
+        numberAt: lead + entry.parsed.numberAt, title: entry.parsed.title,
+        target: paragraphTarget('b' + entry.block.index, entry.block.element),
+      });
+    });
+  });
+  return { captions: captions, refs: refs, entries: entries };
+}
+
+function renumberSummary_(plan) {
+  return {
+    changes: plan.changes,
+    refCount: plan.refCount,
+    entryCount: plan.entryCount,
+    unresolved: plan.unresolved,
+    conflicts: plan.conflicts,
+    fingerprint: renumberFingerprint_(plan),
+  };
+}
+
+function applyRenumber_(plan) {
+  const groups = {};
+  plan.edits.forEach(function (edit) {
+    const key = edit.target.key;
+    if (!groups[key]) groups[key] = { target: edit.target, edits: [] };
+    const same = groups[key].edits.filter(function (other) { return other.at === edit.at; })[0];
+    if (same) {
+      if (same.remove !== edit.remove || same.insert !== edit.insert) throw userError_('err.renumberChanged');
+      return;
+    }
+    groups[key].edits.push(edit);
+  });
+  Object.keys(groups).forEach(function (key) {
+    const sorted = groups[key].edits.slice().sort(function (a, b) { return a.at - b.at; });
+    sorted.forEach(function (edit, i) {
+      if (i && sorted[i - 1].at + sorted[i - 1].remove > edit.at) throw userError_('err.renumberChanged');
+    });
+  });
+  const resolved = Object.keys(groups).map(function (key) {
+    const group = groups[key];
+    const text = group.target.text();
+    const content = text.getText();
+    group.edits.forEach(function (edit) {
+      if (content.substr(edit.at, edit.remove) !== edit.expect) throw userError_('err.renumberChanged');
+    });
+    return { text: text, edits: group.edits.map(function (edit) { return { at: edit.at, remove: edit.remove, insert: edit.insert }; }) };
+  });
+  resolved.forEach(function (item) { applyDocumentEdits_(item.text, item.edits); });
+}
+
+function previewFigureRenumber() {
+  return renumberSummary_(renumberPlan_(renumberInput_(figuresContext_())));
+}
+
+function renumberFigures(options, fingerprint) {
+  const plan = renumberPlan_(renumberInput_(figuresContext_()));
+  if (renumberFingerprint_(plan) !== fingerprint) return { stale: true, preview: renumberSummary_(plan) };
+  applyRenumber_(plan);
+  return { result: checkFigures(options), captions: plan.changes.length, refs: plan.refCount, entries: plan.entryCount };
+}
+
+function figureListEntries_(captions) {
+  const ordered = captions.filter(function (c) { return c.kind === 'table'; })
+    .concat(captions.filter(function (c) { return c.kind !== 'table'; }));
+  return ordered.map(function (c) {
+    const title = String(c.title || '').replace(/\s+/g, ' ').trim();
+    return { id: c.id, text: c.label + ' ' + c.number + '. ' + title, page: c.page || null };
+  });
+}
+
+function figureListPlan_(ctx, withPages) {
+  const pages = withPages ? estimatedChildPages_() : null;
+  const captions = ctx.captions.map(function (c, i) {
+    return { id: i, kind: c.parsed.kind, label: c.parsed.label, number: c.parsed.number, title: c.parsed.title, page: pages ? pages[c.block.index] : null };
+  });
+  const bibliography = ctx.bibliographyIndex >= 0 ? ctx.blocks[ctx.bibliographyIndex] : null;
+  return {
+    entries: figureListEntries_(captions),
+    place: ctx.lists.length > 1 ? 'replaceMany' : ctx.lists.length ? 'replace' : bibliography ? 'afterBibliography' : 'end',
+    existing: ctx.lists.reduce(function (sum, list) { return sum + list.entries.length; }, 0),
+    pages: !!pages,
+  };
+}
+
+function previewFigureList() {
+  const plan = figureListPlan_(figuresContext_(), true);
+  return { entries: plan.entries, place: plan.place, existing: plan.existing, pages: plan.pages };
+}
+
+function figureListBookmark_(doc, c) {
+  try {
+    return figureListBookmarkAt_(doc, c);
+  } catch (e) {
+    console.warn('Nie udało się dodać zakładki: ' + e.message);
+    return null;
+  }
+}
+
+function figureListBookmarkAt_(doc, c) {
+  let paragraph = c.block.element;
+  if (c.block.type === 'table') {
+    const cell = c.block.element.getRow(0).getCell(0);
+    paragraph = null;
+    for (let k = 0; k < cell.getNumChildren() && !paragraph; k++) {
+      const child = castElement_(cell.getChild(k));
+      if (child && !child.isText && child.type !== 'TABLE' && child.element.getText().trim()) paragraph = child.element;
+    }
+    if (!paragraph) return null;
+  }
+  const text = paragraph.editAsText();
+  if (!text.getText().length) return null;
+  return doc.addBookmark(doc.newPosition(text, 0)).getId();
+}
+
+function insertFigureList(options, settings) {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+  const ctx = figuresContext_();
+  if (!ctx.captions.length) throw userError_('err.figListEmpty');
+  const wantPages = !settings || settings.pages !== false;
+  const wantLinks = !settings || settings.links !== false;
+  const plan = figureListPlan_(ctx, false);
+
+  const props = PropertiesService.getDocumentProperties();
+  try {
+    JSON.parse(props.getProperty('figListBookmarks') || '[]').forEach(function (id) {
+      const old = doc.getBookmark(id);
+      if (old) old.remove();
+    });
+  } catch (e) {
+    console.warn('Nie udało się usunąć starych zakładek spisu: ' + e.message);
+  }
+  const bookmarks = {};
+  if (wantLinks) ctx.captions.forEach(function (c, i) { bookmarks[i] = figureListBookmark_(doc, c); });
+
+  let insertAt;
+  if (ctx.lists.length) {
+    ctx.lists.slice(1).reverse().forEach(function (list) {
+      clearFigureList_(body, list.block.index + 1);
+      if (list.block.index < body.getNumChildren() - 1) list.block.element.removeFromParent();
+    });
+    insertAt = ctx.lists[0].block.index + 1;
+    clearFigureList_(body, insertAt);
+  } else {
+    const bibliography = plan.place === 'afterBibliography' ? ctx.blocks[ctx.bibliographyIndex] : null;
+    const level = bibliography ? headingLevel_(bibliography.heading) || 1 : 1;
+    let at = body.getNumChildren();
+    const firstAppendix = ctx.blocks.filter(function (b) { return b.inAppendix; })[0];
+    for (let j = (bibliography ? bibliography.index : 0) + 1; j < body.getNumChildren(); j++) {
+      const child = castElement_(body.getChild(j));
+      if (!child || child.isText || child.type === 'TABLE') continue;
+      const childLevel = headingLevel_(String(child.element.getHeading()));
+      if ((bibliography && childLevel && childLevel <= level) || (firstAppendix && j === firstAppendix.index)) {
+        at = j;
+        break;
+      }
+    }
+    const heading = body.insertParagraph(at, t_('fig.list.heading'));
+    heading.setHeading(bibliography ? bibliography.element.getHeading() : DocumentApp.ParagraphHeading.HEADING1);
+    insertAt = at + 1;
+  }
+
+  let template = null;
+  for (let k = 0; k < body.getNumChildren(); k++) {
+    if (String(body.getChild(k).getType()) !== 'TABLE_OF_CONTENTS') continue;
+    const toc = body.getChild(k).asTableOfContents();
+    if (toc.getNumChildren() && String(toc.getChild(0).getType()) === 'PARAGRAPH') template = toc.getChild(0).asParagraph();
+    break;
+  }
+  const normal = body.getAttributes()[DocumentApp.Attribute.FOREGROUND_COLOR];
+  const color = typeof normal === 'string' && normal ? normal : '#000000';
+  const inserted = plan.entries.map(function (entry, k) {
+    const paragraph = template ? body.insertParagraph(insertAt + k, template.copy()) : body.insertParagraph(insertAt + k, '');
+    paragraph.setHeading(DocumentApp.ParagraphHeading.NORMAL);
+    paragraph.setText(entry.text);
+    const text = paragraph.editAsText();
+    const end = text.getText().length - 1;
+    text.setLinkUrl(0, end, null).setBold(0, end, false).setItalic(0, end, false);
+    if (bookmarks[entry.id]) text.setLinkUrl(0, end, '#bookmark=' + bookmarks[entry.id]);
+    text.setForegroundColor(0, end, color).setUnderline(0, end, false);
+    return paragraph;
+  });
+  let pagesShown = false;
+  if (wantPages) {
+    const after = figureListPlan_(figuresContext_(), true);
+    if (after.pages && after.entries.length === inserted.length) {
+      after.entries.forEach(function (entry, k) {
+        if (!entry.page) return;
+        const text = inserted[k].editAsText();
+        const start = text.getText().length;
+        text.appendText('\t' + entry.page);
+        text.setLinkUrl(start, start + String(entry.page).length, null);
+        pagesShown = true;
+      });
+    }
+  }
+  props.setProperty('figListBookmarks', JSON.stringify(Object.keys(bookmarks).map(function (k) { return bookmarks[k]; }).filter(Boolean)));
+  return { result: checkFigures(options), count: plan.entries.length, place: plan.place, pages: pagesShown };
+}
+
+function plainEmptyParagraph_(element) {
+  if (element.getText().length) return false;
+  for (let k = 0; k < element.getNumChildren(); k++) {
+    if (String(element.getChild(k).getType()) !== 'TEXT') return false;
+  }
+  return !(typeof element.getPositionedImages === 'function' && element.getPositionedImages().length);
+}
+
+function clearFigureList_(body, from) {
+  while (from < body.getNumChildren() - 1) {
+    const child = castElement_(body.getChild(from));
+    if (!child || child.isText || child.type === 'TABLE' || headingLevel_(String(child.element.getHeading()))) return;
+    const text = child.element.getText();
+    const entry = text.trim() && parseCaption_(text.trim()) && !(typeof child.element.getPositionedImages === 'function' && child.element.getPositionedImages().length) &&
+      !child.element.findElement(DocumentApp.ElementType.INLINE_IMAGE) && !child.element.findElement(DocumentApp.ElementType.PAGE_BREAK) &&
+      !child.element.findElement(DocumentApp.ElementType.FOOTNOTE);
+    if (!entry && !plainEmptyParagraph_(child.element)) return;
+    child.element.removeFromParent();
+  }
+}
+
+function captionBelowObjects_(ctx) {
+  return ctx.objects.filter(function (object) { return object.captionBelow && object.captionBelow.block.type === 'paragraph'; });
+}
+
+function moveCaptionAbove_(body, object) {
+  const caption = object.captionBelow.block.index;
+  const first = object.first.index;
+  const last = object.last.index;
+  for (let k = 0; k <= last - first; k++) {
+    const source = body.getChild(first + k);
+    const type = String(source.getType());
+    const copy = source.copy();
+    if (type === 'TABLE') body.insertTable(caption + 1 + k, copy);
+    else if (type === 'LIST_ITEM') body.insertListItem(caption + 1 + k, copy);
+    else body.insertParagraph(caption + 1 + k, copy);
+  }
+  for (let i = last; i >= first; i--) body.getChild(i).removeFromParent();
+}
+
+function moveFigureCaption(options, ref) {
+  const body = DocumentApp.getActiveDocument().getBody();
+  const ctx = figuresContext_();
+  const object = captionBelowObjects_(ctx).filter(function (o) {
+    return o.captionBelow.block.index === ref.location.path[0] && o.captionBelow.block.text.trim().slice(0, 40) === ref.fingerprint;
+  })[0];
+  if (!object) throw userError_('err.figCaptionMoved');
+  moveCaptionAbove_(body, object);
+  return checkFigures(options);
+}
+
+function moveAllFigureCaptions(options) {
+  const body = DocumentApp.getActiveDocument().getBody();
+  const objects = captionBelowObjects_(figuresContext_());
+  objects.slice().sort(function (a, b) { return b.first.index - a.first.index; }).forEach(function (object) { moveCaptionAbove_(body, object); });
+  return { result: checkFigures(options), moved: objects.length };
 }
