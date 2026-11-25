@@ -566,9 +566,105 @@
   $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
   $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
 
+  function fixAllButton(count, handler) {
+    const button = el('button', 'btn-tonal', t('typo.fixAll', { count: formatNumber(count) }));
+    button.addEventListener('click', () => run(() => handler(button)));
+    return button;
+  }
+
+  function renderCheckResult(spec) {
+    const data = spec.data();
+    const summary = $(spec.summaryId);
+    const box = $(spec.groupsId);
+    summary.classList.remove('hidden');
+    box.innerHTML = '';
+    const empty = spec.empty ? spec.empty(data) : '';
+    if (empty) {
+      summary.textContent = empty;
+      return;
+    }
+    const groups = data.groups.filter(g => g.count > 0);
+    const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
+    summary.textContent = problems ? t(spec.summaryKey, { count: formatNumber(problems) }) : t(spec.noneKey);
+    (spec.notes ? spec.notes(data) : []).forEach(text => summary.append(el('div', 'result-note', text)));
+    groups.forEach(group => box.append(renderResultGroup(spec, group)));
+  }
+
+  function renderResultGroup(spec, group) {
+    const card = el('details', 'result-group');
+    card.open = spec.open.has(group.kind);
+    card.addEventListener('toggle', () => card.open ? spec.open.add(group.kind) : spec.open.delete(group.kind));
+    const head = el('summary', 'result-head');
+    const level = group.info ? 'review' : 'fix';
+    const mark = el('span', 'sev sev-' + level);
+    mark.title = level === 'review' ? t('check.level.review') : t('check.level.fix');
+    head.append(mark, el('span', 'result-title', t(spec.kindKey + group.kind + '.title')), el('span', 'result-count', formatNumber(group.count)));
+    card.append(head);
+    card.append(el('div', 'result-desc', t(spec.kindKey + group.kind + '.desc')));
+    const actions = spec.groupActions ? spec.groupActions(group) : [];
+    if (actions.length) {
+      const row = el('div', 'row buttons');
+      actions.forEach(action => row.append(action));
+      card.append(row);
+    }
+    if (group.count > group.items.length) {
+      card.append(el('div', 'result-desc', t(spec.moreKey || 'bib.more', { shown: group.items.length, count: formatNumber(group.count) })));
+    }
+    const list = el('ul', 'result-list');
+    group.items.forEach(item => list.append(renderResultItem(spec, item)));
+    card.append(list);
+    return card;
+  }
+
+  function renderResultItem(spec, item) {
+    const li = el('li', 'result-item');
+    const showable = spec.showable ? spec.showable(item) : item.showable;
+    const snippet = el('div', 'result-snippet' + (showable ? '' : ' static'));
+    if (spec.snippet) {
+      spec.snippet(item, snippet);
+    } else {
+      snippet.append(el('div', '', item.preview));
+      if (item.detail) snippet.append(el('div', 'result-detail', item.detail));
+    }
+    if (showable) {
+      snippet.title = t('typo.show');
+      snippet.addEventListener('click', () => {
+        hideMessage();
+        call(spec.showFn, item.ref).catch(e => showMessage(errorText(e), 'error'));
+      });
+    }
+    li.append(snippet);
+    if (spec.fixable && spec.fixable(item)) {
+      const fix = el('button', 'btn-small', t('typo.fix'));
+      fix.addEventListener('click', () => run(() => spec.fixItem(item)));
+      li.append(fix);
+    }
+    return li;
+  }
+
   let typo = null;
   const typoOpen = new Set();
   const TYPO_SHOW_SPACES = ['orphan', 'spaces', 'punctuation', 'dash'];
+  const TYPO_SPEC = {
+    data: () => typo,
+    summaryId: 'typo-summary',
+    groupsId: 'typo-groups',
+    kindKey: 'typo.kind.',
+    summaryKey: 'typo.summary',
+    noneKey: 'typo.none',
+    moreKey: 'typo.more',
+    open: typoOpen,
+    showFn: 'showTypographyIssue',
+    showable: () => true,
+    snippet: (item, node) => {
+      if (item.footnote) node.append(el('span', 'result-where', t('typo.footnote')));
+      const match = TYPO_SHOW_SPACES.includes(item.ref.kind) ? item.match.replace(/ /g, '·') : item.match;
+      node.append(item.before, el('mark', '', match), item.after);
+    },
+    fixable: () => true,
+    fixItem: item => fixTypographyIssue(item),
+    groupActions: group => [fixAllButton(group.count, button => fixTypographyKind(group.kind, button))],
+  };
 
   async function checkTypography() {
     const button = $('btn-check-typo');
@@ -582,50 +678,7 @@
   }
 
   function renderTypography() {
-    const groups = typo.groups.filter(g => g.count > 0);
-    const total = groups.reduce((sum, g) => sum + g.count, 0);
-    $('typo-summary').textContent = total ? t('typo.summary', { count: formatNumber(total) }) : t('typo.none');
-    $('typo-summary').classList.remove('hidden');
-    const box = $('typo-groups');
-    box.innerHTML = '';
-    groups.forEach(group => box.append(renderTypoGroup(group)));
-  }
-
-  function renderTypoGroup(group) {
-    const card = el('details', 'typo-group');
-    card.open = typoOpen.has(group.kind);
-    card.addEventListener('toggle', () => card.open ? typoOpen.add(group.kind) : typoOpen.delete(group.kind));
-    card.append(el('summary', '', t('typo.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
-    card.append(el('div', 'typo-desc', t('typo.kind.' + group.kind + '.desc')));
-    const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(group.count) }));
-    fixAll.addEventListener('click', () => run(() => fixTypographyKind(group.kind, fixAll)));
-    const row = el('div', 'row buttons');
-    row.append(fixAll);
-    card.append(row);
-    if (group.count > group.items.length) {
-      card.append(el('div', 'typo-desc', t('typo.more', { shown: group.items.length, count: formatNumber(group.count) })));
-    }
-    const list = el('ul', 'list');
-    group.items.forEach(item => list.append(renderTypoItem(item)));
-    card.append(list);
-    return card;
-  }
-
-  function renderTypoItem(item) {
-    const li = el('li');
-    const snippet = el('div', 'typo-snippet');
-    snippet.title = t('typo.show');
-    if (item.footnote) snippet.append(el('span', 'typo-where', t('typo.footnote')));
-    const match = TYPO_SHOW_SPACES.includes(item.ref.kind) ? item.match.replace(/ /g, '·') : item.match;
-    snippet.append(item.before, el('mark', '', match), item.after);
-    snippet.addEventListener('click', () => {
-      hideMessage();
-      call('showTypographyIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
-    });
-    const fix = el('button', 'link', t('typo.fix'));
-    fix.addEventListener('click', () => run(() => fixTypographyIssue(item)));
-    li.append(snippet, fix);
-    return li;
+    renderCheckResult(TYPO_SPEC);
   }
 
   async function fixTypographyIssue(item) {
@@ -856,57 +909,27 @@
     }
   }
 
-  function renderFormatting() {
-    const groups = format.groups.filter(g => g.count > 0);
-    const total = groups.reduce((sum, g) => sum + g.count, 0);
-    const summary = $('format-summary');
-    summary.textContent = total ? t('format.summary', { count: formatNumber(total) }) : t('format.none');
-    if (format.noHeadings) summary.append(el('div', 'typo-desc', t('format.noHeadings')));
-    summary.classList.remove('hidden');
-    const box = $('format-groups');
-    box.innerHTML = '';
-    groups.forEach(group => box.append(renderFormatGroup(group)));
-  }
-
-  function renderFormatGroup(group) {
-    const card = el('details', 'typo-group');
-    card.open = formatOpen.has(group.kind);
-    card.addEventListener('toggle', () => card.open ? formatOpen.add(group.kind) : formatOpen.delete(group.kind));
-    card.append(el('summary', '', t('format.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
-    card.append(el('div', 'typo-desc', t('format.kind.' + group.kind + '.desc')));
-    const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(group.count) }));
-    fixAll.addEventListener('click', () => run(() => fixFormatKind(group.kind, fixAll)));
-    const row = el('div', 'row buttons');
-    row.append(fixAll);
-    card.append(row);
-    if (group.count > group.items.length) {
-      card.append(el('div', 'typo-desc', t('typo.more', { shown: group.items.length, count: formatNumber(group.count) })));
-    }
-    const list = el('ul', 'list');
-    group.items.forEach(item => list.append(renderFormatItem(item)));
-    card.append(list);
-    return card;
-  }
-
-  function renderFormatItem(item) {
-    const li = el('li');
-    const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
-    snippet.append(el('div', '', item.preview));
-    if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
-    if (item.showable) {
-      snippet.title = t('typo.show');
-      snippet.addEventListener('click', () => {
-        hideMessage();
-        call('showFormatIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
-      });
-    }
-    const fix = el('button', 'link', t('typo.fix'));
-    fix.addEventListener('click', () => run(async () => {
+  const FORMAT_SPEC = {
+    data: () => format,
+    summaryId: 'format-summary',
+    groupsId: 'format-groups',
+    kindKey: 'format.kind.',
+    summaryKey: 'format.summary',
+    noneKey: 'format.none',
+    moreKey: 'typo.more',
+    open: formatOpen,
+    showFn: 'showFormatIssue',
+    notes: data => (data.noHeadings ? [t('format.noHeadings')] : []),
+    fixable: () => true,
+    fixItem: async item => {
       format = await call('fixFormatIssue', item.ref);
       renderFormatting();
-    }));
-    li.append(snippet, fix);
-    return li;
+    },
+    groupActions: group => [fixAllButton(group.count, button => fixFormatKind(group.kind, button))],
+  };
+
+  function renderFormatting() {
+    renderCheckResult(FORMAT_SPEC);
   }
 
   async function fixFormatKind(kind, button) {
@@ -1002,60 +1025,29 @@
     return next;
   }
 
+  const STRUCTURE_SPEC = {
+    data: () => structure,
+    summaryId: 'structure-summary',
+    groupsId: 'structure-groups',
+    kindKey: 'structure.kind.',
+    summaryKey: 'structure.summary',
+    noneKey: 'structure.none',
+    open: structureOpen,
+    showFn: 'showStructureIssue',
+    notes: data => (data.pages !== null ? [t(data.pagesApprox ? 'structure.pagesInfoApprox' : 'structure.pagesInfo', { count: data.pages })] : []),
+    fixable: item => !!item.fixable,
+    fixItem: async item => {
+      structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('srule-type').value));
+      renderStructure();
+    },
+    groupActions: group => {
+      const fixable = group.items.filter(item => item.fixable).length;
+      return fixable ? [fixAllButton(fixable, button => fixStructureKind(group.kind, button))] : [];
+    },
+  };
+
   function renderStructure() {
-    const groups = structure.groups.filter(g => g.count > 0);
-    const total = groups.reduce((sum, g) => sum + g.count, 0);
-    const summary = $('structure-summary');
-    summary.textContent = total ? t('structure.summary', { count: formatNumber(total) }) : t('structure.none');
-    if (structure.pages !== null) summary.append(el('div', 'typo-desc', t(structure.pagesApprox ? 'structure.pagesInfoApprox' : 'structure.pagesInfo', { count: structure.pages })));
-    summary.classList.remove('hidden');
-    const box = $('structure-groups');
-    box.innerHTML = '';
-    groups.forEach(group => box.append(renderStructureGroup(group)));
-  }
-
-  function renderStructureGroup(group) {
-    const card = el('details', 'typo-group');
-    card.open = structureOpen.has(group.kind);
-    card.addEventListener('toggle', () => card.open ? structureOpen.add(group.kind) : structureOpen.delete(group.kind));
-    card.append(el('summary', '', t('structure.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
-    card.append(el('div', 'typo-desc', t('structure.kind.' + group.kind + '.desc')));
-    const fixable = group.items.filter(item => item.fixable).length;
-    if (fixable) {
-      const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(fixable) }));
-      fixAll.addEventListener('click', () => run(() => fixStructureKind(group.kind, fixAll)));
-      const row = el('div', 'row buttons');
-      row.append(fixAll);
-      card.append(row);
-    }
-    const list = el('ul', 'list');
-    group.items.forEach(item => list.append(renderStructureItem(item)));
-    card.append(list);
-    return card;
-  }
-
-  function renderStructureItem(item) {
-    const li = el('li');
-    const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
-    snippet.append(el('div', '', item.preview));
-    if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
-    if (item.showable) {
-      snippet.title = t('typo.show');
-      snippet.addEventListener('click', () => {
-        hideMessage();
-        call('showStructureIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
-      });
-    }
-    li.append(snippet);
-    if (item.fixable) {
-      const fix = el('button', 'link', t('typo.fix'));
-      fix.addEventListener('click', () => run(async () => {
-        structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('srule-type').value));
-        renderStructure();
-      }));
-      li.append(fix);
-    }
-    return li;
+    renderCheckResult(STRUCTURE_SPEC);
   }
 
   async function fixStructureKind(kind, button) {
@@ -1124,77 +1116,42 @@
     }
   }
 
-  function renderBibliography() {
-    const summary = $('bib-summary');
-    summary.classList.remove('hidden');
-    const box = $('bib-groups');
-    box.innerHTML = '';
-    if (bibliography.noSection) {
-      summary.textContent = t('bib.noSection');
-      return;
-    }
-    const groups = bibliography.groups.filter(g => g.count > 0);
-    const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
-    summary.textContent = problems ? t('bib.summary', { count: formatNumber(problems) }) : t('bib.none');
-    summary.append(el('div', 'typo-desc', t('bib.stats', bibliography.stats)));
-    groups.forEach(group => box.append(renderBibliographyGroup(group)));
-  }
+  const BIBLIOGRAPHY_SPEC = {
+    data: () => bibliography,
+    summaryId: 'bib-summary',
+    groupsId: 'bib-groups',
+    kindKey: 'bib.kind.',
+    summaryKey: 'bib.summary',
+    noneKey: 'bib.none',
+    open: bibliographyOpen,
+    showFn: 'showBibliographyIssue',
+    empty: data => (data.noSection ? t('bib.noSection') : ''),
+    notes: data => [t('bib.stats', data.stats)],
+    fixable: item => !!item.fixable,
+    fixItem: item => fixBibliographyIssue(item),
+    groupActions: group => {
+      const actions = [];
+      if (group.kind === 'order' && bibliography.sortable) {
+        const sort = el('button', 'btn-tonal', t('bib.sort'));
+        sort.addEventListener('click', () => run(async () => {
+          sort.classList.add('loading');
+          try {
+            bibliography = await call('sortBibliography', { type: $('srule-type').value });
+            renderBibliography();
+            showMessage(t('bib.sorted') + ' ' + t('typo.versionHint'), 'ok');
+          } finally {
+            sort.classList.remove('loading');
+          }
+        }));
+        actions.push(sort);
+      }
+      if (group.fixAll && group.fixable) actions.push(fixAllButton(group.fixable, button => fixBibliographyKind(group.kind, button)));
+      return actions;
+    },
+  };
 
-  function renderBibliographyGroup(group) {
-    const card = el('details', 'typo-group');
-    card.open = bibliographyOpen.has(group.kind);
-    card.addEventListener('toggle', () => card.open ? bibliographyOpen.add(group.kind) : bibliographyOpen.delete(group.kind));
-    card.append(el('summary', '', t('bib.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
-    card.append(el('div', 'typo-desc', t('bib.kind.' + group.kind + '.desc')));
-    if (group.kind === 'order' && bibliography.sortable) {
-      const sort = el('button', '', t('bib.sort'));
-      sort.addEventListener('click', () => run(async () => {
-        sort.classList.add('loading');
-        try {
-          bibliography = await call('sortBibliography', { type: $('srule-type').value });
-          renderBibliography();
-          showMessage(t('bib.sorted') + ' ' + t('typo.versionHint'), 'ok');
-        } finally {
-          sort.classList.remove('loading');
-        }
-      }));
-      const row = el('div', 'row buttons');
-      row.append(sort);
-      card.append(row);
-    }
-    if (group.fixAll && group.fixable) {
-      const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(group.fixable) }));
-      fixAll.addEventListener('click', () => run(() => fixBibliographyKind(group.kind, fixAll)));
-      const row = el('div', 'row buttons');
-      row.append(fixAll);
-      card.append(row);
-    }
-    if (group.count > group.items.length) {
-      card.append(el('div', 'typo-desc', t('bib.more', { shown: group.items.length, count: formatNumber(group.count) })));
-    }
-    const list = el('ul', 'list');
-    group.items.forEach(item => {
-      const li = el('li');
-      const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
-      snippet.append(el('div', '', item.preview));
-      if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
-      if (item.showable) {
-        snippet.title = t('typo.show');
-        snippet.addEventListener('click', () => {
-          hideMessage();
-          call('showBibliographyIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
-        });
-      }
-      li.append(snippet);
-      if (item.fixable) {
-        const fix = el('button', 'link', t('typo.fix'));
-        fix.addEventListener('click', () => run(() => fixBibliographyIssue(item)));
-        li.append(fix);
-      }
-      list.append(li);
-    });
-    card.append(list);
-    return card;
+  function renderBibliography() {
+    renderCheckResult(BIBLIOGRAPHY_SPEC);
   }
 
   async function fixBibliographyIssue(item) {
@@ -1228,43 +1185,20 @@
     }
   }
 
+  const FIGURES_SPEC = {
+    data: () => figures,
+    summaryId: 'fig-summary',
+    groupsId: 'fig-groups',
+    kindKey: 'fig.kind.',
+    summaryKey: 'fig.summary',
+    noneKey: 'fig.none',
+    open: figuresOpen,
+    showFn: 'showBibliographyIssue',
+    notes: data => [t('fig.stats', data.stats)],
+  };
+
   function renderFigures() {
-    const summary = $('fig-summary');
-    summary.classList.remove('hidden');
-    const box = $('fig-groups');
-    box.innerHTML = '';
-    const groups = figures.groups.filter(g => g.count > 0);
-    const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
-    summary.textContent = problems ? t('fig.summary', { count: formatNumber(problems) }) : t('fig.none');
-    summary.append(el('div', 'typo-desc', t('fig.stats', figures.stats)));
-    groups.forEach(group => {
-      const card = el('details', 'typo-group');
-      card.open = figuresOpen.has(group.kind);
-      card.addEventListener('toggle', () => card.open ? figuresOpen.add(group.kind) : figuresOpen.delete(group.kind));
-      card.append(el('summary', '', t('fig.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
-      card.append(el('div', 'typo-desc', t('fig.kind.' + group.kind + '.desc')));
-      if (group.count > group.items.length) {
-        card.append(el('div', 'typo-desc', t('bib.more', { shown: group.items.length, count: formatNumber(group.count) })));
-      }
-      const list = el('ul', 'list');
-      group.items.forEach(item => {
-        const li = el('li');
-        const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
-        snippet.append(el('div', '', item.preview));
-        if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
-        if (item.showable) {
-          snippet.title = t('typo.show');
-          snippet.addEventListener('click', () => {
-            hideMessage();
-            call('showBibliographyIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
-          });
-        }
-        li.append(snippet);
-        list.append(li);
-      });
-      card.append(list);
-      box.append(card);
-    });
+    renderCheckResult(FIGURES_SPEC);
   }
 
   $('btn-check-fig').addEventListener('click', () => run(checkFigures));

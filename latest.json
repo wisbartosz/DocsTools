@@ -1,8 +1,8 @@
 {
-  "version": "0.13.1",
-  "tag": "v0.13.1",
+  "version": "0.14.0",
+  "tag": "v0.14.0",
   "notes": {
-    "pl": "Szybsze i pewniejsze liczenie stron w kontroli struktury. Poprawka: dokładne liczenie przez PDF mogło zaniżać liczbę stron w dłuższych pracach. Liczba stron jest teraz szacowana od razu z układu strony, a eksport do PDF odbywa się tylko blisko wymaganego minimum i jest zapamiętywany do następnej zmiany dokumentu.",
-    "en": "Faster and more reliable page count in the structure check. Fix: the exact PDF count could report too few pages for longer theses. The page count is now estimated at once from the page layout, and the PDF export runs only near the required minimum and is remembered until the document changes."
+    "pl": "Nowy wygląd wyników w zakładce „Sprawdź” – pierwszy etap przebudowy panelu. Wyniki wszystkich modułów mają wspólny wygląd: karty z oznaczeniem ważności (czerwona kropka – do poprawy, bursztynowy romb – do przejrzenia), poprawki w jasnych polach i nowe przyciski. Stopka panelu jest zawsze na dole, a w oknie „Powiększ” wyniki układają się w dwóch kolumnach.",
+    "en": "A new look for results in the \"Check\" tab – the first step of the panel redesign. Results of all modules share one look: cards with a severity mark (red dot – to fix, amber diamond – to review), fixes in light boxes and new buttons. The panel footer always stays at the bottom, and in the \"Enlarge\" window the results are laid out in two columns."
   }
 }
