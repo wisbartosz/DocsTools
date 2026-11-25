@@ -47,6 +47,13 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   length of the abstract and the aim, and the number of pages. You enter the requirements
   once or read them from the guidelines among your sources (the same button as for the
   formatting requirements); they are saved in the document.
+- References and citations, also in the "Check" tab. The add-on finds Harvard citations
+  in the text – in brackets, e.g. (Kowalski 2019), and in the sentence, e.g. "according to
+  Kowalski (2019)" – and the entries in the reference list. It shows citations with no
+  entry, entries nothing in the text refers to, alphabetical order, the number of entries,
+  how entries are written (initials, full stop after the year, "et al.", pages, access date
+  for web pages), Wikipedia and sources older than 10 years. The "Sort references" button
+  puts the entries in alphabetical order and keeps their formatting.
 - The default formatting and structure requirements come from the guidelines of the
   university the toolkit was made for. They apply right away, with nothing to save. If your
   university is different, change them in the forms or read them from your sources. The
@@ -77,7 +84,8 @@ with your sources.
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
 - search across your sources,
-- bibliography checks, including adding entries by DOI or ISBN,
+- more citation checks (consistent style, where citations appear in chapters) and adding
+  reference entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
 - questions your supervisor might ask, and comparing your goals with your conclusions,
@@ -252,6 +260,8 @@ no subfolders, so the manual installation can recreate them.
 - `Structure.js`: thesis structure – table of contents, heading levels and numbering,
   required parts, keywords, lengths, page count (via PDF export). The pure functions can be
   tested in Node.
+- `Bibliography.js`: references and Harvard citations – finding citations and entries,
+  matching, alphabetical order, sorting. The pure functions can be tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.

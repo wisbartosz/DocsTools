@@ -45,6 +45,13 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   właściwej kolejności, ile jest słów kluczowych, jak długi jest abstrakt i cel pracy, ile
   stron ma praca. Wymagania wpisujesz raz albo wczytujesz z regulaminu wśród źródeł
   (tym samym przyciskiem co wymagania edytorskie); zapisują się w dokumencie.
+- Bibliografia i przypisy, też w zakładce „Sprawdź”. Dodatek odnajduje przypisy
+  harwardzkie w tekście – w nawiasie, np. (Kowalski 2019), i w zdaniu, np. „według
+  Kowalskiego (2019)” – oraz pozycje w bibliografii. Pokazuje przypisy bez pozycji
+  w bibliografii, pozycje, do których nic w tekście się nie odwołuje, kolejność
+  alfabetyczną, liczbę pozycji, zapis pozycji (inicjały, kropka po roku, „i in.”, strony,
+  data dostępu przy stronach WWW), Wikipedię oraz źródła starsze niż 10 lat. Przycisk
+  „Posortuj bibliografię” układa pozycje alfabetycznie i zachowuje ich formatowanie.
 - Domyślne wymagania formatowania i struktury pochodzą z regulaminu i poradnika uczelni,
   dla której powstał Przybornik. Obowiązują od razu, bez zapisywania. Jeśli piszesz pracę
   na innej uczelni, zmień je w formularzach albo wczytaj ze źródeł. Przycisk „Przywróć
@@ -74,7 +81,8 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,
 - wyszukiwarka w źródłach,
-- kontrola bibliografii, także dodawanie pozycji po numerze DOI lub ISBN,
+- dalsza kontrola przypisów (spójny zapis, rozmieszczenie w rozdziałach) i dodawanie
+  pozycji bibliografii po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
@@ -251,6 +259,9 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   i prosi Gemini o wypełnienie wymagań (JSON), z listą sprzeczności i cytatami.
 - `Structure.js`: struktura pracy – spis treści, poziomy i numeracja nagłówków, wymagane
   części, słowa kluczowe, długości, liczba stron (eksport do PDF). Czyste funkcje są
+  testowalne w Node.
+- `Bibliography.js`: bibliografia i przypisy harwardzkie – odnajdywanie przypisów
+  i pozycji, dopasowanie, kolejność alfabetyczna, sortowanie. Czyste funkcje są
   testowalne w Node.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.

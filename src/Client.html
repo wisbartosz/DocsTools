@@ -130,9 +130,7 @@
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     $('btn-feedback').classList.toggle('active', name === 'feedback');
     hideMessage();
-    if (name === 'check' && !formatRulesLoaded) {
-      Promise.all([loadFormatRules(), loadStructureRules()]).catch(e => showMessage(errorText(e), 'error'));
-    }
+    if (name === 'check') loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
   }
 
   async function sendFeedback() {
@@ -656,7 +654,7 @@
   }
 
   let format = null;
-  let formatRulesLoaded = false;
+  const loadedRules = new Set();
   const formatOpen = new Set();
   const RULE_FIELDS = {
     'font': 'rule-font',
@@ -724,7 +722,12 @@
     $('skip-title-page').checked = data.skipTitlePage;
     fillFormatRules(data.rules);
     $('format-rules-example').classList.toggle('hidden', !data.isDefault);
-    formatRulesLoaded = true;
+  }
+
+  function loadCheckRules() {
+    const loaders = { format: loadFormatRules, structure: loadStructureRules, bibliography: loadBibliographyRules };
+    return Promise.all(Object.keys(loaders).filter(key => !loadedRules.has(key))
+      .map(key => loaders[key]().then(() => loadedRules.add(key))));
   }
 
   async function resetFormatRules() {
@@ -755,7 +758,7 @@
   }
 
   async function importFormatRules() {
-    if (!formatRulesLoaded) await Promise.all([loadFormatRules(), loadStructureRules()]);
+    await loadCheckRules();
     const result = await callGemini($('btn-import-rules'), 'importFormatRules');
     if (!result) return;
     result.rules.found.forEach(path => setRuleInput(path, ruleValue(result.rules, path)));
@@ -1066,6 +1069,120 @@
     }
   }
 
+  let bibliography = null;
+  const bibliographyOpen = new Set();
+  const BIB_FIELDS = {
+    minReview: 'brule-min-review', minResearch: 'brule-min-research', maxAge: 'brule-max-age',
+    wikipedia: 'brule-wikipedia', web: 'brule-web', format: 'brule-format',
+  };
+
+  async function loadBibliographyRules() {
+    const data = await call('getBibliographyRules');
+    fillBibliographyRules(data.rules);
+    $('bib-rules-example').classList.toggle('hidden', !data.isDefault);
+  }
+
+  function fillBibliographyRules(rules) {
+    Object.keys(BIB_FIELDS).forEach(key => {
+      const input = $(BIB_FIELDS[key]);
+      if (input.type === 'checkbox') input.checked = !!rules[key];
+      else input.value = rules[key] === null || rules[key] === undefined ? '' : rules[key];
+    });
+  }
+
+  function readBibliographyRules() {
+    const rules = {};
+    Object.keys(BIB_FIELDS).forEach(key => {
+      const input = $(BIB_FIELDS[key]);
+      rules[key] = input.type === 'checkbox' ? input.checked : input.value;
+    });
+    return rules;
+  }
+
+  async function saveBibliographyRules() {
+    const saved = await call('saveBibliographyRules', readBibliographyRules());
+    fillBibliographyRules(saved.rules);
+    $('bib-rules-example').classList.toggle('hidden', !saved.isDefault);
+    showMessage(t('structure.rules.saved'), 'ok');
+  }
+
+  async function resetBibliographyRules() {
+    fillBibliographyRules(await call('getDefaultBibliographyRules'));
+    showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  async function checkBibliography() {
+    const button = $('btn-check-bib');
+    button.classList.add('loading');
+    try {
+      bibliography = await call('checkBibliography', { type: $('srule-type').value });
+      renderBibliography();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  function renderBibliography() {
+    const summary = $('bib-summary');
+    summary.classList.remove('hidden');
+    const box = $('bib-groups');
+    box.innerHTML = '';
+    if (bibliography.noSection) {
+      summary.textContent = t('bib.noSection');
+      return;
+    }
+    const groups = bibliography.groups.filter(g => g.count > 0);
+    const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
+    summary.textContent = problems ? t('bib.summary', { count: formatNumber(problems) }) : t('bib.none');
+    summary.append(el('div', 'typo-desc', t('bib.stats', bibliography.stats)));
+    groups.forEach(group => box.append(renderBibliographyGroup(group)));
+  }
+
+  function renderBibliographyGroup(group) {
+    const card = el('details', 'typo-group');
+    card.open = bibliographyOpen.has(group.kind);
+    card.addEventListener('toggle', () => card.open ? bibliographyOpen.add(group.kind) : bibliographyOpen.delete(group.kind));
+    card.append(el('summary', '', t('bib.kind.' + group.kind + '.title') + ' (' + formatNumber(group.count) + ')'));
+    card.append(el('div', 'typo-desc', t('bib.kind.' + group.kind + '.desc')));
+    if (group.kind === 'order' && bibliography.sortable) {
+      const sort = el('button', '', t('bib.sort'));
+      sort.addEventListener('click', () => run(async () => {
+        sort.classList.add('loading');
+        try {
+          bibliography = await call('sortBibliography', { type: $('srule-type').value });
+          renderBibliography();
+          showMessage(t('bib.sorted') + ' ' + t('typo.versionHint'), 'ok');
+        } finally {
+          sort.classList.remove('loading');
+        }
+      }));
+      const row = el('div', 'row buttons');
+      row.append(sort);
+      card.append(row);
+    }
+    const list = el('ul', 'list');
+    group.items.forEach(item => {
+      const li = el('li');
+      const snippet = el('div', 'typo-snippet' + (item.showable ? '' : ' static'));
+      snippet.append(el('div', '', item.preview));
+      if (item.detail) snippet.append(el('div', 'format-detail', item.detail));
+      if (item.showable) {
+        snippet.title = t('typo.show');
+        snippet.addEventListener('click', () => {
+          hideMessage();
+          call('showBibliographyIssue', item.ref).catch(e => showMessage(errorText(e), 'error'));
+        });
+      }
+      li.append(snippet);
+      list.append(li);
+    });
+    card.append(list);
+    return card;
+  }
+
+  $('btn-save-bib-rules').addEventListener('click', () => run(saveBibliographyRules));
+  $('btn-reset-bib-rules').addEventListener('click', () => run(resetBibliographyRules));
+  $('btn-check-bib').addEventListener('click', () => run(checkBibliography));
   $('srule-type').addEventListener('change', structureTypeChanged);
   $('btn-save-structure-rules').addEventListener('click', () => run(saveStructureRules));
   $('btn-reset-structure-rules').addEventListener('click', () => run(resetStructureRules));

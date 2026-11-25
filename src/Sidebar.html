@@ -89,6 +89,32 @@
       <div id="structure-groups"></div>
     </details>
 
+    <details class="check-section" data-section="bibliography">
+      <summary><?= t_('bib.title') ?></summary>
+      <div class="muted small"><?= t_('bib.hint') ?></div>
+      <details id="bib-rules" class="typo-group">
+        <summary><?= t_('bib.rules.title') ?></summary>
+        <div id="bib-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
+        <div class="rules-grid">
+          <label for="brule-min-review"><?= t_('bib.rules.minReview') ?></label><input id="brule-min-review" type="number" min="0" step="1">
+          <label for="brule-min-research"><?= t_('bib.rules.minResearch') ?></label><input id="brule-min-research" type="number" min="0" step="1">
+          <label for="brule-max-age"><?= t_('bib.rules.maxAge') ?></label><input id="brule-max-age" type="number" min="0" step="1">
+          <label class="rules-check"><input id="brule-wikipedia" type="checkbox"> <?= t_('bib.rules.wikipedia') ?></label>
+          <label class="rules-check"><input id="brule-web" type="checkbox"> <?= t_('bib.rules.web') ?></label>
+          <label class="rules-check"><input id="brule-format" type="checkbox"> <?= t_('bib.rules.format') ?></label>
+        </div>
+        <div class="row buttons">
+          <button id="btn-save-bib-rules" class="primary"><?= t_('format.rules.save') ?></button>
+          <button id="btn-reset-bib-rules"><?= t_('rules.reset') ?></button>
+        </div>
+      </details>
+      <div class="row buttons">
+        <button id="btn-check-bib" class="primary"><?= t_('bib.check') ?></button>
+      </div>
+      <div id="bib-summary" class="muted hidden"></div>
+      <div id="bib-groups"></div>
+    </details>
+
     <details class="check-section" data-section="typography">
     <summary><?= t_('typo.title') ?></summary>
     <div class="muted small"><?= t_('typo.hint') ?></div>

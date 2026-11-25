@@ -1,8 +1,8 @@
 {
-  "version": "0.10.1",
-  "tag": "v0.10.1",
+  "version": "0.11.0",
+  "tag": "v0.11.0",
   "notes": {
-    "pl": "Poprawki obsługi Gemini po przeglądzie kodu. Komunikaty mówią właściwą przyczynę: brak klucza, wyczerpany limit albo wycofany model, a „wszystkie przeciążone” pojawia się tylko przy prawdziwym przeciążeniu. Błąd modelu zapasowego nie przerywa już szukania kolejnego. Cytaty z fragmentów źródeł są poprawnie odnajdywane i mają właściwe numery stron, a pytania o konkretny paragraf (np. „§ 12”) trafiają we właściwe miejsce.",
-    "en": "Gemini handling fixes after a code review. Messages give the real cause: a missing key, a used-up limit or a retired model, and \"all overloaded\" appears only on real overload. An error from a backup model no longer stops the search for the next one. Quotes from source passages are found correctly with the right page numbers, and questions about a specific section (e.g. \"§ 12\") land in the right place."
+    "pl": "Nowa sekcja „Bibliografia i przypisy” w zakładce „Sprawdź”. Dodatek odnajduje przypisy harwardzkie w tekście i pozycje w bibliografii, a potem pokazuje przypisy bez pozycji, pozycje niecytowane, złą kolejność alfabetyczną, za małą liczbę pozycji, błędy zapisu pozycji, Wikipedię i źródła starsze niż 10 lat. Przycisk „Posortuj bibliografię” układa pozycje alfabetycznie. Domyślne wymagania pochodzą z regulaminu i poradnika.",
+    "en": "A new \"References and citations\" section in the \"Check\" tab. The add-on finds Harvard citations in the text and the entries in the reference list, then shows citations with no entry, uncited entries, wrong alphabetical order, too few entries, mistakes in how entries are written, Wikipedia and sources older than 10 years. The \"Sort references\" button puts the entries in alphabetical order. The default requirements come from the guidelines."
   }
 }
