@@ -110,23 +110,35 @@
         <button class="icon-btn btn-view-back" aria-label="<?= t_('check.back') ?>" title="<?= t_('check.back') ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
         <span class="view-title"><?= t_('check.rules') ?></span>
       </div>
-      <label class="rules-check check-option"><input id="skip-title-page" type="checkbox" checked> <?= t_('check.skipTitle') ?></label>
-      <div class="muted small"><?= t_('check.skipTitleHint') ?></div>
-      <div class="row buttons">
-        <button id="btn-import-rules"><?= t_('format.rules.import') ?></button>
-      </div>
-      <div class="muted small"><?= t_('format.rules.importHint') ?></div>
+      <div id="rules-banner" class="rules-banner hidden"></div>
+      <button id="btn-import-rules" class="btn-tonal wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg> <?= t_('format.rules.import') ?></button>
+      <div class="muted small module-hint collapsed rules-import-hint"><?= t_('format.rules.importHint') ?></div>
       <div id="rules-import-result" class="typo-group hidden"></div>
-      <details id="structure-rules" class="typo-group">
-        <summary><?= t_('structure.rules.title') ?></summary>
-        <div class="typo-desc"><?= t_('structure.rules.hint') ?></div>
-        <div id="structure-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
+      <div class="segmented" role="group" aria-label="<?= t_('check.rules') ?>">
+        <button class="segment active" aria-pressed="true" data-pane="general"><?= t_('rules.pane.general') ?></button>
+        <button class="segment" aria-pressed="false" data-pane="structure"><?= t_('rules.pane.structure') ?></button>
+        <button class="segment" aria-pressed="false" data-pane="bibliography"><?= t_('rules.pane.bibliography') ?></button>
+        <button class="segment" aria-pressed="false" data-pane="format"><?= t_('rules.pane.format') ?></button>
+      </div>
+      <div class="rules-panes">
+      <section id="general-rules" class="rules-pane active" data-pane="general">
+        <h4 class="rules-pane-title"><?= t_('rules.pane.general') ?></h4>
+        <div class="muted small rules-pane-hint"><?= t_('rules.instant') ?></div>
         <div class="rules-grid">
           <label for="srule-type"><?= t_('structure.rules.type') ?></label>
           <select id="srule-type">
             <option value="review"><?= t_('structure.type.review') ?></option>
             <option value="research"><?= t_('structure.type.research') ?></option>
           </select>
+        </div>
+        <label class="rules-check check-option"><input id="skip-title-page" type="checkbox" checked> <?= t_('check.skipTitle') ?></label>
+        <div class="muted small"><?= t_('check.skipTitleHint') ?></div>
+      </section>
+      <section id="structure-rules" class="rules-pane" data-pane="structure">
+        <h4 class="rules-pane-title"><?= t_('structure.rules.title') ?></h4>
+        <div class="muted small rules-pane-hint"><?= t_('structure.rules.hint') ?></div>
+        <div id="structure-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
+        <div class="rules-grid">
           <span class="rules-wide muted"><?= t_('structure.rules.sections') ?></span>
           <textarea id="srule-sections" class="rules-wide" rows="6"></textarea>
           <label class="rules-check"><input id="srule-toc" type="checkbox"> <?= t_('structure.rules.toc') ?></label>
@@ -139,13 +151,13 @@
           <input id="srule-aim-min" type="number" min="0" step="10"><input id="srule-aim-max" type="number" min="0" step="10">
           <label for="srule-min-pages"><?= t_('structure.rules.minPages') ?></label><input id="srule-min-pages" type="number" min="0" step="1">
         </div>
-        <div class="row buttons">
+        <div class="row buttons hidden">
           <button id="btn-save-structure-rules" class="primary"><?= t_('format.rules.save') ?></button>
           <button id="btn-reset-structure-rules"><?= t_('rules.reset') ?></button>
         </div>
-      </details>
-      <details id="bib-rules" class="typo-group">
-        <summary><?= t_('bib.rules.title') ?></summary>
+      </section>
+      <section id="bib-rules" class="rules-pane" data-pane="bibliography">
+        <h4 class="rules-pane-title"><?= t_('bib.rules.title') ?></h4>
         <div id="bib-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
         <div class="rules-grid">
           <label for="brule-min-review"><?= t_('bib.rules.minReview') ?></label><input id="brule-min-review" type="number" min="0" step="1">
@@ -157,14 +169,14 @@
           <label class="rules-check"><input id="brule-cite-format" type="checkbox"> <?= t_('bib.rules.citeFormat') ?></label>
           <label class="rules-check"><input id="brule-cite-placement" type="checkbox"> <?= t_('bib.rules.citePlacement') ?></label>
         </div>
-        <div class="row buttons">
+        <div class="row buttons hidden">
           <button id="btn-save-bib-rules" class="primary"><?= t_('format.rules.save') ?></button>
           <button id="btn-reset-bib-rules"><?= t_('rules.reset') ?></button>
         </div>
-      </details>
-      <details id="format-rules" class="typo-group">
-      <summary><?= t_('format.rules.title') ?></summary>
-      <div class="typo-desc"><?= t_('format.rules.hint') ?></div>
+      </section>
+      <section id="format-rules" class="rules-pane" data-pane="format">
+        <h4 class="rules-pane-title"><?= t_('format.rules.title') ?></h4>
+      <div class="muted small rules-pane-hint"><?= t_('format.rules.hint') ?></div>
       <div id="format-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
       <div class="rules-grid">
         <b class="rules-head"><?= t_('format.rules.text') ?></b>
@@ -202,11 +214,17 @@
         <label class="rules-check"><input id="rule-new-page" type="checkbox"> <?= t_('format.rules.chapterNewPage') ?></label>
         <label for="rule-caption-size"><?= t_('format.rules.captionSize') ?></label><input id="rule-caption-size" type="number" step="0.5" min="0">
       </div>
-      <div class="row buttons">
+      <div class="row buttons hidden">
         <button id="btn-save-rules" class="primary"><?= t_('format.rules.save') ?></button>
         <button id="btn-reset-rules"><?= t_('rules.reset') ?></button>
       </div>
-    </details>
+    </section>
+      </div>
+      <div class="rules-actions">
+        <button id="btn-save-all-rules" class="primary"><?= t_('rules.save') ?></button>
+        <button id="btn-reset-all-rules" class="link"><?= t_('rules.reset') ?></button>
+        <span id="rules-dirty" class="muted small hidden"><?= t_('rules.dirty') ?></span>
+      </div>
     </div>
   </section>
 

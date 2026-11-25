@@ -863,7 +863,7 @@
     const data = await call('getFormatRules');
     $('skip-title-page').checked = data.skipTitlePage;
     fillFormatRules(data.rules);
-    $('format-rules-example').classList.toggle('hidden', !data.isDefault);
+    setRulesDefault('format', data.isDefault);
   }
 
   function loadCheckRules() {
@@ -905,10 +905,8 @@
     if (!result) return;
     result.rules.found.forEach(path => setRuleInput(path, ruleValue(result.rules, path)));
     fillImportedStructure(result.structure);
-    $('format-rules-example').classList.add('hidden');
-    $('structure-rules-example').classList.add('hidden');
-    $('format-rules').open = true;
-    $('structure-rules').open = true;
+    setRulesDirty(true);
+    showRulesPane('structure');
     renderRulesImport(result);
     showMessage(t('format.rules.imported', { count: result.found }) + (result.fallback ? ' ' + t('ai.fallbackUsed', { model: result.model }) : ''), 'ok');
   }
@@ -928,11 +926,60 @@
 
   async function saveAllRules() {
     const format = await call('saveFormatRules', readFormatRules());
+    fillFormatRules(format.rules);
+    setRulesDefault('format', format.isDefault);
     const saved = await call('saveStructureRules', readStructureRules());
-    $('format-rules-example').classList.toggle('hidden', !format.isDefault);
-    $('structure-rules-example').classList.toggle('hidden', !saved.isDefault);
+    fillStructureRules(saved.rules);
+    setRulesDefault('structure', saved.isDefault);
+    const bibliographyRules = await call('saveBibliographyRules', readBibliographyRules());
+    fillBibliographyRules(bibliographyRules.rules);
+    setRulesDefault('bib', bibliographyRules.isDefault);
     hideRulesImport();
-    showMessage(t('format.rules.bothSaved'), 'ok');
+    setRulesDirty(false);
+    showMessage(t('structure.rules.saved'), 'ok');
+  }
+
+  async function resetAllRules() {
+    setRulesDirty(true);
+    await resetStructureRules();
+    await resetBibliographyRules();
+    await resetFormatRules();
+    setRulesDirty(true);
+    showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  function setRulesDirty(dirty) {
+    $('rules-dirty').classList.toggle('hidden', !dirty);
+  }
+
+  const rulesDefault = { format: null, structure: null, bib: null };
+
+  function setRulesDefault(form, isDefault) {
+    rulesDefault[form] = !!isDefault;
+    $(form + '-rules-example').classList.toggle('hidden', !isDefault);
+    renderRulesBanner();
+  }
+
+  function renderRulesBanner() {
+    const banner = $('rules-banner');
+    const states = Object.keys(rulesDefault).map(key => rulesDefault[key]);
+    if (states.some(state => state === null)) {
+      banner.classList.add('hidden');
+      return;
+    }
+    const defaults = states.every(Boolean);
+    banner.textContent = t(defaults ? 'rules.banner.default' : 'rules.banner.custom');
+    banner.classList.toggle('is-default', defaults);
+    banner.classList.remove('hidden');
+  }
+
+  function showRulesPane(name) {
+    document.querySelectorAll('#check-rules .segment').forEach(segment => {
+      const active = segment.dataset.pane === name;
+      segment.classList.toggle('active', active);
+      segment.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('#check-rules .rules-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.pane === name));
   }
 
   function renderRulesImport(result) {
@@ -956,7 +1003,10 @@
           radio.type = 'radio';
           radio.name = 'rules-conflict-' + index;
           radio.checked = optionIndex === 0;
-          radio.addEventListener('change', () => setRuleInput(conflict.field, option.value));
+          radio.addEventListener('change', () => {
+            setRuleInput(conflict.field, option.value);
+            setRulesDirty(true);
+          });
           label.append(radio, option.value + ' (' + option.source + ')');
           fieldset.append(label);
         });
@@ -980,7 +1030,7 @@
   async function saveFormatRules() {
     const saved = await call('saveFormatRules', readFormatRules());
     fillFormatRules(saved.rules);
-    $('format-rules-example').classList.toggle('hidden', !saved.isDefault);
+    setRulesDefault('format', saved.isDefault);
     showMessage(t('format.rules.saved'), 'ok');
   }
 
@@ -1045,7 +1095,7 @@
     const data = await call('getStructureRules');
     structureDefaults = { sections: data.sections };
     fillStructureRules(data.rules);
-    $('structure-rules-example').classList.toggle('hidden', !data.isDefault);
+    setRulesDefault('structure', data.isDefault);
   }
 
   async function resetStructureRules() {
@@ -1087,7 +1137,7 @@
   async function saveStructureRules() {
     const saved = await call('saveStructureRules', readStructureRules());
     fillStructureRules(saved.rules);
-    $('structure-rules-example').classList.toggle('hidden', !saved.isDefault);
+    setRulesDefault('structure', saved.isDefault);
     showMessage(t('structure.rules.saved'), 'ok');
   }
 
@@ -1162,7 +1212,7 @@
   async function loadBibliographyRules() {
     const data = await call('getBibliographyRules');
     fillBibliographyRules(data.rules);
-    $('bib-rules-example').classList.toggle('hidden', !data.isDefault);
+    setRulesDefault('bib', data.isDefault);
   }
 
   function fillBibliographyRules(rules) {
@@ -1185,7 +1235,7 @@
   async function saveBibliographyRules() {
     const saved = await call('saveBibliographyRules', readBibliographyRules());
     fillBibliographyRules(saved.rules);
-    $('bib-rules-example').classList.toggle('hidden', !saved.isDefault);
+    setRulesDefault('bib', saved.isDefault);
     showMessage(t('structure.rules.saved'), 'ok');
   }
 
@@ -1508,10 +1558,24 @@
   $('check-type').addEventListener('change', () => run(changeCheckType));
 
   $('btn-check-fig').addEventListener('click', () => run(checkFigures));
+  $('btn-save-all-rules').addEventListener('click', () => run(saveAllRules));
+  $('btn-reset-all-rules').addEventListener('click', () => run(resetAllRules));
+  document.querySelectorAll('#check-rules .segment').forEach(segment => segment.addEventListener('click', () => showRulesPane(segment.dataset.pane)));
+  document.querySelectorAll('#check-rules .rules-pane input, #check-rules .rules-pane select, #check-rules .rules-pane textarea').forEach(input => {
+    if (input.id === 'skip-title-page' || input.id === 'srule-type') return;
+    input.addEventListener('input', () => setRulesDirty(true));
+    input.addEventListener('change', () => setRulesDirty(true));
+  });
+  renderRulesBanner();
   $('btn-save-bib-rules').addEventListener('click', () => run(saveBibliographyRules));
   $('btn-reset-bib-rules').addEventListener('click', () => run(resetBibliographyRules));
   $('btn-check-bib').addEventListener('click', () => run(checkBibliography));
-  $('srule-type').addEventListener('change', structureTypeChanged);
+  $('srule-type').addEventListener('change', () => {
+    const type = $('srule-type').value;
+    $('srule-type').value = $('check-type').value;
+    $('check-type').value = type;
+    run(changeCheckType);
+  });
   $('btn-save-structure-rules').addEventListener('click', () => run(saveStructureRules));
   $('btn-reset-structure-rules').addEventListener('click', () => run(resetStructureRules));
   $('btn-reset-rules').addEventListener('click', () => run(resetFormatRules));

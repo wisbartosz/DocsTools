@@ -1,8 +1,8 @@
 {
-  "version": "0.15.0",
-  "tag": "v0.15.0",
+  "version": "0.16.0",
+  "tag": "v0.16.0",
   "notes": {
-    "pl": "Nowa zakładka „Sprawdź” – drugi etap przebudowy panelu. „Sprawdź” jest pierwszą zakładką, a przycisk „Sprawdź całą pracę” uruchamia wszystkie kontrole i pokazuje przegląd: liczniki do poprawy i do przejrzenia oraz stan każdego modułu. Kliknięcie modułu otwiera jego wyniki z filtrami. Rodzaj pracy wybiera się na górze, a wymagania uczelni są na osobnym ekranie.",
-    "en": "A new \"Check\" tab – the second step of the panel redesign. \"Check\" is now the first tab, and the \"Check the whole thesis\" button runs all checks and shows an overview: counters of items to fix and to review and the state of each module. Clicking a module opens its results with filters. The type of thesis is chosen at the top, and the university requirements have their own screen."
+    "pl": "Nowy ekran „Wymagania uczelni” – trzeci etap przebudowy panelu. Sekcje Ogólne, Struktura, Bibliografia i Format przełącza się jednym przełącznikiem, wszystkie wymagania zapisuje jeden przycisk „Zapisz”, a panel pokazuje, czy obowiązują wymagania domyślne i czy są niezapisane zmiany. W oknie „Powiększ” wszystkie sekcje widać naraz.",
+    "en": "A new \"University requirements\" screen – the third step of the panel redesign. The General, Structure, References and Format sections are switched with one control, one \"Save\" button saves all requirements, and the panel shows whether the default requirements apply and whether there are unsaved changes. In the \"Enlarge\" window all sections are shown at once."
   }
 }
