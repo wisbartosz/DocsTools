@@ -1,6 +1,6 @@
 const APP_SHORT_NAME = 'PDZ';
 const APP_NAME = 'Przybornik dyplomowanej Żabki';
-const APP_VERSION = '0.18.0';
+const APP_VERSION = '0.19.0';
 
 function onOpen() {
   DocumentApp.getUi()

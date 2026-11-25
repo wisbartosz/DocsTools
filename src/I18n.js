@@ -48,12 +48,12 @@ function formatMessage_(text, params) {
   });
 }
 
-function saveUiLanguage(value) {
+function saveUiLanguage(value, reopen) {
   const language = String(value || '');
   if (language && UI_LANGUAGES.indexOf(language) < 0) throw userError_('err.languageInvalid');
   const props = userProps_();
   if (language) props.setProperty(PROP.UI_LANGUAGE, language);
   else props.deleteProperty(PROP.UI_LANGUAGE);
   uiLanguageCache_ = null;
-  showSidebar();
+  if (reopen !== false) showSidebar();
 }

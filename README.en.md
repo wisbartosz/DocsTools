@@ -20,8 +20,10 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   ticked. Every answer comes with a list of sources, each with a verbatim quote and a page
   number (where we know it). The add-on checks on its own whether the quote really appears
   in the source text. If the sources don't answer the question, the assistant says so
-  plainly. It won't write any part of your thesis for you. You can continue a question
-  with "Follow up", and keep using the other tabs while you wait for an answer.
+  plainly. It won't write any part of your thesis for you. The conversation works like a
+  chat: the next question in the box at the bottom continues the open conversation, "New
+  conversation" starts another one, and "Copy with references" copies the answer with its
+  sources. You can keep using the other tabs while you wait for an answer.
   With long sources only the passages related to the question go to Gemini, and when the
   chosen model is overloaded, the toolkit switches to a backup model and says so next to the answer.
 - Questions about a passage of your thesis. Select a paragraph in the document and click
@@ -86,7 +88,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
 - "Send feedback" in the footer. Write what isn't working or what's missing, click "Send"
   and the message goes straight to the author. No GitHub account needed.
 - Settings in the sidebar: sources folder, Gemini key, model choice and a connection test.
-  The model and backup models are saved at once, the key and language with a button.
+  Changes are saved at once (the key with a button). A new language shows after you
+  reopen the panel.
 - Polish and English interface. The add-on picks the language of your Google account,
   and you can change it in the settings.
 - Source processing. The add-on extracts text from PDFs (scans included), Word, ODT and
@@ -138,7 +141,7 @@ account (https://script.google.com/home/usersettings). It's a single switch you 
 
 The toolkit checks for a newer version on its own. When there is one, a "Version … is available"
 bar with an "Update" button appears at the top of the panel, a dot appears on the settings
-icon (⚙), and the Updates section shows what's new and an "Update" button. The button
+icon (⚙), and Settings (the Panel card, "Version") shows what's new and an "Update" button. The button
 opens the installer, which replaces the toolkit in your document with the latest version.
 Your work, settings and processed sources stay. If the new version gives you trouble,
 Settings has a link to the installer with a "Restore the previous version" button. Reload the document after updating.
@@ -210,7 +213,7 @@ the script editor, because the next push will overwrite your changes.
    because it's your own script. Choose Advanced → Go to… and allow it.
 3. In Settings (the ⚙ icon in the top right of the panel), paste the link to your sources folder.
 4. Paste the key from https://aistudio.google.com/apikey, choose a model and click
-   "Test connection".
+   "Check" next to "Connection". The Assistant tab shows these steps one by one.
 5. In the Sources tab, click "Process sources".
 
 Until then, the Assistant tab shows these steps with progress and a button for the next one.

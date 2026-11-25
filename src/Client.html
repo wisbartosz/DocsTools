@@ -5,6 +5,7 @@
   let sources = [];
   let assistant = { sources: [], warnChars: 0 };
   let assistantLoaded = false;
+  let connection = null;
   const threads = [];
   let activeThread = null;
   let checkView = 'overview';
@@ -16,6 +17,13 @@
     const text = I18N[key] || key;
     if (!params) return text;
     return text.replace(/\{(\w+)\}/g, (match, name) => params[name] === undefined ? match : String(params[name]));
+  }
+
+  function countText(key, count) {
+    const n = Math.abs(count) % 100;
+    const d = n % 10;
+    const form = count === 1 ? 'one' : UI_LANG === 'pl' && d >= 2 && d <= 4 && (n < 12 || n > 14) ? 'few' : 'many';
+    return t(key + '.' + form, { count: formatNumber(count) });
   }
 
   function formatNumber(value) {
@@ -30,14 +38,45 @@
 
   let lastError = '';
 
+  let toastTimer = null;
+
   function showMessage(text, kind) {
     if (kind === 'error') lastError = text;
+    if (kind === 'ok') {
+      $('message').className = 'message hidden';
+      showToast(text);
+      return;
+    }
+    hideToast();
     const box = $('message');
     box.textContent = text;
     box.className = 'message' + (kind ? ' ' + kind : '');
   }
 
-  function hideMessage() { $('message').className = 'message hidden'; }
+  function showToast(text) {
+    const toast = $('toast');
+    toast.textContent = text;
+    toast.classList.remove('hidden');
+    scheduleToastHide(Math.min(12000, Math.max(4000, text.length * 60)));
+  }
+
+  function scheduleToastHide(delay) {
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      if ($('toast').matches(':hover')) scheduleToastHide(1500);
+      else hideToast();
+    }, delay);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    $('toast').classList.add('hidden');
+  }
+
+  function hideMessage() {
+    $('message').className = 'message hidden';
+    hideToast();
+  }
 
   function errorText(e) {
     return (e && e.message ? e.message : String(e)).replace(/^(Exception|Error|UserError):\s*/, '');
@@ -128,7 +167,11 @@
     });
   }
 
+  let previousTab = 'check';
+
   function switchTab(name) {
+    const current = document.querySelector('.panel:not(.hidden)');
+    if (current && current.id !== 'tab-settings' && current.id !== 'tab-' + name) previousTab = current.id.replace('tab-', '');
     document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
     if (name === 'assistant') {
       assistantUnread = 0;
@@ -136,10 +179,8 @@
     }
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     $('btn-feedback').classList.toggle('active', name === 'feedback');
-    const lastThread = name !== 'assistant' ? null
-      : UI_MODE === 'window' ? activeThread && activeThread.element
-      : document.querySelector('#answers > .thread:last-child');
-    if (lastThread) lastThread.scrollIntoView({ block: 'start' });
+    const lastTurn = name === 'assistant' && activeThread ? activeThread.turnsElement.lastElementChild : null;
+    if (lastTurn) lastTurn.scrollIntoView({ block: 'start' });
     else scrollToTop($('tab-' + name));
     hideMessage();
     if (name === 'check') {
@@ -166,7 +207,7 @@
 
   function renderQuestionPlaceholder() {
     const key = fragment ? 'assistant.fragment.placeholder'
-      : UI_MODE === 'window' && activeThread ? 'assistant.placeholderNewThread'
+      : activeThread ? 'assistant.placeholderFollowUp'
       : 'assistant.placeholder';
     $('question').placeholder = t(key);
   }
@@ -176,24 +217,31 @@
     renderThreadList();
   }
 
-  function selectThread(thread) {
+  function selectThread(thread, scroll) {
     activeThread = thread;
     if (thread) thread.unread = false;
     renderQuestionPlaceholder();
-    threads.forEach(item => {
-      item.element.classList.toggle('active', item === thread);
-      if (item === thread) item.element.open = true;
-    });
-    $('answers').classList.toggle('none-active', !thread);
+    renderAssistantSummary();
+    threads.forEach(item => item.element.classList.toggle('active', item === thread));
+    $('assistant-examples').classList.toggle('hidden', !!thread);
+    $('assistant-threads').open = false;
     renderThreadList();
+    if (scroll === false) return;
     if (thread) thread.element.scrollIntoView({ block: 'start' });
     else scrollToTop($('tab-assistant'));
   }
 
   function renderThreadList() {
-    if (UI_MODE !== 'window') return;
-    const list = $('rail-thread-list');
-    const hadFocus = document.activeElement && document.activeElement.classList.contains('rail-thread');
+    const unread = threads.some(thread => thread.unread);
+    $('assistant-threads').classList.toggle('hidden', !threads.length);
+    $('assistant-threads-summary').textContent = t('assistant.threadsSummary', { count: threads.length });
+    $('assistant-threads').querySelector('summary').classList.toggle('has-dot', unread);
+    fillThreadList($('thread-list'));
+    if (UI_MODE === 'window') fillThreadList($('rail-thread-list'));
+  }
+
+  function fillThreadList(list) {
+    const hadFocus = document.activeElement && list.contains(document.activeElement);
     list.innerHTML = '';
     threads.slice().reverse().forEach(thread => {
       const button = el('button', 'rail-item rail-thread' + (thread === activeThread ? ' active' : ''));
@@ -229,10 +277,14 @@
   function renderSettings() {
     if (!settings) return;
     $('fallback-toggle').checked = settings.fallback !== false;
+    $('folder-name').textContent = settings.sourceFolderName || t(settings.sourceFolderId ? 'settings.folder.noAccess' : 'settings.folder.noneShort');
     $('folder-current').textContent = settings.sourceFolderId
-      ? (settings.sourceFolderName ? t('settings.folder.current', { name: settings.sourceFolderName }) : t('settings.folder.inaccessible'))
+      ? (settings.sourceFolderName ? t('settings.folder.drive') : t('settings.folder.inaccessible'))
       : t('settings.folder.none');
     $('key-status').textContent = settings.hasApiKey ? t('settings.key.present') : t('settings.key.missing');
+    $('key-status').classList.toggle('ok', !!settings.hasApiKey);
+    $('connection-status').textContent = !connection ? t('settings.connection.unknown')
+      : connection.ok ? t('settings.connection.ok', { time: connection.time }) : t('settings.connection.failed');
     $('btn-clear-key').disabled = busy || !settings.hasApiKey;
     $('model-select').disabled = busy || !settings.hasApiKey;
     $('btn-test').disabled = busy || !settings.hasApiKey || !settings.model;
@@ -265,24 +317,38 @@
     const ready = hasFolder && hasSources && hasKey;
     $('assistant-start').classList.toggle('hidden', ready || (hasFolder && !assistantLoaded));
     $('assistant-content').classList.toggle('hidden', !ready);
+    const folderDetail = t('assistant.start.folderDone', { name: settings.sourceFolderName }) + (sources.length ? ' · ' + countText('count.files', sources.length) : '');
+    const keyLink = el('button', 'link inline-link', t('assistant.start.keyLink'));
+    keyLink.addEventListener('click', () => openEditor('key-editor', 'key-input'));
+    const keyTodo = el('span');
+    const keyParts = t('assistant.start.keyTodo').split('{link}');
+    keyTodo.append(keyParts[0], keyLink, keyParts[1] || '');
     const steps = [
-      { done: hasFolder, title: 'assistant.start.folder', detail: hasFolder ? t('assistant.start.folderDone', { name: settings.sourceFolderName }) : t('assistant.start.folderTodo'),
-        action: 'assistant.start.folderAction', run: () => openEditor('folder-editor', 'folder-input') },
+      { done: hasFolder, title: 'assistant.start.folder', detail: hasFolder ? folderDetail : t('assistant.start.folderTodo'),
+        action: 'assistant.start.folderAction', run: () => openEditor('folder-editor', 'folder-input'), hint: 'assistant.start.needFolder' },
       { done: hasSources, title: 'assistant.start.sources',
         detail: hasSources ? t('assistant.start.sourcesDone', { count: assistant.sources.length }) : t('assistant.start.sourcesTodo'),
-        action: 'assistant.start.sourcesAction', run: () => switchTab('sources'), needs: hasFolder },
-      { done: hasKey, title: 'assistant.start.key', detail: hasKey ? t('assistant.start.keyDone') : t('assistant.start.keyTodo'),
-        action: 'assistant.start.keyAction', run: () => openEditor('key-editor', 'key-input') },
+        action: 'assistant.start.sourcesAction', needs: hasFolder, hint: 'assistant.start.needSources',
+        run: () => {
+          switchTab('sources');
+          run(processSources);
+        } },
+      { done: hasKey, title: 'assistant.start.key', detail: hasKey ? t('assistant.start.keyDone') : keyTodo,
+        action: 'assistant.start.keyAction', run: () => openEditor('key-editor', 'key-input'), hint: 'assistant.start.needKey' },
     ];
     renderRail();
     const current = steps.findIndex(step => !step.done && step.needs !== false);
+    const pending = steps.find(step => !step.done);
+    $('start-composer-text').textContent = pending ? t(pending.hint) : '';
     const list = $('start-steps');
     list.innerHTML = '';
     steps.forEach((step, i) => {
       const li = el('li', 'start-step' + (step.done ? ' done' : '') + (i === current ? ' current' : ''));
       const mark = el('span', 'start-mark', step.done ? '' : String(i + 1));
       const body = el('span', 'start-body');
-      body.append(el('span', 'start-name', t(step.title)), el('span', 'start-detail', step.detail));
+      const detail = el('span', 'start-detail');
+      detail.append(step.detail);
+      body.append(el('span', 'start-name', t(step.title)), detail);
       if (i === current) {
         const button = el('button', 'primary start-action', t(step.action));
         button.addEventListener('click', step.run);
@@ -336,38 +402,44 @@
     }
   }
 
+  function sourceState(status) {
+    if (status === 'ok') return 'ok';
+    if (status === 'error') return 'error';
+    if (TO_PROCESS.includes(status)) return 'todo';
+    return 'none';
+  }
+
   function renderSources() {
     const list = $('sources-list');
     list.innerHTML = '';
     sources.forEach(s => {
-      const li = document.createElement('li');
-      const name = document.createElement('a');
-      name.className = 'name';
+      const row = el('div', 'module-row source-row state-' + sourceState(s.status));
+      const badge = el('span', 'module-badge');
+      if (s.status === 'error') badge.textContent = '!';
+      const text = el('span', 'module-text');
+      const name = el('a', 'module-name source-name', s.name);
       name.href = s.url;
       name.target = '_blank';
-      name.textContent = s.name;
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const status = document.createElement('span');
-      status.className = 'status-' + s.status;
-      status.textContent = t('status.' + s.status);
-      meta.append(s.type + ' · ', status);
-      if (s.chars) meta.append(' · ' + t('sources.chars', { count: formatNumber(s.chars) }));
+      const meta = el('span', 'module-status');
+      meta.append(s.type + ' · ', el('span', 'status-' + s.status, t('status.' + s.status)));
       if (s.pages) meta.append(' · ' + t('sources.pages', { count: s.pages }));
-      li.append(name, meta);
-      if (s.error) {
-        const err = document.createElement('div');
-        err.className = 'meta status-error';
-        err.textContent = s.error;
-        li.append(err);
-      }
-      list.append(li);
+      else if (s.chars) meta.append(' · ' + t('sources.chars', { count: formatNumber(s.chars) }));
+      text.append(name, meta);
+      if (s.error) text.append(el('span', 'module-status status-error', s.error));
+      row.append(badge, text);
+      list.append(row);
     });
+    list.classList.toggle('hidden', !sources.length);
     const ready = sources.filter(s => s.status === 'ok').length;
     const todo = sources.filter(s => TO_PROCESS.includes(s.status)).length;
+    $('sources-folder-name').textContent = settings.sourceFolderName || '';
     $('sources-summary').textContent = sources.length
-      ? t('sources.summary', { total: sources.length, ready: ready, todo: todo })
+      ? countText('count.files', sources.length) + ' · ' + (todo ? t('sources.summaryShort', { ready: ready, todo: todo }) : t('sources.allReady'))
       : t('sources.empty');
+    $('process-label').textContent = todo ? t('sources.processCount', { count: todo }) : t('sources.process');
+    $('btn-process').classList.toggle('primary', todo > 0);
+    $('btn-process').classList.toggle('btn-tonal', !todo);
+    renderAssistantStart();
   }
 
   async function loadSources() {
@@ -412,7 +484,8 @@
 
   function renderAssistantSummary() {
     const selected = assistant.sources.filter(s => s.selected);
-    const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0) + (fragment ? fragment.chars : 0);
+    const threadFragment = activeThread && activeThread.fragment ? activeThread.fragment.length : 0;
+    const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0) + (fragment ? fragment.chars : threadFragment);
     $('assistant-sources-summary').textContent = t('assistant.sourcesSummary', { selected: selected.length, total: assistant.sources.length });
     $('assistant-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
     $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
@@ -451,7 +524,8 @@
 
   function renderFragment() {
     $('fragment-box').classList.toggle('hidden', !fragment);
-    $('fragment-title').textContent = fragment ? t('assistant.fragment.title', { chars: formatNumber(fragment.chars) }) : '';
+    $('fragment-title').textContent = fragment ? t('assistant.fragment.chip', { text: fragment.text.slice(0, 120) }) : '';
+    $('fragment-title').title = fragment ? fragment.text : '';
     $('fragment-text').textContent = fragment ? fragment.text : '';
     $('btn-attach-fragment').textContent = t(fragment ? 'assistant.fragment.replace' : 'assistant.fragment.attach');
     renderQuestionPlaceholder();
@@ -459,114 +533,138 @@
   }
 
   async function askAssistant() {
-    const viewed = activeThread;
+    const target = activeThread;
     const attached = fragment;
-    const question = $('question').value.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
+    const typed = $('question').value;
+    const question = typed.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
     const selected = assistant.sources.filter(s => s.selected);
-    const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), [], attached ? attached.text : '');
+    const history = target ? target.turns.map(turn => ({ question: turn.question, answer: turn.answer })) : [];
+    const fragmentText = attached ? attached.text : (target ? target.fragment : '');
+    const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), history, fragmentText);
     if (!result) return;
     hideMessage();
     if (fragment === attached) removeFragment();
-    const thread = {
-      sourceIds: selected.map(s => s.id),
-      sourceNames: selected.map(s => s.name),
-      fragment: attached ? attached.text : '',
-      turns: [],
-    };
-    thread.element = renderThread(thread, question);
-    threads.push(thread);
-    if (UI_MODE !== 'window') document.querySelectorAll('#answers > .thread').forEach(card => { card.open = false; });
-    $('answers').append(thread.element);
-    addTurn(thread, question, result);
-    if (UI_MODE !== 'window') thread.element.scrollIntoView({ block: 'start' });
-    else if (activeThread === viewed) selectThread(thread);
-    else markThreadUnread(thread);
-    $('question').value = '';
-    notifyAssistant();
-  }
-
-  async function followUp(thread, input, button) {
-    const question = input.value.trim();
-    const history = thread.turns.map(turn => ({ question: turn.question, answer: turn.answer }));
-    const result = await callGemini(button, 'askAssistant', question, thread.sourceIds, history, thread.fragment);
-    if (!result) return;
-    hideMessage();
-    addTurn(thread, question, result);
-    input.value = '';
-    if (UI_MODE === 'window' && thread !== activeThread) markThreadUnread(thread);
+    let thread = target;
+    if (!thread) {
+      thread = { fragment: fragmentText, turns: [] };
+      thread.element = renderThread(thread, question);
+      threads.push(thread);
+      $('answers').append(thread.element);
+    } else if (attached) {
+      thread.fragment = attached.text;
+    }
+    const turn = addTurn(thread, question, result, attached ? attached.text : '', selected);
+    if ($('question').value === typed) $('question').value = '';
+    if (activeThread === target) {
+      selectThread(thread, false);
+      turn.scrollIntoView({ block: 'start' });
+    } else {
+      markThreadUnread(thread);
+    }
     notifyAssistant();
   }
 
   function renderThread(thread, firstQuestion) {
-    const card = el('details', 'thread');
-    card.open = true;
+    const card = el('div', 'thread');
     const title = thread.fragment ? (UI_LANG === 'pl' ? '„' : '“') + thread.fragment.slice(0, 80) + '” · ' + firstQuestion : firstQuestion;
     thread.title = title;
     thread.label = firstQuestion;
-    card.append(el('summary', 'thread-title', title));
-    card.append(el('div', 'thread-sources', t('assistant.threadSources', { names: thread.sourceNames.join(', ') })));
-    if (thread.fragment) {
-      const box = el('details', 'thread-fragment');
-      box.append(el('summary', '', t('assistant.fragment.inThread')), el('div', 'fragment-text', thread.fragment));
-      card.append(box);
-    }
     thread.turnsElement = el('div', 'turns');
     card.append(thread.turnsElement);
-
-    const reply = el('div', 'reply hidden');
-    const input = el('textarea');
-    input.rows = 2;
-    input.placeholder = t('assistant.followUpPlaceholder');
-    const send = el('button', 'primary', t('assistant.send'));
-    send.addEventListener('click', () => runInBackground(send, () => followUp(thread, input, send)));
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        runInBackground(send, () => followUp(thread, input, send));
-      }
-    });
-    reply.append(input, send);
-
-    const open = el('button', 'link', t('assistant.followUp'));
-    open.addEventListener('click', () => {
-      open.classList.add('hidden');
-      reply.classList.remove('hidden');
-      input.focus();
-    });
-    card.append(open, reply);
     return card;
   }
 
-  function addTurn(thread, question, result) {
+  function addTurn(thread, question, result, fragmentText, selected) {
     const turn = el('div', 'turn');
     const main = el('div', 'turn-main');
     turn.append(main);
     main.append(el('div', 'bubble', question));
+    if (fragmentText) {
+      const box = el('details', 'thread-fragment');
+      box.append(el('summary', '', t('assistant.fragment.inThread')), el('div', 'fragment-text', fragmentText));
+      main.append(box);
+    }
+    if (selected.length < assistant.sources.length) {
+      main.append(el('div', 'thread-sources', t('assistant.threadSources', { names: selected.map(s => s.name).join(', ') })));
+    }
     if (result.raw) {
       main.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw), ...answerNotes(result));
       thread.turns.push({ question: question, answer: result.raw });
       thread.turnsElement.append(turn);
-      return;
+      return turn;
     }
     if (!result.found) main.append(el('div', 'not-found', t('assistant.notFound')));
     const answer = el('div', 'answer');
-    result.answer.split(/\n{2,}/).forEach(part => answer.append(el('p', '', part.trim())));
-    const notes = answerNotes(result);
+    result.answer.split(/\n{2,}/).forEach(part => answer.append(answerParagraph(part.trim(), turn)));
     main.append(answer);
-    if (UI_MODE === 'window') main.append(...notes);
     if (result.citations.length) {
       turn.classList.add('has-cites');
-      const cites = el('details', 'cites');
-      cites.open = true;
-      cites.append(el('summary', '', t('assistant.citations', { count: result.citations.length })));
+      const cites = el('div', 'cites');
+      cites.append(el('div', 'cites-title', t('assistant.citations', { count: result.citations.length })));
       const list = el('ol');
-      result.citations.forEach(c => list.append(renderCitation(c)));
+      result.citations.forEach((c, index) => list.append(renderCitation(c, index + 1)));
       cites.append(list);
       turn.append(cites);
     }
-    if (UI_MODE !== 'window') turn.append(...notes);
+    const actions = el('div', 'turn-actions');
+    const copy = el('button', 'link', t('assistant.copy'));
+    copy.addEventListener('click', () => copyAnswer(result));
+    actions.append(copy);
+    turn.append(actions, ...answerNotes(result));
     thread.turns.push({ question: question, answer: result.answer });
     thread.turnsElement.append(turn);
+    return turn;
+  }
+
+  function answerParagraph(text, turn) {
+    const p = el('p');
+    text.split(/(\[\d+\])/).forEach(part => {
+      const match = part.match(/^\[(\d+)\]$/);
+      if (!match) {
+        if (part) p.append(part);
+        return;
+      }
+      const ref = el('button', 'cite-ref', match[1]);
+      ref.setAttribute('aria-label', t('assistant.citeRef', { n: match[1] }));
+      ref.addEventListener('click', () => {
+        const target = turn.querySelector('.cite[data-n="' + match[1] + '"]');
+        if (!target) return;
+        target.scrollIntoView({ block: 'nearest' });
+        target.classList.remove('flash');
+        void target.offsetWidth;
+        target.classList.add('flash');
+      });
+      p.append(ref);
+    });
+    return p;
+  }
+
+  function copyAnswer(result) {
+    const lines = [result.answer.trim()];
+    if (result.citations.length) {
+      lines.push('', t('assistant.copySources'));
+      result.citations.forEach((c, index) => {
+        const where = c.page ? ', ' + t('assistant.page', { page: c.page }) : c.location ? ', ' + c.location : '';
+        const quote = c.quote ? ' – ' + (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”' : '';
+        lines.push('[' + (index + 1) + '] ' + c.sourceName + where + quote);
+      });
+    }
+    const text = lines.join('\n');
+    const done = () => showMessage(t('assistant.copied'), 'ok');
+    const fallback = () => {
+      const area = el('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.append(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      area.remove();
+      if (ok) done();
+      else showMessage(t('assistant.copyFailed'), 'error');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
   }
 
   function answerNotes(result) {
@@ -576,29 +674,25 @@
     return notes;
   }
 
-  function renderCitation(c) {
-    const li = document.createElement('li');
+  function renderCitation(c, n) {
+    const li = el('li', 'cite');
+    li.dataset.n = n;
+    const body = el('div', 'cite-body');
+    if (c.quote) body.append(el('div', 'quote', (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”'));
+    const meta = el('div', 'cite-meta');
     if (c.known) {
-      const link = document.createElement('a');
+      const link = el('a', '', c.sourceName);
       link.href = c.sourceUrl;
       link.target = '_blank';
-      link.textContent = c.sourceName;
-      li.append(link);
+      meta.append(link);
     } else {
-      li.append(t('assistant.unknownSource', { name: c.sourceName }));
+      meta.append(t('assistant.unknownSource', { name: c.sourceName }));
     }
-    if (c.page) li.append(', ' + t('assistant.page', { page: c.page }));
-    else if (c.location) li.append(', ' + c.location);
-    const badge = document.createElement('span');
-    badge.className = 'badge ' + c.quoteStatus;
-    badge.textContent = ' · ' + t('assistant.quote.' + c.quoteStatus);
-    li.append(badge);
-    if (c.quote) {
-      const quote = document.createElement('div');
-      quote.className = 'quote';
-      quote.textContent = (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”';
-      li.append(quote);
-    }
+    if (c.page) meta.append(' · ' + t('assistant.page', { page: c.page }));
+    else if (c.location) meta.append(' · ' + c.location);
+    meta.append(' · ', el('span', 'badge ' + c.quoteStatus, t('assistant.quote.' + c.quoteStatus)));
+    body.append(meta);
+    li.append(el('span', 'cite-num', String(n)), body);
     return li;
   }
 
@@ -640,6 +734,8 @@
 
   document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
 
+  $('btn-sources-change').addEventListener('click', () => openEditor('folder-editor', 'folder-input'));
+  $('btn-sources-folder').addEventListener('click', () => openEditor('folder-editor', 'folder-input'));
   $('btn-refresh').addEventListener('click', () => run(async () => {
     try {
       await loadSources();
@@ -676,8 +772,16 @@
   }));
 
   $('btn-test').addEventListener('click', () => run(async () => {
-    const result = await callGemini($('btn-test'), 'testGeminiConnection');
+    const time = new Date().toLocaleTimeString(UI_LANG === 'en' ? 'en-GB' : 'pl-PL', { hour: '2-digit', minute: '2-digit' });
+    let result;
+    try {
+      result = await callGemini($('btn-test'), 'testGeminiConnection');
+    } catch (e) {
+      connection = { ok: false, time: time };
+      throw e;
+    }
     if (!result) return;
+    connection = { ok: true, time: time };
     showMessage(t('ai.testOk', { model: result.model, reply: result.reply }), 'ok');
   }));
 
@@ -687,7 +791,22 @@
       .catch(e => showMessage(errorText(e), 'error'));
   });
 
-  $('btn-save-language').addEventListener('click', () => run(() => call('saveUiLanguage', $('language-select').value)));
+  $('language-select').addEventListener('change', () => {
+    const value = $('language-select').value;
+    call('saveUiLanguage', value, false)
+      .then(() => {
+        settings.uiLanguageSetting = value;
+        $('language-note').classList.remove('hidden');
+      })
+      .catch(e => {
+        $('language-select').value = settings.uiLanguageSetting || '';
+        showMessage(errorText(e), 'error');
+      });
+  });
+  if ($('btn-reopen')) $('btn-reopen').addEventListener('click', () => run(() => call('showSidebar')));
+  $('btn-settings-back').addEventListener('click', () => switchTab(previousTab));
+  setInfoTip($('model-info'), t('settings.model.hint'));
+  $('model-info').innerHTML = document.querySelector('#module-info').innerHTML;
 
   let update = null;
 
@@ -711,8 +830,7 @@
     }
     $('update-notes').textContent = available ? update.notes : '';
     $('update-notes').classList.toggle('hidden', !available || !update.notes);
-    $('btn-install-update').classList.toggle('hidden', !available);
-    $('update-install-hint').classList.toggle('hidden', !available);
+    $('update-available').classList.toggle('hidden', !available);
     $('update-banner').classList.toggle('hidden', !available);
     $('update-banner-text').textContent = available ? t('update.banner', { latest: update.latest }) : '';
     const tab = document.querySelector('.tab[data-tab="settings"]');
@@ -743,6 +861,37 @@
     });
   });
 
+
+  function infoTip(text) {
+    const tip = el('span', 'info-tip');
+    tip.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>';
+    setInfoTip(tip, text);
+    tip.tabIndex = 0;
+    tip.setAttribute('role', 'img');
+    tip.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      tip.classList.toggle('pinned');
+    });
+    tip.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        tip.classList.toggle('pinned');
+      }
+      if (e.key === 'Escape') tip.classList.remove('pinned');
+    });
+    tip.addEventListener('blur', () => tip.classList.remove('pinned'));
+    return tip;
+  }
+
+  function setInfoTip(tip, text) {
+    tip.dataset.tip = text;
+    tip.setAttribute('aria-label', text);
+    tip.classList.toggle('hidden', !text);
+  }
+
+  const openFirstGroup = {};
 
   function makeExpandable(node, collapsedClass) {
     const collapsed = () => node.classList.contains(collapsedClass);
@@ -821,9 +970,14 @@
       return;
     }
     const groups = data.groups.filter(g => g.count > 0);
-    const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
-    summary.textContent = problems ? t(spec.summaryKey, { count: formatNumber(problems) }) : t(spec.noneKey);
-    (spec.notes ? spec.notes(data) : []).forEach(text => summary.append(el('div', 'result-note', text)));
+    const notes = spec.notes ? spec.notes(data) : [];
+    summary.textContent = groups.length ? '' : t(spec.noneKey);
+    notes.forEach(text => summary.append(el('div', 'result-note', text)));
+    summary.classList.toggle('hidden', groups.length > 0 && !notes.length);
+    if (spec.module && openFirstGroup[spec.module]) {
+      delete openFirstGroup[spec.module];
+      if (!spec.open.size && groups.length) spec.open.add(groups[0].kind);
+    }
     if (spec.module) delete moduleErrors[spec.module];
     const filtered = spec.module && spec.module === currentModule;
     if (filtered && resultFilter !== 'all' && !groups.some(group => (resultFilter === 'review') === !!group.info)) resultFilter = 'all';
@@ -846,11 +1000,8 @@
     mark.title = level === 'review' ? t('check.level.review') : t('check.level.fix');
     mark.setAttribute('role', 'img');
     mark.setAttribute('aria-label', mark.title);
-    head.append(mark, el('span', 'result-title', t(spec.kindKey + group.kind + '.title')), el('span', 'result-count', formatNumber(group.count)));
+    head.append(mark, el('span', 'result-title', t(spec.kindKey + group.kind + '.title')), infoTip(t(spec.kindKey + group.kind + '.desc')), el('span', 'result-count', formatNumber(group.count)));
     card.append(head);
-    const desc = el('div', 'result-desc clamp clampable', t(spec.kindKey + group.kind + '.desc'));
-    makeExpandable(desc, 'clamp');
-    card.append(desc);
     const actions = spec.groupActions ? spec.groupActions(group) : [];
     if (actions.length) {
       const row = el('div', 'row buttons');
@@ -872,6 +1023,10 @@
     const snippet = el('div', 'result-snippet' + (showable ? '' : ' static'));
     if (spec.snippet) {
       spec.snippet(item, snippet);
+    } else if (typeof item.replacement === 'string') {
+      const change = el('div', 'fix-change');
+      change.append(el('span', 'fix-before', item.preview), el('span', 'fix-arrow', '→'), el('span', 'fix-after', item.replacement));
+      snippet.append(change);
     } else {
       snippet.append(el('div', '', item.preview));
       if (item.detail) snippet.append(el('div', 'result-detail', item.detail));
@@ -1037,6 +1192,7 @@
   async function loadFormatRules() {
     const data = await call('getFormatRules');
     $('skip-title-page').checked = data.skipTitlePage;
+    if (overviewReady) renderOverview();
     fillFormatRules(data.rules);
     setRulesDefault('format', data.isDefault);
   }
@@ -1583,6 +1739,7 @@
     $('count-fix').textContent = formatNumber(fix);
     $('count-review').textContent = formatNumber(review);
     $('count-ok').textContent = formatNumber(ok);
+    $('title-page-note').classList.toggle('hidden', !$('skip-title-page').checked);
     $('check-last').textContent = lastCheck ? t('check.last', { time: lastCheck.time, seconds: lastCheck.seconds }) : '';
     overviewReady = true;
     const row = focused && list.querySelector('.module-row[data-module="' + focused + '"]');
@@ -1627,6 +1784,8 @@
     currentModule = id;
     resultFilter = 'all';
     $('module-title').textContent = t(module.title);
+    const hint = document.querySelector('.module-view[data-module="' + id + '"] .module-hint');
+    setInfoTip($('module-info'), hint ? hint.textContent.trim() : '');
     document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('hidden', view.dataset.module !== id));
     showCheckView('module');
     if (UI_MODE === 'window') renderOverview();
@@ -1638,12 +1797,14 @@
 
   async function runModuleCheck(module) {
     delete moduleErrors[module.id];
+    openFirstGroup[module.id] = true;
     const spinner = currentModule === module.id ? $('btn-module-recheck') : null;
     if (spinner) spinner.classList.add('loading');
     try {
       await module.check();
     } catch (e) {
       moduleErrors[module.id] = errorText(e);
+      delete openFirstGroup[module.id];
       throw e;
     } finally {
       if (spinner) spinner.classList.remove('loading');
@@ -1669,7 +1830,7 @@
       await loadCheckRules().catch(e => console.warn(e));
       for (let i = 0; i < CHECK_MODULES.length; i++) {
         const module = CHECK_MODULES[i];
-        button.textContent = t('check.progress', { name: t(module.title), n: i + 1, total: CHECK_MODULES.length });
+        $('check-all-label').textContent = t('check.progress', { name: t(module.title), n: i + 1, total: CHECK_MODULES.length });
         try {
           await runModuleCheck(module);
         } catch (e) {
@@ -1683,7 +1844,7 @@
       };
     } finally {
       button.classList.remove('loading');
-      button.textContent = t('check.all');
+      $('check-all-label').textContent = t('check.all');
       renderOverview();
     }
   }
@@ -1739,7 +1900,20 @@
   }
 
   document.querySelectorAll('.btn-view-back').forEach(button => button.addEventListener('click', () => showCheckView('overview')));
-  document.querySelectorAll('.module-hint').forEach(hint => makeExpandable(hint, 'collapsed'));
+  setInfoTip($('import-info'), t('format.rules.importHint'));
+  $('import-info').innerHTML = $('module-info').innerHTML;
+  ['module-info', 'model-info', 'import-info'].forEach(id => {
+    const tip = $(id);
+    tip.addEventListener('click', () => tip.classList.toggle('pinned'));
+    tip.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        tip.classList.toggle('pinned');
+      }
+      if (e.key === 'Escape') tip.classList.remove('pinned');
+    });
+    tip.addEventListener('blur', () => tip.classList.remove('pinned'));
+  });
   $('btn-open-rules').addEventListener('click', () => {
     showCheckView('rules');
     loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
@@ -1775,7 +1949,13 @@
   $('btn-reset-rules').addEventListener('click', () => run(resetFormatRules));
   $('btn-check-structure').addEventListener('click', () => run(checkStructure));
   $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
+  $('btn-title-page-rules').addEventListener('click', () => {
+    showCheckView('rules');
+    showRulesPane('general');
+    loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+  });
   $('skip-title-page').addEventListener('change', () => {
+    renderOverview();
     call('saveSkipTitlePage', $('skip-title-page').checked).catch(e => showMessage(errorText(e), 'error'));
   });
   $('btn-import-rules').addEventListener('click', () => runInBackground($('btn-import-rules'), importFormatRules));
@@ -1787,6 +1967,14 @@
   $('btn-send-feedback').addEventListener('click', () => runInBackground($('btn-send-feedback'), sendFeedback));
 
   $('btn-select-all').addEventListener('click', () => selectAllSources(true));
+  $('btn-new-thread').addEventListener('click', () => {
+    selectThread(null);
+    $('question').focus();
+  });
+  document.querySelectorAll('.example-chip').forEach(chip => chip.addEventListener('click', () => {
+    $('question').value = chip.textContent;
+    $('question').focus();
+  }));
   $('btn-select-none').addEventListener('click', () => selectAllSources(false));
   $('btn-ask').addEventListener('click', () => runInBackground($('btn-ask'), askAssistant));
   if ($('btn-enlarge')) $('btn-enlarge').addEventListener('click', () => run(() => call('showAssistantWindow')));
@@ -1797,6 +1985,14 @@
     }
   });
 
+  $('toast').addEventListener('click', hideToast);
+  document.querySelectorAll('.rules-grid .rules-check').forEach(label => {
+    const node = [...label.childNodes].find(child => child.nodeType === 3 && child.textContent.trim());
+    if (node) node.textContent = node.textContent.replace(/\S/, ch => ch.toLocaleUpperCase(UI_LANG));
+  });
+  document.querySelectorAll('.rules-pane input[type=number], .rules-pane input[type=text]').forEach(input => {
+    if (!input.placeholder) input.placeholder = t('rules.none');
+  });
   if (UI_MODE === 'window') {
     $('rail-rules').addEventListener('click', () => {
       switchTab('check');
@@ -1809,11 +2005,6 @@
       void pane.offsetWidth;
       pane.classList.add('pane-flash');
     }));
-    $('btn-new-thread').addEventListener('click', () => {
-      switchTab('assistant');
-      selectThread(null);
-      $('question').focus();
-    });
     showCheckView('overview');
     switchTab('assistant');
   }

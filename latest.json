@@ -1,8 +1,8 @@
 {
-  "version": "0.18.0",
-  "tag": "v0.18.0",
+  "version": "0.19.0",
+  "tag": "v0.19.0",
   "notes": {
-    "pl": "Nowy układ okna „Powiększ” – ostatni etap przebudowy panelu. Zakładki są w menu po lewej. W „Sprawdź” lista modułów stoi obok wyników wybranego modułu. W Asystencie rozmowy są w menu (można wrócić do każdej albo zacząć nową), a cytaty stoją obok odpowiedzi. Wymagania mają w menu własną pozycję ze spisem sekcji. Panel boczny się nie zmienia.",
-    "en": "A new layout of the \"Enlarge\" window – the last step of the panel redesign. The tabs are in a menu on the left. In \"Check\" the module list sits next to the results of the chosen module. In the assistant the conversations are in the menu (you can go back to any of them or start a new one), and the quotes sit next to the answer. Requirements have their own menu item with a list of sections. The sidebar does not change."
+    "pl": "Panel dopracowany według projektu. Czcionka Roboto (wyraźniejsze pogrubienia), Asystent jak czat – pytanie w polu na dole ciągnie otwartą rozmowę, cytaty są numerowane, a „Kopiuj z przypisami” kopiuje odpowiedź ze źródłami. Wyniki sprawdzania od razu pokazują problemy i poprawki „przed → po”, objaśnienia są pod ikoną ⓘ. Nowe Ustawienia i Źródła, a komunikaty o zapisaniu same znikają.",
+    "en": "The panel polished to match the design. The Roboto font (clearer bold text), the assistant works like a chat – a question in the box at the bottom continues the open conversation, quotes are numbered and \"Copy with references\" copies the answer with its sources. Check results show problems and \"before → after\" fixes at once, explanations sit under an ⓘ icon. New Settings and Sources screens, and \"saved\" messages disappear on their own."
   }
 }

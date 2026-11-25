@@ -19,7 +19,9 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   źródeł. Każda odpowiedź ma listę źródeł z dosłownym cytatem i stroną (tam, gdzie ją
   znamy). Dodatek sam sprawdza, czy cytat naprawdę jest w tekście źródła. Gdy w źródłach
   nie ma odpowiedzi, asystent mówi to wprost. Nie napisze za Ciebie fragmentu pracy.
-  Pytanie można pociągnąć dalej przyciskiem „Dopytaj”, a podczas czekania na odpowiedź
+  Rozmowa działa jak czat: kolejne pytanie w polu na dole ciągnie otwartą rozmowę,
+  „Nowa rozmowa” zaczyna następną, a „Kopiuj z przypisami” kopiuje odpowiedź z listą źródeł.
+  Podczas czekania na odpowiedź można
   normalnie korzystać z innych zakładek. Przy długich źródłach do Gemini trafiają tylko
   fragmenty związane z pytaniem, a gdy wybrany model jest przeciążony, Przybornik sam
   przełącza się na zapasowy i pisze o tym przy odpowiedzi.
@@ -83,7 +85,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
 - „Zgłoś uwagę” w stopce. Piszesz, co nie działa albo czego brakuje, klikasz „Wyślij”
   i wiadomość trafia prosto do autora. Nie trzeba mieć konta na GitHubie.
 - Ustawienia w panelu: folder ze źródłami, klucz Gemini, wybór modelu i test połączenia.
-  Model i modele zapasowe zapisują się od razu, klucz i język – przyciskiem.
+  Zmiany zapisują się od razu (klucz – przyciskiem). Nowy język pojawia się po ponownym
+  otwarciu panelu.
 - Polski i angielski interfejs. Dodatek sam wybiera język według ustawień konta Google,
   a w ustawieniach można go zmienić.
 - Przetwarzanie źródeł. Dodatek wyciąga tekst z PDF-ów (także skanów), plików Word,
@@ -134,7 +137,7 @@ koncie (https://script.google.com/home/usersettings). To jeden przełącznik, us
 
 Przybornik sam sprawdza, czy jest nowsza wersja. Gdy jest, na górze panelu pojawia się
 pasek „Jest nowa wersja” z przyciskiem „Zaktualizuj”, przy ikonie ustawień (⚙) kropka,
-a w sekcji Aktualizacje opis zmian i przycisk „Aktualizuj”. Przycisk
+a w Ustawieniach (karta Panel, „Wersja”) opis zmian i przycisk „Aktualizuj”. Przycisk
 otwiera instalator, który podmieni Przybornik w Twoim dokumencie na najnowszą wersję.
 Praca, ustawienia i przetworzone źródła zostają. Gdyby nowa wersja sprawiała kłopoty,
 w Ustawieniach jest link do instalatora z przyciskiem „Przywróć poprzednią wersję”. Po aktualizacji odśwież
@@ -207,7 +210,7 @@ w edytorze skryptów, bo następne wgranie nadpisze te zmiany.
    bo to Twój własny skrypt. Wybierz Zaawansowane → Przejdź do… i zezwól.
 3. W ustawieniach (ikona ⚙ w prawym górnym rogu panelu) wklej link do folderu ze źródłami.
 4. Wklej klucz z https://aistudio.google.com/apikey, wybierz model i kliknij
-   „Testuj połączenie”.
+   „Sprawdź” przy „Połączenie”. Zakładka Asystent pokazuje te kroki po kolei.
 5. W zakładce Źródła kliknij „Przetwórz źródła”.
 
 Zakładka Asystent do tego czasu pokazuje te kroki z postępem i przyciskiem do następnego.

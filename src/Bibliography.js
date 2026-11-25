@@ -597,6 +597,7 @@ function checkBibliography(options) {
       item.ref.original = issue.original;
       item.fixable = true;
       item.single = !!issue.single;
+      if (issue.kind !== 'quoteItalic') item.replacement = issue.replacement;
       add(issue.kind, item);
     });
     uncitedQuotes_(p.text, p.citations).forEach(function (quote) {
