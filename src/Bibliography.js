@@ -5,35 +5,182 @@ const BIB_NAME = "\\p{Lu}[\\p{L}'’-]+";
 const BIB_NOT_AUTHOR = /^(tabela|tab|rycina|ryc|rysunek|rys|wykres|schemat|fotografia|zdj.cie|za..cznik|aneks|rozdzia.|dz|table|figure|fig|appendix|chapter|annex|w|we|od|do|na|po|za|lata|latach|rok|roku|wiek|ustawa|ustawy|ustawie|rozporz.dzenie|rozporz.dzeniu|polsce|europie|unii)$/i;
 const BIB_PREFIX = /^(?:(?:por|zob|np|cf|vide|see|patrz|e\.g|za)\s*[.:]?\s*(?:te.|tak.e|r.wnie.|also)?\s*[.:]?\s+)+/i;
 const BIB_WEAK_BEFORE = /(?:^|[^\p{L}])(?:w|we|na|z|ze|do|od|po|o|u|przy|przed|nad|pod|dla|przez)\s+$/iu;
-const BIB_KINDS = ['missing', 'uncited', 'order', 'count', 'format', 'wikipedia', 'old', 'web'];
-const BIB_INFO_KINDS = { old: true, web: true };
-const BIB_DEFAULT_RULES = { minReview: 30, minResearch: null, maxAge: 10, wikipedia: true, web: true, format: true };
+const BIB_PAGES = /,?\s*(s|ss|str|pp?)\.\s*\d+(\s*[-–]\s*\d+)?\s*$/i;
+const BIB_ABBREVIATIONS = /^(itd|itp|tzw|tzn|red|wyd|por|zob|str|ryc|tab|rys|godz|min|max|ang|jw|etc|al|tys|mln|mld|proc|wsp|ust|art|pkt|poz|mgr|prof|hab|in.|nast|rozdz|oprac|t.um|wydz|kat|dot|ser|vol|eds|ibid|cyt|p.n|p.d|zach|wsch|godz|sek|ryc|fot|zdj|dzi.|ok|ww)$/i;
+const BIB_KINDS = ['missing', 'uncited', 'authors', 'letters', 'periodBefore', 'innerSpace', 'commaYear', 'etAl', 'sameAuthor',
+  'semicolon', 'quoteItalic', 'order', 'count', 'format', 'wikipedia', 'quoteNoCite', 'noCitation', 'results', 'discussion', 'old', 'web'];
+const BIB_INFO_KINDS = { old: true, web: true, quoteNoCite: true, noCitation: true, results: true, discussion: true };
+const BIB_FIXABLE = { periodBefore: true, innerSpace: true, commaYear: true, etAl: true, sameAuthor: true, semicolon: true, quoteItalic: true };
+const BIB_FIX_ALL = { periodBefore: true, innerSpace: true, commaYear: true };
+const BIB_FORMAT_KINDS = { authors: true, letters: true, periodBefore: true, innerSpace: true, commaYear: true, etAl: true,
+  sameAuthor: true, semicolon: true, quoteItalic: true, quoteNoCite: true };
+const BIB_PLACEMENT_KINDS = { noCitation: true, results: true, discussion: true };
+const BIB_DEFAULT_RULES = { minReview: 30, minResearch: null, maxAge: 10, wikipedia: true, web: true, format: true, citeFormat: true, citePlacement: true };
 const BIB_EN_WORDS = /\b(the|of|and|with|for|in|on|to|from|an|by|is|are|study|review|effect|treatment|patients?)\b/gi;
 const BIB_PL_WORDS = /\b(i|w|z|na|do|oraz|dla|od|po|jako|przez|badanie|leczenie|pacjent\w*)\b/gi;
+const BIB_QUOTE_MIN_WORDS = 5;
+const BIB_NO_CITATION_MIN_CHARS = 300;
+const BIB_MAX_ITEMS = 100;
 
 function normalizeSurname_(name) {
   return String(name || '').normalize('NFC').toLowerCase().replace(/['’-]/g, '');
 }
 
-function citationItems_(content) {
-  const afterCitedBy = content.split(/cyt\.\s*za\s+/i);
-  const text = afterCitedBy[afterCitedBy.length - 1];
-  const items = [];
-  text.split(';').forEach(function (part) {
-    let clean = part.trim().replace(/,?\s*(s|ss|str|pp?)\.\s*\d+(\s*[-–]\s*\d+)?\s*$/i, '');
+function authorYear_(core) {
+  const pattern = new RegExp('^(' + BIB_NAME + ')((?:\\s*,\\s*' + BIB_NAME + ')*)((?:\\s+(?:i|oraz|and|&)\\s+' + BIB_NAME + ')?)' +
+    '(\\s+(?:i\\s*in\\.|et\\s+al\\.))?(\\s*,?\\s+)((?:1[5-9]|20)\\d\\d[a-z]?(?:\\s*,\\s*(?:1[5-9]|20)\\d\\d[a-z]?)*)$', 'u');
+  const match = pattern.exec(core);
+  if (!match || BIB_NOT_AUTHOR.test(match[1])) return null;
+  const listed = 1 + (match[2].match(/,/g) || []).length + (match[3] ? 1 : 0);
+  const authorEnd = match[1].length + match[2].length + match[3].length + (match[4] || '').length;
+  return {
+    first: match[1],
+    listed: listed,
+    authors: match[4] || listed > 2 ? 3 : listed,
+    etAlForm: match[4] ? match[4].trim().replace(/\s+/g, ' ') : '',
+    authorText: core.slice(0, authorEnd),
+    authorEnd: authorEnd,
+    separator: match[5],
+    yearsStart: authorEnd + match[5].length,
+    years: match[6].split(',').map(function (year) {
+      const parsed = /((?:1[5-9]|20)\d\d)([a-z])?/.exec(year.trim());
+      return { year: parsed[1], suffix: parsed[2] || '' };
+    }),
+  };
+}
+
+function splitAuthorYears_(core) {
+  const chunks = [];
+  const splitter = /,\s+(?=\p{Lu})/gu;
+  let last = 0;
+  let match;
+  while ((match = splitter.exec(core)) !== null) {
+    chunks.push({ text: core.slice(last, match.index), at: last, comma: match.index });
+    last = match.index + match[0].length;
+  }
+  chunks.push({ text: core.slice(last), at: last, comma: -1 });
+  if (chunks.length < 2) return null;
+  chunks.forEach(function (chunk) { chunk.parsed = authorYear_(chunk.text); });
+  return chunks.every(function (chunk) { return chunk.parsed; }) ? chunks : null;
+}
+
+function parseCitationContent_(content) {
+  const result = { items: [], fixes: [] };
+  let base = 0;
+  let citedBy = false;
+  const citedByPattern = /cyt\.\s*za\s+/gi;
+  let match;
+  while ((match = citedByPattern.exec(content)) !== null) {
+    base = match.index + match[0].length;
+    citedBy = true;
+  }
+  const tail = content.slice(base);
+  const partPattern = /[^;]+/g;
+  let previous = null;
+  while ((match = partPattern.exec(tail)) !== null) {
+    const raw = match[0];
+    const lead = raw.length - raw.replace(/^\s+/, '').length;
+    const trimmed = raw.trim();
+    const clean = trimmed.replace(BIB_PAGES, '');
     const prefix = BIB_PREFIX.exec(clean);
     const inflected = !!prefix && /(^|\s)za(\s|[.:]|$)/i.test(prefix[0]);
-    if (prefix) clean = clean.slice(prefix[0].length);
-    const pattern = new RegExp('^(' + BIB_NAME + ')((?:\\s*,\\s*' + BIB_NAME + ')*)(?:\\s+(?:i|oraz|and|&)\\s+' + BIB_NAME + ')?' +
-      '(\\s+(?:i\\s*in\\.|et\\s+al\\.))?\\s*,?\\s+((?:1[5-9]|20)\\d\\d[a-z]?(?:\\s*,\\s*(?:1[5-9]|20)\\d\\d[a-z]?)*)$', 'u');
-    const match = pattern.exec(clean);
-    if (!match || BIB_NOT_AUTHOR.test(match[1])) return;
-    match[4].split(',').forEach(function (year) {
-      const parsed = /((?:1[5-9]|20)\d\d)([a-z])?/.exec(year.trim());
-      items.push({ surname: match[1], year: parsed[1], suffix: parsed[2] || '', narrative: inflected });
+    const core = prefix ? clean.slice(prefix[0].length) : clean;
+    const coreAt = base + match.index + lead + (prefix ? prefix[0].length : 0);
+    const pieces = [];
+    const whole = authorYear_(core);
+    if (whole) {
+      pieces.push({ parsed: whole, at: coreAt, length: core.length });
+    } else {
+      const chunks = splitAuthorYears_(core) || [];
+      chunks.forEach(function (chunk, i) {
+        pieces.push({ parsed: chunk.parsed, at: coreAt + chunk.at, length: chunk.text.length });
+        const next = chunks[i + 1];
+        if (!next) return;
+        if (authorKey_(chunk.parsed) === authorKey_(next.parsed)) {
+          if (clean !== trimmed && i + 2 === chunks.length) return;
+          const end = coreAt + chunk.at + chunk.text.length;
+          result.fixes.push({ kind: 'sameAuthor', at: end, remove: coreAt + next.at + next.parsed.yearsStart - end, insert: ', ' });
+        } else {
+          result.fixes.push({ kind: 'semicolon', at: coreAt + chunk.comma, remove: 1, insert: ';' });
+        }
+      });
+    }
+    if (!pieces.length) {
+      previous = null;
+      continue;
+    }
+    pieces.forEach(function (piece) {
+      const parsed = piece.parsed;
+      parsed.years.forEach(function (year) {
+        result.items.push({ surname: parsed.first, year: year.year, suffix: year.suffix, narrative: inflected, authors: parsed.authors });
+      });
+      if (!citedBy && parsed.separator.indexOf(',') >= 0) {
+        result.fixes.push({ kind: 'commaYear', at: piece.at + parsed.authorEnd, remove: parsed.separator.length, insert: ' ' });
+      }
+      if (parsed.listed > 2 || /^et/i.test(parsed.etAlForm)) {
+        result.fixes.push({ kind: 'etAl', at: piece.at, remove: parsed.authorEnd, insert: parsed.first + ' i in.',
+          firstAuthor: { surname: parsed.first, year: parsed.years[0].year, suffix: parsed.years[0].suffix, narrative: inflected } });
+      }
     });
+    const first = pieces[0];
+    const paged = clean !== trimmed;
+    if (previous && !previous.paged && !paged && !prefix && previous.key === authorKey_(first.parsed)) {
+      result.fixes.push({ kind: 'sameAuthor', at: previous.end, remove: first.at + first.parsed.yearsStart - previous.end, insert: ', ' });
+    }
+    const lastPiece = pieces[pieces.length - 1];
+    previous = { key: authorKey_(lastPiece.parsed), end: lastPiece.at + lastPiece.length, paged: paged };
+  }
+  return result;
+}
+
+function authorKey_(parsed) {
+  return normalizeSurname_(parsed.authorText.replace(/\s+/g, ' '));
+}
+
+function citationItems_(content) {
+  return parseCitationContent_(content).items;
+}
+
+function applyEditsToString_(text, edits) {
+  let out = text;
+  edits.slice().sort(function (a, b) { return b.at - a.at; }).forEach(function (edit) {
+    out = out.slice(0, edit.at) + edit.insert + out.slice(edit.at + edit.remove);
   });
-  return items;
+  return out;
+}
+
+function citationIssue_(text, kind, edits, spanStart, spanEnd) {
+  const start = Math.min.apply(null, edits.map(function (e) { return e.at; }));
+  const end = Math.max.apply(null, edits.map(function (e) { return e.at + e.remove; }));
+  const from = Math.min(start, spanStart);
+  const to = Math.max(end, spanEnd);
+  const shifted = edits.map(function (e) { return { at: e.at - from, remove: e.remove, insert: e.insert }; });
+  return {
+    kind: kind,
+    start: start,
+    original: text.slice(start, end),
+    from: from,
+    to: to,
+    preview: text.slice(from, to),
+    replacement: applyEditsToString_(text.slice(from, to), shifted),
+    edits: edits,
+  };
+}
+
+function periodBeforeIssue_(text, start, end) {
+  const before = /([^\s.]+)\.(\s+)$/u.exec(text.slice(Math.max(0, start - 40), start));
+  if (!before) return null;
+  const word = before[1];
+  if (/^\p{L}+$/u.test(word) && (word.length < 3 || BIB_ABBREVIATIONS.test(word))) return null;
+  const after = text.slice(end);
+  const closed = after.charAt(0) === '.';
+  if (!closed && !/^(\s*$|\s+[\p{Lu}„"])/u.test(after)) return null;
+  const dot = start - before[2].length - 1;
+  const edits = [{ at: dot, remove: 1, insert: '' }];
+  if (!closed) edits.push({ at: end, remove: 0, insert: '.' });
+  const issue = citationIssue_(text, 'periodBefore', edits, dot - word.length, end);
+  issue.single = closed;
+  return issue;
 }
 
 function parseCitations_(text) {
@@ -41,39 +188,98 @@ function parseCitations_(text) {
   const parenthetical = /\(([^()]{4,250})\)/g;
   let match;
   while ((match = parenthetical.exec(text)) !== null) {
-    const items = citationItems_(match[1]);
-    if (items.length) found.push({ start: match.index, end: match.index + match[0].length, raw: match[0], items: items });
+    const parsed = parseCitationContent_(match[1]);
+    if (!parsed.items.length) continue;
+    const start = match.index;
+    const end = start + match[0].length;
+    const issues = parsed.fixes.map(function (fix) {
+      const issue = citationIssue_(text, fix.kind, [{ at: start + 1 + fix.at, remove: fix.remove, insert: fix.insert }], start, end);
+      if (fix.firstAuthor) issue.firstAuthor = fix.firstAuthor;
+      return issue;
+    });
+    const inner = match[1];
+    const lead = inner.length - inner.replace(/^\s+/, '').length;
+    const trail = inner.length - inner.replace(/\s+$/, '').length;
+    if (lead || trail) {
+      issues.push(citationIssue_(text, 'innerSpace', [
+        { at: start + 1, remove: lead, insert: '' },
+        { at: end - 1 - trail, remove: trail, insert: '' },
+      ].filter(function (edit) { return edit.remove; }), start, end));
+    }
+    const period = periodBeforeIssue_(text, start, end);
+    if (period) issues.push(period);
+    found.push({ start: start, end: end, raw: match[0], items: parsed.items, issues: issues });
   }
   const narrative = new RegExp("(?<![\\p{L}'’-])(" + BIB_NAME + ')((?:\\s*,\\s*' + BIB_NAME + ')*)' +
-    '(?:\\s+(?:i|oraz|and|&)\\s+' + BIB_NAME + '|\\s+i\\s*in\\.|\\s+et\\s+al\\.)?' +
+    '((?:\\s+(?:i|oraz|and|&)\\s+' + BIB_NAME + '|\\s+i\\s*in\\.|\\s+et\\s+al\\.)?)' +
     '\\s*\\(((?:1[5-9]|20)\\d\\d)([a-z])?(?:\\s*,\\s*(?:s|ss|str|pp?)\\.\\s*\\d+(?:\\s*[-–]\\s*\\d+)?)?\\)', 'gu');
   while ((match = narrative.exec(text)) !== null) {
     const names = [match[1]].concat(match[2].split(',').map(function (n) { return n.trim(); }).filter(String));
     let weak = BIB_WEAK_BEFORE.test(text.slice(Math.max(0, match.index - 12), match.index));
+    let shifted = false;
     if (names.length > 1 && (weak || BIB_NOT_AUTHOR.test(names[0]))) {
       names.shift();
       weak = false;
+      shifted = true;
     }
     if (BIB_NOT_AUTHOR.test(names[0]) || names[0].length < 3) continue;
+    const tail = match[3].trim();
+    const etAl = /^(i\s*in\.|et\s+al\.)$/.test(tail);
+    const listed = names.length + (tail && !etAl ? 1 : 0);
+    const issues = [];
+    if (!shifted && (listed > 2 || /^et/.test(tail))) {
+      const issue = citationIssue_(text, 'etAl', [{ at: match.index, remove: match[1].length + match[2].length + match[3].length, insert: names[0] + ' i in.' }],
+        match.index, match.index + match[0].length);
+      issue.firstAuthor = { surname: names[0], year: match[4], suffix: match[5] || '', narrative: true };
+      issues.push(issue);
+    }
     found.push({
       start: match.index,
       end: match.index + match[0].length,
       raw: match[0],
-      items: [{ surname: names[0], names: names, year: match[3], suffix: match[4] || '', narrative: true, weak: weak }],
+      items: [{ surname: names[0], names: names, year: match[4], suffix: match[5] || '', narrative: true, weak: weak, etAl: etAl, extra: tail && !etAl ? 1 : 0, authors: etAl || listed > 2 ? 3 : listed }],
+      issues: issues,
     });
   }
   return found.sort(function (a, b) { return a.start - b.start; });
 }
 
+function quoteSpans_(text) {
+  const spans = [];
+  const pattern = /„([^”"„]+)[”"]|"([^"]+)"|«([^»]+)»/g;
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    const inner = match[1] || match[2] || match[3];
+    if (inner.trim().split(/\s+/).length >= BIB_QUOTE_MIN_WORDS) spans.push({ start: match.index, end: match.index + match[0].length });
+  }
+  return spans;
+}
+
+function uncitedQuotes_(text, citations) {
+  return quoteSpans_(text).filter(function (quote) {
+    let sentenceStart = 0;
+    const back = /[.!?](?=\s)/g;
+    let match;
+    while ((match = back.exec(text)) !== null && match.index < quote.start) sentenceStart = match.index + 1;
+    const forward = /[.!?](?=\s|$)/g;
+    forward.lastIndex = quote.end;
+    const next = forward.exec(text);
+    const sentenceEnd = next ? next.index : text.length;
+    return !citations.some(function (c) { return c.end > sentenceStart && c.start <= sentenceEnd + 2; });
+  });
+}
+
 function parseBibliographyEntry_(raw) {
   const text = String(raw || '').replace(/^\s*\d+\s*[.)]\s*/, '').trim();
-  const entry = { text: text, numbered: text !== String(raw || '').trim(), surname: null, year: null, suffix: '', authors: 0, web: false, wikipedia: false, english: false, problems: [] };
+  const entry = { text: text, numbered: text !== String(raw || '').trim(), surname: null, year: null, suffix: '', authors: 0, authorSurnames: [], etAl: false, web: false, wikipedia: false, english: false, problems: [] };
   entry.web = /https?:\/\/|www\./i.test(text);
   entry.wikipedia = /wikipedia/i.test(text);
   const year = BIB_YEAR.exec(text);
   const authorsPart = year ? text.slice(0, year.index) : '';
   const authors = authorsPart.match(new RegExp(BIB_NAME + '\\s+(?:\\p{Lu}\\.\\s?-?)+', 'gu')) || [];
   entry.authors = authors.length;
+  entry.authorSurnames = authors.map(function (author) { return author.split(/\s+/)[0]; });
+  entry.etAl = /\bi\s*in\.|et al\./i.test(authorsPart);
   const first = new RegExp('^(' + BIB_NAME + ')', 'u').exec(text);
   const leadingName = new RegExp('^' + BIB_NAME + '\\s*[,.]?\\s*\\(?(?:1[5-9]|20)\\d\\d', 'u');
   if (first && (!entry.web || authors.length || leadingName.test(text))) entry.surname = first[1];
@@ -91,11 +297,43 @@ function parseBibliographyEntry_(raw) {
   }
   if (!authors.length || authorsPart.indexOf(authors[0]) !== 0) entry.problems.push('initials');
   if (!new RegExp('^\\s*' + year[0] + '\\s*\\.').test(text.slice(year.index))) entry.problems.push('yearPeriod');
-  if (entry.authors > 3 && !/\bi\s*in\.|et al\./i.test(authorsPart)) entry.problems.push('etAl');
+  if (entry.authors > 3 && !entry.etAl) entry.problems.push('etAl');
   if (!/\b(s|ss|pp?)\.\s?\d+/i.test(text)) entry.problems.push('pages');
   const title = text.slice(year.index + year[0].length);
   entry.english = (title.match(BIB_EN_WORDS) || []).length > (title.match(BIB_PL_WORDS) || []).length;
   return entry;
+}
+
+function entryAuthorClass_(entry) {
+  if (!entry.authors) return 0;
+  return entry.etAl || entry.authors >= 3 ? 3 : entry.authors;
+}
+
+function expectedCitation_(entry, narrative) {
+  const names = entry.authorSurnames;
+  const cls = entryAuthorClass_(entry);
+  const authors = cls === 1 ? names[0] : cls === 2 ? names[0] + ' i ' + names[1] : names[0] + ' i in.';
+  const year = entry.year + entry.suffix;
+  return narrative ? authors + ' (' + year + ')' : '(' + authors + ' ' + year + ')';
+}
+
+function letterProblems_(entries) {
+  const groups = {};
+  entries.forEach(function (entry, index) {
+    if (!entry.surname || !entry.year) return;
+    const authors = entry.authorSurnames.length ? entry.authorSurnames.join('+') + (entry.etAl ? '+' : '') : entry.surname;
+    const key = normalizeSurname_(authors) + '|' + entry.year;
+    (groups[key] = groups[key] || []).push(index);
+  });
+  const problems = [];
+  Object.keys(groups).forEach(function (key) {
+    const group = groups[key];
+    if (group.length < 2) return;
+    const suffixes = group.map(function (i) { return entries[i].suffix; });
+    const distinct = suffixes.every(function (s, i) { return s && suffixes.indexOf(s) === i; });
+    if (!distinct) Array.prototype.push.apply(problems, group);
+  });
+  return problems.sort(function (a, b) { return a - b; });
 }
 
 function matchCitation_(item, entries) {
@@ -113,12 +351,33 @@ function matchCitation_(item, entries) {
   if (withSuffix.length) return withSuffix;
   if (exact.length) return exact;
   if (!item.narrative) return [];
-  return sameYear.filter(function (entry) {
-    const base = normalizeSurname_(entry.surname);
-    let common = 0;
-    while (common < base.length && common < surname.length && base[common] === surname[common]) common++;
-    return common >= Math.max(4, base.length - 2);
-  });
+  return sameYear.filter(function (entry) { return sameSurname_(entry.surname, surname); });
+}
+
+function sameSurname_(entrySurname, citedSurname) {
+  const base = normalizeSurname_(entrySurname);
+  const cited = normalizeSurname_(citedSurname);
+  let common = 0;
+  while (common < base.length && common < cited.length && base[common] === cited[common]) common++;
+  return common >= Math.max(4, base.length - 2);
+}
+
+function otherYears_(item, entries) {
+  const names = item.names || [item.surname];
+  return entries.filter(function (entry) {
+    if (!entry.surname || !entry.year) return false;
+    return names.some(function (name) {
+      return normalizeSurname_(entry.surname) === normalizeSurname_(name) || (item.narrative && sameSurname_(entry.surname, name));
+    });
+  }).map(function (entry) { return entry.surname + ' ' + entry.year + entry.suffix; });
+}
+
+function citedAuthors_(item, entries) {
+  if (!item.names || item.names.length < 2) return item.authors;
+  let index = 0;
+  while (index < item.names.length - 1 && !matchCitation_({ surname: item.names[index], year: item.year, suffix: item.suffix, narrative: true }, entries).length) index++;
+  const listed = item.names.length - index + item.extra;
+  return item.etAl || listed > 2 ? 3 : listed;
 }
 
 function compareEntries_(a, b) {
@@ -134,6 +393,35 @@ function alphabeticalProblems_(entries) {
     if (compareEntries_(entries[i], entries[i - 1]) < 0) problems.push(i);
   }
   return problems;
+}
+
+function chapterNames_(text) {
+  return [].concat.apply([], parseSections_(text));
+}
+
+function chapterRoles_(type) {
+  return {
+    results: chapterNames_(t_('bib.names.results')),
+    discussion: chapterNames_(t_('bib.names.discussion')),
+    methods: chapterNames_(t_('bib.names.methods')),
+    other: [].concat(
+      chapterNames_(currentStructureRules_(type).sections),
+      chapterNames_(t_('structure.default.review')),
+      chapterNames_(t_('structure.default.research')),
+      chapterNames_(t_('structure.names.aim')),
+      chapterNames_(t_('structure.names.abstract')),
+      chapterNames_(t_('bib.names.other'))),
+  };
+}
+
+function chapterRole_(title, roles) {
+  const clean = String(title || '')
+    .replace(/^\s*(?:[Rr]ozdzia\S*|ROZDZIA\S*|[Cc]hapter|CHAPTER|[Cc]z\S{3}|CZ\S{3}|[Pp]art|PART)\s+(?:\d+|[IVXLC]+)(?=[\s.:–-]|$)\s*[.:–-]?\s*/, '');
+  if (matchesSection_(clean, roles.discussion)) return 'discussion';
+  if (matchesSection_(clean, roles.results)) return /dyskusj|discussion|om.wienie/i.test(clean) ? 'discussion' : 'results';
+  if (matchesSection_(clean, roles.methods)) return 'methods';
+  if (matchesSection_(clean, roles.other)) return 'other';
+  return 'theory';
 }
 
 function getBibliographyRules() {
@@ -170,6 +458,9 @@ function normalizeBibliographyRules_(input) {
     const parsed = parseInt(String(value === undefined || value === null ? '' : value), 10);
     return isFinite(parsed) && parsed > 0 ? parsed : null;
   };
+  const flag = function (value) {
+    return value === undefined ? true : !!value;
+  };
   return {
     minReview: number(source.minReview),
     minResearch: number(source.minResearch),
@@ -177,27 +468,58 @@ function normalizeBibliographyRules_(input) {
     wikipedia: !!source.wikipedia,
     web: !!source.web,
     format: !!source.format,
+    citeFormat: flag(source.citeFormat),
+    citePlacement: flag(source.citePlacement),
   };
+}
+
+function paragraphIssues_(element, text, citations) {
+  const issues = [];
+  citations.forEach(function (citation) { Array.prototype.push.apply(issues, citation.issues); });
+  const rich = element.editAsText();
+  quoteSpans_(text).forEach(function (quote) {
+    const probes = [quote.start + 1, Math.floor((quote.start + quote.end) / 2), quote.end - 2];
+    if (!probes.every(function (offset) { return rich.isItalic(offset) === true; })) return;
+    const original = text.slice(quote.start, quote.end);
+    issues.push({ kind: 'quoteItalic', start: quote.start, end: quote.end, original: original, from: quote.start, to: quote.end, preview: original, replacement: '', edits: [] });
+  });
+  return issues;
 }
 
 function checkBibliography(options) {
   const opts = options || {};
   const rules = readBibliographyRules_() || getDefaultBibliographyRules();
   const type = opts.type || savedStructureType_();
-  const ctx = bibliographyContext_();
+  const ctx = bibliographyContext_(type);
   const groups = {};
-  BIB_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [], info: !!BIB_INFO_KINDS[kind] }; });
+  BIB_KINDS.forEach(function (kind) {
+    groups[kind] = { kind: kind, count: 0, items: [], info: !!BIB_INFO_KINDS[kind], fixAll: !!BIB_FIX_ALL[kind], fixable: 0 };
+  });
   const add = function (kind, item) {
-    groups[kind].count++;
-    groups[kind].items.push(item);
+    if (BIB_FORMAT_KINDS[kind] && !rules.citeFormat) return;
+    if (BIB_PLACEMENT_KINDS[kind] && !rules.citePlacement) return;
+    const group = groups[kind];
+    group.count++;
+    if (item.fixable && !item.single) group.fixable++;
+    if (group.items.length < BIB_MAX_ITEMS) group.items.push(item);
+  };
+  const preview = function (text) {
+    const clean = text.trim();
+    return clean.length > 120 ? clean.slice(0, 120) + '…' : clean;
   };
   const entryItem = function (entry, detail) {
     return {
       ref: { location: entry.location, fingerprint: entry.raw.slice(0, 40) },
       showable: true,
-      preview: entry.raw.length > 120 ? entry.raw.slice(0, 120) + '…' : entry.raw,
+      preview: preview(entry.raw),
       detail: detail || '',
     };
+  };
+  const paragraphItem = function (p, detail) {
+    return { ref: { location: p.location, fingerprint: p.text.trim().slice(0, 40) }, showable: true, preview: preview(p.text), detail: detail || '' };
+  };
+  const rangeItem = function (location, start, end, text, detail) {
+    return { ref: { location: location, start: start, end: end, fingerprint: text }, showable: true, preview: text, detail: detail || '' };
   };
   const result = function () {
     return {
@@ -211,11 +533,30 @@ function checkBibliography(options) {
 
   const missing = {};
   const cited = [];
+  const earlier = [];
+  const inDiscussion = [];
+  const discussionOrder = ctx.discussion ? ctx.discussion.order : Infinity;
   ctx.citations.forEach(function (citation) {
+    const reported = {};
     citation.items.forEach(function (item) {
       const matches = matchCitation_(item, ctx.entries);
       if (matches.length) {
         Array.prototype.push.apply(cited, matches);
+        if (citation.paragraph.role === 'discussion') Array.prototype.push.apply(inDiscussion, matches);
+        else if (citation.paragraph.order < discussionOrder) Array.prototype.push.apply(earlier, matches);
+        if (matches.length === 1) {
+          const entry = matches[0];
+          const expected = entryAuthorClass_(entry);
+          const authors = citedAuthors_(item, ctx.entries);
+          const key = 'a' + ctx.entries.indexOf(entry);
+          if (expected && authors && authors !== expected && !reported[key]) {
+            reported[key] = true;
+            add('authors', rangeItem(citation.location, citation.start, citation.end, citation.raw, t_('bib.authors.detail', { expected: expectedCitation_(entry, item.narrative && citation.raw.charAt(0) !== '(') })));
+          }
+        } else if (!item.suffix && matches.every(function (m) { return m.suffix; })) {
+          const options = matches.map(function (m) { return m.surname + ' ' + m.year + m.suffix; }).join(', ');
+          add('letters', rangeItem(citation.location, citation.start, citation.end, citation.raw, t_('bib.letters.cite', { options: options })));
+        }
         return;
       }
       if (item.weak) return;
@@ -227,6 +568,7 @@ function checkBibliography(options) {
           showable: true,
           preview: label + ' ' + item.year + item.suffix,
           raw: citation.raw,
+          hint: otherYears_(item, ctx.entries),
           count: 0,
         };
       }
@@ -236,12 +578,50 @@ function checkBibliography(options) {
   Object.keys(missing).forEach(function (key) {
     const item = missing[key];
     item.detail = t_('bib.missing.detail', { count: item.count }) + ': ' + item.raw;
+    if (item.hint.length) item.detail += ' – ' + t_('bib.missing.hint', { options: item.hint.join(', ') });
+    delete item.hint;
     add('missing', item);
   });
 
+  ctx.paragraphs.forEach(function (p) {
+    paragraphIssues_(p.element, p.text, citedOnly_(p.citations, ctx.entries)).forEach(function (issue) {
+      if (issue.firstAuthor) {
+        const matches = matchCitation_(issue.firstAuthor, ctx.entries);
+        if (!matches.length) return;
+        if (matches.length === 1 && entryAuthorClass_(matches[0]) && entryAuthorClass_(matches[0]) < 3) return;
+      }
+      const item = rangeItem(p.location, issue.from, issue.to, issue.preview,
+        issue.kind === 'quoteItalic' ? t_('bib.quoteItalic.detail') : t_('bib.fix.to', { text: issue.replacement }));
+      item.ref.kind = issue.kind;
+      item.ref.at = issue.start;
+      item.ref.original = issue.original;
+      item.fixable = true;
+      item.single = !!issue.single;
+      add(issue.kind, item);
+    });
+    uncitedQuotes_(p.text, p.citations).forEach(function (quote) {
+      add('quoteNoCite', rangeItem(p.location, quote.start, quote.end, p.text.slice(quote.start, quote.end), t_('bib.quoteNoCite.detail')));
+    });
+    if (p.role === 'theory' && !p.isList && !p.inTable && !p.citations.length && p.text.trim().length >= BIB_NO_CITATION_MIN_CHARS) {
+      add('noCitation', paragraphItem(p, t_('bib.noCitation.detail', { chapter: p.chapter })));
+    }
+    if (p.role === 'results') {
+      p.citations.forEach(function (citation) {
+        add('results', rangeItem(p.location, citation.start, citation.end, citation.raw, t_('bib.results.detail', { chapter: p.chapter })));
+      });
+    }
+  });
+  const discussed = inDiscussion.filter(function (entry, i) { return inDiscussion.indexOf(entry) === i; });
+  const fresh = discussed.filter(function (entry) { return earlier.indexOf(entry) < 0; });
+  if (ctx.discussion && discussed.length >= 3 && fresh.length * 2 > discussed.length) {
+    add('discussion', paragraphItem(ctx.discussion, t_('bib.discussion.detail', { count: discussed.length, fresh: fresh.length })));
+  }
+
   const thisYear = new Date().getFullYear();
-  ctx.entries.forEach(function (entry) {
+  const letters = letterProblems_(ctx.entries);
+  ctx.entries.forEach(function (entry, index) {
     if (entry.surname && entry.year && cited.indexOf(entry) < 0) add('uncited', entryItem(entry, t_('bib.uncited.detail')));
+    if (letters.indexOf(index) >= 0) add('letters', entryItem(entry, t_('bib.letters.entry', { year: entry.year })));
     if (rules.format && entry.problems.length) {
       add('format', entryItem(entry, entry.problems.map(function (p) { return t_('bib.problem.' + p); }).join('; ')));
     }
@@ -278,8 +658,47 @@ function showBibliographyIssue(ref) {
   doc.setSelection(range.build());
 }
 
+function citedOnly_(citations, entries) {
+  return citations.filter(function (citation) {
+    return citation.items.some(function (item) { return matchCitation_(item, entries).length; });
+  });
+}
+
+function applyBibliographyIssue_(element, issue) {
+  const text = element.editAsText();
+  if (issue.kind === 'quoteItalic') text.setItalic(issue.from, issue.to - 1, false);
+  else applyDocumentEdits_(text, issue.edits);
+}
+
+function fixBibliographyIssue(ref, options) {
+  const resolved = ref && ref.location ? resolveElementPath_(ref.location) : null;
+  if (!resolved || resolved.isText || !BIB_FIXABLE[ref.kind]) throw userError_('format.err.changed');
+  const ctx = bibliographyContext_((options || {}).type || savedStructureType_());
+  const text = resolved.element.getText();
+  const issue = paragraphIssues_(resolved.element, text, citedOnly_(parseCitations_(text), ctx.entries)).filter(function (candidate) {
+    return candidate.kind === ref.kind && candidate.start === ref.at && candidate.original === ref.original;
+  })[0];
+  if (!issue) throw userError_('format.err.changed');
+  applyBibliographyIssue_(resolved.element, issue);
+  return checkBibliography(options);
+}
+
+function fixBibliographyKind(kind, options) {
+  if (!BIB_FIX_ALL[kind]) throw userError_('format.err.changed');
+  const ctx = bibliographyContext_((options || {}).type || savedStructureType_());
+  let fixed = 0;
+  ctx.paragraphs.forEach(function (p) {
+    const issues = citedOnly_(p.citations, ctx.entries).reduce(function (all, citation) { return all.concat(citation.issues); }, [])
+      .filter(function (issue) { return issue.kind === kind && !issue.single; });
+    if (!issues.length) return;
+    applyDocumentEdits_(p.element.editAsText(), issues.reduce(function (all, issue) { return all.concat(issue.edits); }, []));
+    fixed += issues.length;
+  });
+  return { fixed: fixed, result: checkBibliography(options) };
+}
+
 function sortBibliography(options) {
-  const ctx = bibliographyContext_();
+  const ctx = bibliographyContext_((options || {}).type || savedStructureType_());
   if (!ctx.section || !ctx.sortable) throw userError_('bib.err.cantSort');
   const body = DocumentApp.getActiveDocument().getBody();
   const sorted = ctx.entries.slice().sort(compareEntries_);
@@ -293,7 +712,7 @@ function sortBibliography(options) {
   return checkBibliography(options);
 }
 
-function bibliographyContext_() {
+function bibliographyContext_(type) {
   const body = DocumentApp.getActiveDocument().getBody();
   const all = [];
   collectParagraphs_(body, [], false, all);
@@ -313,7 +732,7 @@ function bibliographyContext_() {
   const headed = candidates.filter(function (i) { return level(paragraphs[i].heading); });
   const pool = headed.length ? headed : candidates;
   const start = pool.length ? pool[pool.length - 1] : -1;
-  const ctx = { section: start >= 0, entries: [], citations: [], sortable: false, stats: { citations: 0, entries: 0, english: 0 } };
+  const ctx = { section: start >= 0, entries: [], citations: [], paragraphs: [], discussion: null, sortable: false, stats: { citations: 0, entries: 0, english: 0 } };
   let end = paragraphs.length;
   if (start >= 0) {
     const startLevel = level(paragraphs[start].heading) || 7;
@@ -339,13 +758,36 @@ function bibliographyContext_() {
       return index >= 0 && (i === 0 || index === indexes[i - 1] + 1);
     });
   }
+  const roles = chapterRoles_(type);
+  let stack = [];
+  let ownPart = false;
   paragraphs.forEach(function (p, i) {
+    p.order = i;
+    const l = level(p.heading);
+    if (l) {
+      if (p.inTable || !p.text.trim()) return;
+      let role = chapterRole_(p.text, roles);
+      const parents = stack.filter(function (h) { return h.level < l; });
+      const owner = parents.filter(function (h) { return h.role === 'results' || h.role === 'discussion' || h.role === 'own'; }).pop();
+      if (role === 'methods') role = 'own';
+      if (role === 'theory' && owner) role = owner.role;
+      if (!parents.length && (role === 'own' || role === 'results' || role === 'discussion')) ownPart = true;
+      if (ownPart && !parents.length && role === 'theory') role = 'own';
+      stack = parents.concat({ level: l, paragraph: p, role: role });
+      if (role === 'discussion' && !ctx.discussion) ctx.discussion = p;
+      return;
+    }
     if (start >= 0 && i >= start && i < end) return;
-    if (level(p.heading)) return;
-    parseCitations_(p.text).forEach(function (citation) {
+    const current = stack[stack.length - 1];
+    p.role = current ? (current.role === 'own' ? 'other' : current.role) : null;
+    p.chapter = current ? current.paragraph.text.trim() : '';
+    p.citations = parseCitations_(p.text);
+    p.citations.forEach(function (citation) {
       citation.location = p.location;
+      citation.paragraph = p;
       ctx.citations.push(citation);
     });
+    ctx.paragraphs.push(p);
   });
   const scholarly = ctx.entries.filter(function (e) { return !e.web; });
   ctx.stats = {

@@ -52,6 +52,11 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   alfabetyczną, liczbę pozycji, zapis pozycji (inicjały, kropka po roku, „i in.”, strony,
   data dostępu przy stronach WWW), Wikipedię oraz źródła starsze niż 10 lat. Przycisk
   „Posortuj bibliografię” układa pozycje alfabetycznie i zachowuje ich formatowanie.
+  Sprawdza też zapis przypisów według poradnika (kropka po nawiasie, „i in.” przy więcej
+  niż dwóch autorach, przecinki i średniki, litery a/b przy roku, liczba autorów zgodna
+  z bibliografią) z poprawką po kliknięciu, cytaty bez przypisu i cytaty w kursywie, a do
+  przejrzenia pokazuje dłuższe akapity bez przypisu w części teoretycznej, przypisy
+  w Wynikach i Dyskusję opartą głównie na nowych pracach.
 - Domyślne wymagania formatowania i struktury pochodzą z regulaminu i poradnika uczelni,
   dla której powstał Przybornik. Obowiązują od razu, bez zapisywania. Jeśli piszesz pracę
   na innej uczelni, zmień je w formularzach albo wczytaj ze źródeł. Przycisk „Przywróć
@@ -81,8 +86,7 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - sprawdzanie, czy zaznaczone twierdzenia mają pokrycie w źródłach,
 - wyszukiwarka w źródłach,
-- dalsza kontrola przypisów (spójny zapis, rozmieszczenie w rozdziałach) i dodawanie
-  pozycji bibliografii po numerze DOI lub ISBN,
+- dodawanie pozycji bibliografii po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - spójność terminologii, numeracja rysunków i tabel, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
@@ -261,7 +265,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   części, słowa kluczowe, długości, liczba stron (eksport do PDF). Czyste funkcje są
   testowalne w Node.
 - `Bibliography.js`: bibliografia i przypisy harwardzkie – odnajdywanie przypisów
-  i pozycji, dopasowanie, kolejność alfabetyczna, sortowanie. Czyste funkcje są
+  i pozycji, dopasowanie, kolejność alfabetyczna, sortowanie, zapis i rozmieszczenie
+  przypisów z poprawkami. Czyste funkcje są
   testowalne w Node.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.

@@ -54,6 +54,12 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   how entries are written (initials, full stop after the year, "et al.", pages, access date
   for web pages), Wikipedia and sources older than 10 years. The "Sort references" button
   puts the entries in alphabetical order and keeps their formatting.
+  It also checks how citations are written according to the guidelines (full stop after
+  the bracket, "i in." for more than two authors, commas and semicolons, year letters a/b,
+  number of authors matching the reference list) with a one-click fix, quotes without a
+  citation and quotes in italics, and lists for review longer paragraphs without a
+  citation in the theoretical part, citations in Results, and a Discussion built mostly
+  on new works.
 - The default formatting and structure requirements come from the guidelines of the
   university the toolkit was made for. They apply right away, with nothing to save. If your
   university is different, change them in the forms or read them from your sources. The
@@ -84,8 +90,7 @@ with your sources.
 - source cards with a summary and the key points,
 - checking whether selected claims are backed by your sources,
 - search across your sources,
-- more citation checks (consistent style, where citations appear in chapters) and adding
-  reference entries by DOI or ISBN,
+- adding reference entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - consistent terminology, figure and table numbering, editorial notes,
 - questions your supervisor might ask, and comparing your goals with your conclusions,
@@ -261,7 +266,7 @@ no subfolders, so the manual installation can recreate them.
   required parts, keywords, lengths, page count (via PDF export). The pure functions can be
   tested in Node.
 - `Bibliography.js`: references and Harvard citations – finding citations and entries,
-  matching, alphabetical order, sorting. The pure functions can be tested in Node.
+  matching, alphabetical order, sorting, citation style and placement with fixes. The pure functions can be tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
 - `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.

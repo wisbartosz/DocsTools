@@ -1074,6 +1074,7 @@
   const BIB_FIELDS = {
     minReview: 'brule-min-review', minResearch: 'brule-min-research', maxAge: 'brule-max-age',
     wikipedia: 'brule-wikipedia', web: 'brule-web', format: 'brule-format',
+    citeFormat: 'brule-cite-format', citePlacement: 'brule-cite-placement',
   };
 
   async function loadBibliographyRules() {
@@ -1160,6 +1161,16 @@
       row.append(sort);
       card.append(row);
     }
+    if (group.fixAll && group.fixable) {
+      const fixAll = el('button', '', t('typo.fixAll', { count: formatNumber(group.fixable) }));
+      fixAll.addEventListener('click', () => run(() => fixBibliographyKind(group.kind, fixAll)));
+      const row = el('div', 'row buttons');
+      row.append(fixAll);
+      card.append(row);
+    }
+    if (group.count > group.items.length) {
+      card.append(el('div', 'typo-desc', t('bib.more', { shown: group.items.length, count: formatNumber(group.count) })));
+    }
     const list = el('ul', 'list');
     group.items.forEach(item => {
       const li = el('li');
@@ -1174,10 +1185,32 @@
         });
       }
       li.append(snippet);
+      if (item.fixable) {
+        const fix = el('button', 'link', t('typo.fix'));
+        fix.addEventListener('click', () => run(() => fixBibliographyIssue(item)));
+        li.append(fix);
+      }
       list.append(li);
     });
     card.append(list);
     return card;
+  }
+
+  async function fixBibliographyIssue(item) {
+    bibliography = await call('fixBibliographyIssue', item.ref, { type: $('srule-type').value });
+    renderBibliography();
+  }
+
+  async function fixBibliographyKind(kind, button) {
+    button.classList.add('loading');
+    try {
+      const response = await call('fixBibliographyKind', kind, { type: $('srule-type').value });
+      bibliography = response.result;
+      renderBibliography();
+      showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
   }
 
   $('btn-save-bib-rules').addEventListener('click', () => run(saveBibliographyRules));

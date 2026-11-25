@@ -1,8 +1,8 @@
 {
-  "version": "0.11.0",
-  "tag": "v0.11.0",
+  "version": "0.12.0",
+  "tag": "v0.12.0",
   "notes": {
-    "pl": "Nowa sekcja „Bibliografia i przypisy” w zakładce „Sprawdź”. Dodatek odnajduje przypisy harwardzkie w tekście i pozycje w bibliografii, a potem pokazuje przypisy bez pozycji, pozycje niecytowane, złą kolejność alfabetyczną, za małą liczbę pozycji, błędy zapisu pozycji, Wikipedię i źródła starsze niż 10 lat. Przycisk „Posortuj bibliografię” układa pozycje alfabetycznie. Domyślne wymagania pochodzą z regulaminu i poradnika.",
-    "en": "A new \"References and citations\" section in the \"Check\" tab. The add-on finds Harvard citations in the text and the entries in the reference list, then shows citations with no entry, uncited entries, wrong alphabetical order, too few entries, mistakes in how entries are written, Wikipedia and sources older than 10 years. The \"Sort references\" button puts the entries in alphabetical order. The default requirements come from the guidelines."
+    "pl": "Bibliografia i przypisy – zapis i rozmieszczenie przypisów. Dodatek sprawdza zapis przypisów według poradnika: kropkę po nawiasie, spacje w nawiasie, przecinek przed rokiem, „i in.” przy więcej niż dwóch autorach, przecinki i średniki, litery a/b przy roku oraz liczbę autorów zgodną z bibliografią. Błędy zapisu poprawia po kliknięciu, a kropkę, spacje i przecinek także wszystkie naraz. Pokazuje cytaty bez przypisu i cytaty w kursywie, a do przejrzenia: dłuższe akapity bez przypisu w części teoretycznej, przypisy w Wynikach i Dyskusję opartą głównie na nowych pracach.",
+    "en": "References and citations – citation style and placement. The add-on checks how citations are written according to the guidelines: full stop after the bracket, spaces in the bracket, comma before the year, \"i in.\" for more than two authors, commas and semicolons, year letters a/b and the number of authors matching the reference list. It fixes style mistakes with a click, and the full stop, spaces and comma also all at once. It shows quotes without a citation and quotes in italics, and for review: longer paragraphs without a citation in the theoretical part, citations in Results, and a Discussion built mostly on new works."
   }
 }
