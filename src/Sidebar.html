@@ -62,16 +62,22 @@
         <details id="assistant-sources" class="sources-chip">
           <summary><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg><span id="assistant-sources-summary"></span></summary>
           <div class="sources-panel">
-            <div class="row buttons">
+            <div class="picker-head">
+              <span class="picker-title"><?= t_('assistant.sourcesPick') ?></span>
               <button id="btn-select-all" class="link"><?= t_('assistant.selectAll') ?></button>
+              <span class="muted" aria-hidden="true">·</span>
               <button id="btn-select-none" class="link"><?= t_('assistant.selectNone') ?></button>
             </div>
-            <ul id="assistant-source-list" class="checklist"></ul>
+            <div id="assistant-source-list" class="picker-list"></div>
+            <div id="assistant-picker-size" class="picker-foot muted small"></div>
           </div>
         </details>
         <details id="assistant-threads" class="sources-chip threads-chip hidden">
           <summary><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span id="assistant-threads-summary"></span></summary>
-          <div class="sources-panel"><div id="thread-list" class="rail-list"></div></div>
+          <div class="sources-panel">
+            <div class="picker-head"><span class="picker-title"><?= t_('rail.threads') ?></span></div>
+            <div id="thread-list" class="picker-threads"></div>
+          </div>
         </details>
         <button id="btn-new-thread" class="link"><?= t_('assistant.newThread') ?></button>
       </div>

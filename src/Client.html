@@ -202,7 +202,7 @@
     document.querySelector('.tab[data-tab="check"]').classList.toggle('active', checkOpen && !rulesOpen);
     $('rail-rules').classList.toggle('active', rulesOpen);
     $('rail-sections').classList.toggle('hidden', !rulesOpen);
-    $('rail-threads').classList.toggle('hidden', $('tab-assistant').classList.contains('hidden') || $('assistant-content').classList.contains('hidden'));
+    $('rail-threads').classList.toggle('hidden', !threads.length || $('tab-assistant').classList.contains('hidden') || $('assistant-content').classList.contains('hidden'));
   }
 
   function renderQuestionPlaceholder() {
@@ -237,7 +237,10 @@
     $('assistant-threads-summary').textContent = t('assistant.threadsSummary', { count: threads.length });
     $('assistant-threads').querySelector('summary').classList.toggle('has-dot', unread);
     fillThreadList($('thread-list'));
-    if (UI_MODE === 'window') fillThreadList($('rail-thread-list'));
+    if (UI_MODE === 'window') {
+      fillThreadList($('rail-thread-list'));
+      renderRail();
+    }
   }
 
   function fillThreadList(list) {
@@ -467,17 +470,17 @@
     const list = $('assistant-source-list');
     list.innerHTML = '';
     assistant.sources.forEach(s => {
-      const li = document.createElement('li');
-      const label = document.createElement('label');
-      const box = document.createElement('input');
+      const label = el('label', 'picker-row');
+      const text = el('span', 'picker-text');
+      text.append(el('span', 'picker-name', s.name));
+      const size = s.pages ? t('sources.pages', { count: s.pages }) : s.chars ? t('sources.chars', { count: formatNumber(s.chars) }) : '';
+      if (size) text.append(el('span', 'picker-meta', size));
+      const box = el('input');
       box.type = 'checkbox';
       box.checked = s.selected;
       box.addEventListener('change', () => { s.selected = box.checked; selectionChanged(); });
-      const name = document.createElement('span');
-      name.textContent = s.name;
-      label.append(box, name);
-      li.append(label);
-      list.append(li);
+      label.append(text, box);
+      list.append(label);
     });
     renderAssistantSummary();
   }
@@ -488,6 +491,7 @@
     const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0) + (fragment ? fragment.chars : threadFragment);
     $('assistant-sources-summary').textContent = t('assistant.sourcesSummary', { selected: selected.length, total: assistant.sources.length });
     $('assistant-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
+    $('assistant-picker-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
     $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
   }
 
@@ -1967,6 +1971,18 @@
   $('btn-send-feedback').addEventListener('click', () => runInBackground($('btn-send-feedback'), sendFeedback));
 
   $('btn-select-all').addEventListener('click', () => selectAllSources(true));
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.assistant-bar details[open]').forEach(details => {
+      if (!details.contains(e.target)) details.open = false;
+    });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.assistant-bar details[open]').forEach(details => {
+      details.open = false;
+      details.querySelector('summary').focus();
+    });
+  });
   $('btn-new-thread').addEventListener('click', () => {
     selectThread(null);
     $('question').focus();

@@ -422,6 +422,7 @@ const MESSAGES = {
 
     'assistant.sourcesSummary': '{selected} z {total} źródeł',
     'assistant.selectAll': 'Wszystkie',
+    'assistant.sourcesPick': 'Źródła do pytania',
     'assistant.selectNone': 'Żadne',
     'assistant.size': 'Zaznaczone: ok. {chars} znaków',
     'assistant.sizeWarning': 'Duże zaznaczenie – jedno pytanie zużyje sporą część limitu Gemini. Rozważ odznaczenie części źródeł.',
@@ -1003,6 +1004,7 @@ const MESSAGES = {
 
     'assistant.sourcesSummary': '{selected} of {total} sources',
     'assistant.selectAll': 'All',
+    'assistant.sourcesPick': 'Sources for questions',
     'assistant.selectNone': 'None',
     'assistant.size': 'Selected: about {chars} characters',
     'assistant.sizeWarning': 'That is a large selection – one question will use a big part of your Gemini limit. Consider unticking some sources.',

@@ -1,8 +1,8 @@
 {
-  "version": "0.19.0",
-  "tag": "v0.19.0",
+  "version": "0.19.1",
+  "tag": "v0.19.1",
   "notes": {
-    "pl": "Panel dopracowany według projektu. Czcionka Roboto (wyraźniejsze pogrubienia), Asystent jak czat – pytanie w polu na dole ciągnie otwartą rozmowę, cytaty są numerowane, a „Kopiuj z przypisami” kopiuje odpowiedź ze źródłami. Wyniki sprawdzania od razu pokazują problemy i poprawki „przed → po”, objaśnienia są pod ikoną ⓘ. Nowe Ustawienia i Źródła, a komunikaty o zapisaniu same znikają.",
-    "en": "The panel polished to match the design. The Roboto font (clearer bold text), the assistant works like a chat – a question in the box at the bottom continues the open conversation, quotes are numbered and \"Copy with references\" copies the answer with its sources. Check results show problems and \"before → after\" fixes at once, explanations sit under an ⓘ icon. New Settings and Sources screens, and \"saved\" messages disappear on their own."
+    "pl": "Nowy wybór źródeł w Asystencie: rozwijane okienko w stylu reszty panelu, z rozmiarem każdego pliku i sumą zaznaczenia. Zamyka się kliknięciem obok albo klawiszem Esc.",
+    "en": "A new source picker in the assistant: a drop-down in the style of the rest of the panel, with the size of each file and the total of the selection. It closes when you click elsewhere or press Esc."
   }
 }
