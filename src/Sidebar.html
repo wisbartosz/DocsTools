@@ -7,15 +7,15 @@
 </head>
 <body class="<?= mode ?>">
   <nav class="tabs">
-    <button class="tab active" data-tab="assistant"><?= t_('tab.assistant') ?></button>
-    <button class="tab" data-tab="check"><?= t_('tab.check') ?></button>
+    <button class="tab active" data-tab="check"><?= t_('tab.check') ?></button>
+    <button class="tab" data-tab="assistant"><?= t_('tab.assistant') ?></button>
     <button class="tab" data-tab="sources"><?= t_('tab.sources') ?></button>
     <button class="tab tab-icon" data-tab="settings" title="<?= t_('tab.settings') ?>" aria-label="<?= t_('tab.settings') ?>"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
   </nav>
 
   <div id="message" class="message hidden"></div>
 
-  <section id="tab-assistant" class="panel">
+  <section id="tab-assistant" class="panel hidden">
     <div id="assistant-no-sources" class="hint hidden"><?= t_('assistant.noSources') ?></div>
     <div id="assistant-content" class="hidden">
       <details id="assistant-sources">
@@ -44,17 +44,79 @@
     </div>
   </section>
 
-  <section id="tab-check" class="panel hidden">
-    <label class="rules-check check-option"><input id="skip-title-page" type="checkbox" checked> <?= t_('check.skipTitle') ?></label>
-    <div class="muted small"><?= t_('check.skipTitleHint') ?></div>
-    <div class="row buttons">
-      <button id="btn-import-rules"><?= t_('format.rules.import') ?></button>
+  <section id="tab-check" class="panel">
+    <div id="check-overview" class="check-view">
+      <div class="check-top">
+        <label class="chip-select"><span class="visually-hidden"><?= t_('check.type') ?></span>
+          <select id="check-type">
+            <option value="review"><?= t_('structure.type.review') ?></option>
+            <option value="research"><?= t_('structure.type.research') ?></option>
+          </select>
+        </label>
+        <button id="btn-open-rules" class="link"><?= t_('check.rules') ?></button>
+      </div>
+      <button id="btn-check-all" class="primary wide"><?= t_('check.all') ?></button>
+      <div id="check-last" class="muted small center"></div>
+      <div id="check-counters" class="counters hidden">
+        <div class="counter counter-fix"><b id="count-fix">0</b><span><?= t_('check.counter.fix') ?></span></div>
+        <div class="counter counter-review"><b id="count-review">0</b><span><?= t_('check.counter.review') ?></span></div>
+        <div class="counter counter-ok"><b id="count-ok">0</b><span><?= t_('check.counter.ok') ?></span></div>
+      </div>
+      <div id="module-list" class="module-list"></div>
     </div>
-    <div class="muted small"><?= t_('format.rules.importHint') ?></div>
-    <div id="rules-import-result" class="typo-group hidden"></div>
-    <details class="check-section" data-section="structure">
-      <summary><?= t_('structure.title') ?></summary>
-      <div class="muted small"><?= t_('structure.hint') ?></div>
+
+    <div id="check-module" class="check-view hidden">
+      <div class="view-head">
+        <button class="icon-btn btn-view-back" aria-label="<?= t_('check.back') ?>" title="<?= t_('check.back') ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <span id="module-title" class="view-title"></span>
+        <button id="btn-module-recheck" class="icon-btn" aria-label="<?= t_('check.recheck') ?>" title="<?= t_('check.recheck') ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button>
+      </div>
+      <div id="module-error" class="message error hidden"></div>
+      <div id="module-filters" class="filter-chips"></div>
+      <section class="module-view hidden" data-module="structure">
+        <div class="muted small module-hint collapsed"><?= t_('structure.hint') ?></div>
+        <button id="btn-check-structure" class="hidden"><?= t_('structure.check') ?></button>
+        <div id="structure-summary" class="muted hidden"></div>
+        <div id="structure-groups" class="result-groups-grid"></div>
+      </section>
+      <section class="module-view hidden" data-module="bibliography">
+        <div class="muted small module-hint collapsed"><?= t_('bib.hint') ?></div>
+        <button id="btn-check-bib" class="hidden"><?= t_('bib.check') ?></button>
+        <div id="bib-summary" class="muted hidden"></div>
+        <div id="bib-groups" class="result-groups-grid"></div>
+      </section>
+      <section class="module-view hidden" data-module="figures">
+        <div class="muted small module-hint collapsed"><?= t_('fig.hint') ?></div>
+        <button id="btn-check-fig" class="hidden"><?= t_('fig.check') ?></button>
+        <div id="fig-summary" class="muted hidden"></div>
+        <div id="fig-groups" class="result-groups-grid"></div>
+      </section>
+      <section class="module-view hidden" data-module="typography">
+        <div class="muted small module-hint collapsed"><?= t_('typo.hint') ?></div>
+        <button id="btn-check-typo" class="hidden"><?= t_('typo.check') ?></button>
+        <div id="typo-summary" class="muted hidden"></div>
+        <div id="typo-groups" class="result-groups-grid"></div>
+      </section>
+      <section class="module-view hidden" data-module="format">
+        <div class="muted small module-hint collapsed"><?= t_('format.hint') ?></div>
+        <button id="btn-check-format" class="hidden"><?= t_('format.check') ?></button>
+        <div id="format-summary" class="muted hidden"></div>
+        <div id="format-groups" class="result-groups-grid"></div>
+      </section>
+    </div>
+
+    <div id="check-rules" class="check-view hidden">
+      <div class="view-head">
+        <button class="icon-btn btn-view-back" aria-label="<?= t_('check.back') ?>" title="<?= t_('check.back') ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <span class="view-title"><?= t_('check.rules') ?></span>
+      </div>
+      <label class="rules-check check-option"><input id="skip-title-page" type="checkbox" checked> <?= t_('check.skipTitle') ?></label>
+      <div class="muted small"><?= t_('check.skipTitleHint') ?></div>
+      <div class="row buttons">
+        <button id="btn-import-rules"><?= t_('format.rules.import') ?></button>
+      </div>
+      <div class="muted small"><?= t_('format.rules.importHint') ?></div>
+      <div id="rules-import-result" class="typo-group hidden"></div>
       <details id="structure-rules" class="typo-group">
         <summary><?= t_('structure.rules.title') ?></summary>
         <div class="typo-desc"><?= t_('structure.rules.hint') ?></div>
@@ -82,16 +144,6 @@
           <button id="btn-reset-structure-rules"><?= t_('rules.reset') ?></button>
         </div>
       </details>
-      <div class="row buttons">
-        <button id="btn-check-structure" class="primary"><?= t_('structure.check') ?></button>
-      </div>
-      <div id="structure-summary" class="muted hidden"></div>
-      <div id="structure-groups" class="result-groups-grid"></div>
-    </details>
-
-    <details class="check-section" data-section="bibliography">
-      <summary><?= t_('bib.title') ?></summary>
-      <div class="muted small"><?= t_('bib.hint') ?></div>
       <details id="bib-rules" class="typo-group">
         <summary><?= t_('bib.rules.title') ?></summary>
         <div id="bib-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
@@ -110,37 +162,7 @@
           <button id="btn-reset-bib-rules"><?= t_('rules.reset') ?></button>
         </div>
       </details>
-      <div class="row buttons">
-        <button id="btn-check-bib" class="primary"><?= t_('bib.check') ?></button>
-      </div>
-      <div id="bib-summary" class="muted hidden"></div>
-      <div id="bib-groups" class="result-groups-grid"></div>
-    </details>
-
-    <details class="check-section" data-section="figures">
-      <summary><?= t_('fig.title') ?></summary>
-      <div class="muted small"><?= t_('fig.hint') ?></div>
-      <div class="row buttons">
-        <button id="btn-check-fig" class="primary"><?= t_('fig.check') ?></button>
-      </div>
-      <div id="fig-summary" class="muted hidden"></div>
-      <div id="fig-groups" class="result-groups-grid"></div>
-    </details>
-
-    <details class="check-section" data-section="typography">
-    <summary><?= t_('typo.title') ?></summary>
-    <div class="muted small"><?= t_('typo.hint') ?></div>
-    <div class="row buttons">
-      <button id="btn-check-typo" class="primary"><?= t_('typo.check') ?></button>
-    </div>
-    <div id="typo-summary" class="muted hidden"></div>
-    <div id="typo-groups" class="result-groups-grid"></div>
-    </details>
-
-    <details class="check-section" data-section="format">
-    <summary><?= t_('format.title') ?></summary>
-    <div class="muted small"><?= t_('format.hint') ?></div>
-    <details id="format-rules" class="typo-group">
+      <details id="format-rules" class="typo-group">
       <summary><?= t_('format.rules.title') ?></summary>
       <div class="typo-desc"><?= t_('format.rules.hint') ?></div>
       <div id="format-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
@@ -185,12 +207,7 @@
         <button id="btn-reset-rules"><?= t_('rules.reset') ?></button>
       </div>
     </details>
-    <div class="row buttons">
-      <button id="btn-check-format" class="primary"><?= t_('format.check') ?></button>
     </div>
-    <div id="format-summary" class="muted hidden"></div>
-    <div id="format-groups" class="result-groups-grid"></div>
-    </details>
   </section>
 
   <section id="tab-sources" class="panel hidden">

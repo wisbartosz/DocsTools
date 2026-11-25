@@ -28,6 +28,11 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   "Attach the selected passage of your thesis". You can ask about it directly, or leave
   the question empty. Then the assistant checks what in the passage your sources support,
   what they don't cover and what they contradict. It never rewrites or corrects the passage.
+- The "Check" tab (first in the panel): the "Check the whole thesis" button runs all checks one
+  after another and shows an overview – how much is to fix, how much to review and the state of
+  each module. Clicking a module opens its results with "To fix / To review" filters. The type of
+  thesis (review / research) is chosen at the top, and the university requirements have their own
+  "University requirements" screen.
 - Polish typography in the "Check" tab. The add-on goes through the body of your thesis
   and the footnotes: one-letter words without a non-breaking space (a, i, o, u, w, z),
   straight quotes instead of „…”, hyphens instead of en dashes, three dots instead of an

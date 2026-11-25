@@ -1,8 +1,8 @@
 {
-  "version": "0.14.1",
-  "tag": "v0.14.1",
+  "version": "0.15.0",
+  "tag": "v0.15.0",
   "notes": {
-    "pl": "Poprawki nowego wyglądu wyników: strzałki i znaczniki kart nie nachodzą już na pasek zakładek przy przewijaniu, komunikaty zostają widoczne pod zakładkami, wyniki można obsługiwać z klawiatury (Tab, Enter) i po poprawce zaznaczenie wraca w to samo miejsce listy. Drobne poprawki wyglądu przycisków, pól i okna „Powiększ”.",
-    "en": "Fixes for the new results look: card arrows and marks no longer draw over the tab bar while scrolling, messages stay visible under the tabs, results work with the keyboard (Tab, Enter) and after a fix the focus returns to the same place in the list. Small look fixes for buttons, fields and the \"Enlarge\" window."
+    "pl": "Nowa zakładka „Sprawdź” – drugi etap przebudowy panelu. „Sprawdź” jest pierwszą zakładką, a przycisk „Sprawdź całą pracę” uruchamia wszystkie kontrole i pokazuje przegląd: liczniki do poprawy i do przejrzenia oraz stan każdego modułu. Kliknięcie modułu otwiera jego wyniki z filtrami. Rodzaj pracy wybiera się na górze, a wymagania uczelni są na osobnym ekranie.",
+    "en": "A new \"Check\" tab – the second step of the panel redesign. \"Check\" is now the first tab, and the \"Check the whole thesis\" button runs all checks and shows an overview: counters of items to fix and to review and the state of each module. Clicking a module opens its results with filters. The type of thesis is chosen at the top, and the university requirements have their own screen."
   }
 }

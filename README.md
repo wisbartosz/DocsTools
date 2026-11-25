@@ -27,6 +27,11 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   fragment pracy”. Możesz zapytać o niego wprost albo zostawić pole pytania puste. Wtedy
   asystent sprawdzi, co z tego fragmentu potwierdzają źródła, czego w nich nie ma i co
   im przeczy. Fragmentu nie przepisuje ani nie poprawia.
+- Zakładka „Sprawdź” (pierwsza w panelu): przycisk „Sprawdź całą pracę” uruchamia po kolei
+  wszystkie kontrole i pokazuje przegląd – ile jest do poprawy, ile do przejrzenia i stan każdego
+  modułu. Kliknięcie modułu otwiera jego wyniki z filtrami „Do poprawy / Do przejrzenia”.
+  Rodzaj pracy (poglądowa / badawcza) wybiera się na górze, a wymagania uczelni są na osobnym
+  ekranie „Wymagania uczelni”.
 - Polska typografia w zakładce „Sprawdź”. Dodatek przegląda treść pracy i przypisy:
   pojedyncze litery bez twardej spacji (a, i, o, u, w, z), proste cudzysłowy zamiast
   „…”, dywizy zamiast półpauz, trzy kropki zamiast wielokropka, podwójne spacje i spacje

@@ -42,7 +42,7 @@
   async function run(action) {
     if (busy) return;
     busy = true;
-    const buttons = [...document.querySelectorAll('button:not(.tab)')].filter(b => !b.classList.contains('loading'));
+    const buttons = [...document.querySelectorAll('button:not(.tab), #check-type')].filter(b => !b.classList.contains('loading'));
     buttons.forEach(b => b.disabled = true);
     hideMessage();
     try {
@@ -53,8 +53,11 @@
       buttons.forEach(b => b.disabled = false);
       busy = false;
       renderSettings();
+      if (overviewReady) renderOverview();
     }
   }
+
+  let overviewReady = false;
 
   async function runInBackground(button, action) {
     if (button.disabled || button.classList.contains('loading')) return;
@@ -566,6 +569,28 @@
   $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
   $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
 
+  function makeExpandable(node, collapsedClass) {
+    const collapsed = () => node.classList.contains(collapsedClass);
+    const sync = () => {
+      node.setAttribute('aria-expanded', collapsed() ? 'false' : 'true');
+      node.title = collapsed() ? t('check.more') : '';
+    };
+    const toggle = () => {
+      node.classList.toggle(collapsedClass);
+      sync();
+    };
+    node.tabIndex = 0;
+    node.setAttribute('role', 'button');
+    node.addEventListener('click', toggle);
+    node.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+    sync();
+  }
+
   function fixAllButton(count, handler) {
     const button = el('button', 'btn-tonal', t('typo.fixAll', { count: formatNumber(count) }));
     button.addEventListener('click', () => {
@@ -614,15 +639,25 @@
     box.innerHTML = '';
     const empty = spec.empty ? spec.empty(data) : '';
     if (empty) {
+      if (spec.module) delete moduleErrors[spec.module];
       summary.textContent = empty;
+      renderFilters();
+      renderOverview();
       return;
     }
     const groups = data.groups.filter(g => g.count > 0);
     const problems = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
     summary.textContent = problems ? t(spec.summaryKey, { count: formatNumber(problems) }) : t(spec.noneKey);
     (spec.notes ? spec.notes(data) : []).forEach(text => summary.append(el('div', 'result-note', text)));
-    groups.forEach(group => box.append(renderResultGroup(spec, group)));
+    if (spec.module) delete moduleErrors[spec.module];
+    const filtered = spec.module && spec.module === currentModule;
+    if (filtered && resultFilter !== 'all' && !groups.some(group => (resultFilter === 'review') === !!group.info)) resultFilter = 'all';
+    groups
+      .filter(group => !filtered || resultFilter === 'all' || (resultFilter === 'review') === !!group.info)
+      .forEach(group => box.append(renderResultGroup(spec, group)));
     restoreResultFocus(box, focus);
+    renderFilters();
+    renderOverview();
   }
 
   function renderResultGroup(spec, group) {
@@ -638,7 +673,9 @@
     mark.setAttribute('aria-label', mark.title);
     head.append(mark, el('span', 'result-title', t(spec.kindKey + group.kind + '.title')), el('span', 'result-count', formatNumber(group.count)));
     card.append(head);
-    card.append(el('div', 'result-desc', t(spec.kindKey + group.kind + '.desc')));
+    const desc = el('div', 'result-desc clamp clampable', t(spec.kindKey + group.kind + '.desc'));
+    makeExpandable(desc, 'clamp');
+    card.append(desc);
     const actions = spec.groupActions ? spec.groupActions(group) : [];
     if (actions.length) {
       const row = el('div', 'row buttons');
@@ -697,6 +734,7 @@
   const typoOpen = new Set();
   const TYPO_SHOW_SPACES = ['orphan', 'spaces', 'punctuation', 'dash'];
   const TYPO_SPEC = {
+    module: 'typography',
     data: () => typo,
     summaryId: 'typo-summary',
     groupsId: 'typo-groups',
@@ -869,9 +907,6 @@
     fillImportedStructure(result.structure);
     $('format-rules-example').classList.add('hidden');
     $('structure-rules-example').classList.add('hidden');
-    document.querySelectorAll('.check-section').forEach(section => {
-      if (section.dataset.section !== 'typography') section.open = true;
-    });
     $('format-rules').open = true;
     $('structure-rules').open = true;
     renderRulesImport(result);
@@ -961,6 +996,7 @@
   }
 
   const FORMAT_SPEC = {
+    module: 'format',
     data: () => format,
     summaryId: 'format-summary',
     groupsId: 'format-groups',
@@ -1026,6 +1062,7 @@
       if (input.type === 'checkbox') input.checked = !!value;
       else input.value = value === null || value === undefined ? '' : value;
     });
+    syncCheckType();
   }
 
   function readStructureRules() {
@@ -1058,7 +1095,7 @@
     const button = $('btn-check-structure');
     button.classList.add('loading');
     try {
-      structure = await call('checkStructure', { type: $('srule-type').value, pages: true });
+      structure = await call('checkStructure', { type: $('check-type').value, pages: true });
       renderStructure();
     } finally {
       button.classList.remove('loading');
@@ -1077,6 +1114,7 @@
   }
 
   const STRUCTURE_SPEC = {
+    module: 'structure',
     data: () => structure,
     summaryId: 'structure-summary',
     groupsId: 'structure-groups',
@@ -1088,7 +1126,7 @@
     notes: data => (data.pages !== null ? [t(data.pagesApprox ? 'structure.pagesInfoApprox' : 'structure.pagesInfo', { count: data.pages })] : []),
     fixable: item => !!item.fixable,
     fixItem: async item => {
-      structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('srule-type').value));
+      structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('check-type').value));
       renderStructure();
     },
     groupActions: group => {
@@ -1104,7 +1142,7 @@
   async function fixStructureKind(kind, button) {
     button.classList.add('loading');
     try {
-      const response = await call('fixStructureKind', kind, $('srule-type').value);
+      const response = await call('fixStructureKind', kind, $('check-type').value);
       structure = withPreviousPages(response.result);
       renderStructure();
       showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
@@ -1160,7 +1198,7 @@
     const button = $('btn-check-bib');
     button.classList.add('loading');
     try {
-      bibliography = await call('checkBibliography', { type: $('srule-type').value });
+      bibliography = await call('checkBibliography', { type: $('check-type').value });
       renderBibliography();
     } finally {
       button.classList.remove('loading');
@@ -1168,6 +1206,7 @@
   }
 
   const BIBLIOGRAPHY_SPEC = {
+    module: 'bibliography',
     data: () => bibliography,
     summaryId: 'bib-summary',
     groupsId: 'bib-groups',
@@ -1187,7 +1226,7 @@
         sort.addEventListener('click', () => run(async () => {
           sort.classList.add('loading');
           try {
-            bibliography = await call('sortBibliography', { type: $('srule-type').value });
+            bibliography = await call('sortBibliography', { type: $('check-type').value });
             renderBibliography();
             showMessage(t('bib.sorted') + ' ' + t('typo.versionHint'), 'ok');
           } finally {
@@ -1206,14 +1245,14 @@
   }
 
   async function fixBibliographyIssue(item) {
-    bibliography = await call('fixBibliographyIssue', item.ref, { type: $('srule-type').value });
+    bibliography = await call('fixBibliographyIssue', item.ref, { type: $('check-type').value });
     renderBibliography();
   }
 
   async function fixBibliographyKind(kind, button) {
     button.classList.add('loading');
     try {
-      const response = await call('fixBibliographyKind', kind, { type: $('srule-type').value });
+      const response = await call('fixBibliographyKind', kind, { type: $('check-type').value });
       bibliography = response.result;
       renderBibliography();
       showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
@@ -1229,7 +1268,7 @@
     const button = $('btn-check-fig');
     button.classList.add('loading');
     try {
-      figures = await call('checkFigures', { type: $('srule-type').value });
+      figures = await call('checkFigures', { type: $('check-type').value });
       renderFigures();
     } finally {
       button.classList.remove('loading');
@@ -1237,6 +1276,7 @@
   }
 
   const FIGURES_SPEC = {
+    module: 'figures',
     data: () => figures,
     summaryId: 'fig-summary',
     groupsId: 'fig-groups',
@@ -1251,6 +1291,221 @@
   function renderFigures() {
     renderCheckResult(FIGURES_SPEC);
   }
+
+  const CHECK_MODULES = [
+    { id: 'structure', title: 'structure.title', kindKey: 'structure.kind.', data: () => structure, check: () => checkStructure(), render: () => renderStructure() },
+    { id: 'bibliography', title: 'bib.title', kindKey: 'bib.kind.', data: () => bibliography, check: () => checkBibliography(), render: () => renderBibliography(),
+      unavailable: data => (data.noSection ? t('check.module.noBibliography') : '') },
+    { id: 'figures', title: 'fig.title', kindKey: 'fig.kind.', data: () => figures, check: () => checkFigures(), render: () => renderFigures() },
+    { id: 'typography', title: 'typo.title', kindKey: 'typo.kind.', data: () => typo, check: () => checkTypography(), render: () => renderTypography() },
+    { id: 'format', title: 'format.title', kindKey: 'format.kind.', data: () => format, check: () => checkFormatting(), render: () => renderFormatting() },
+  ];
+  const moduleErrors = {};
+  let currentModule = null;
+  let resultFilter = 'all';
+  let lastCheck = null;
+
+  function moduleById(id) {
+    return CHECK_MODULES.find(m => m.id === id);
+  }
+
+  function moduleStatus(module) {
+    if (moduleErrors[module.id]) return { state: 'error', fix: 0, review: 0, text: t('check.module.error', { error: moduleErrors[module.id] }) };
+    const data = module.data();
+    if (!data) return { state: 'none', fix: 0, review: 0, text: t('check.module.none') };
+    const unavailable = module.unavailable ? module.unavailable(data) : '';
+    if (unavailable) return { state: 'unavailable', fix: 0, review: 0, text: unavailable };
+    const groups = data.groups.filter(g => g.count > 0);
+    const fix = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
+    const review = groups.filter(g => g.info).reduce((sum, g) => sum + g.count, 0);
+    if (!fix && !review) return { state: 'ok', fix: 0, review: 0, text: t('check.module.ok') };
+    if (!fix) return { state: 'review', fix: 0, review: review, text: t('check.module.review', { count: formatNumber(review) }) };
+    const top = groups.filter(g => !g.info).sort((a, b) => b.count - a.count).slice(0, 2).map(g => t(module.kindKey + g.kind + '.title'));
+    const extra = review ? [t('check.module.moreReview', { count: formatNumber(review) })] : [];
+    return { state: 'fix', fix: fix, review: review, text: top.concat(extra).join(' · ') };
+  }
+
+  function renderOverview() {
+    const list = $('module-list');
+    list.innerHTML = '';
+    let fix = 0;
+    let review = 0;
+    let ok = 0;
+    let checked = 0;
+    CHECK_MODULES.forEach(module => {
+      const status = moduleStatus(module);
+      if (status.state !== 'none') checked++;
+      fix += status.fix;
+      review += status.review;
+      if (status.state === 'ok') ok++;
+      const row = el('button', 'module-row state-' + status.state);
+      row.dataset.module = module.id;
+      row.disabled = busy;
+      const badge = el('span', 'module-badge');
+      if (status.state === 'fix') badge.textContent = status.fix > 99 ? '99+' : String(status.fix);
+      if (status.state === 'review') badge.textContent = status.review > 99 ? '99+' : String(status.review);
+      if (status.state === 'error') badge.textContent = '!';
+      const text = el('span', 'module-text');
+      text.append(el('span', 'module-name', t(module.title)), el('span', 'module-status', status.text));
+      row.append(badge, text, el('span', 'module-chevron'));
+      row.addEventListener('click', () => openModule(module.id));
+      list.append(row);
+    });
+    $('check-counters').classList.toggle('hidden', !checked);
+    $('count-fix').textContent = formatNumber(fix);
+    $('count-review').textContent = formatNumber(review);
+    $('count-ok').textContent = formatNumber(ok);
+    $('check-last').textContent = lastCheck ? t('check.last', { time: lastCheck.time, seconds: lastCheck.seconds }) : '';
+    overviewReady = true;
+  }
+
+  function showCheckView(name) {
+    const previous = currentModule;
+    ['overview', 'module', 'rules'].forEach(view => $('check-' + view).classList.toggle('hidden', view !== name));
+    window.scrollTo(0, 0);
+    if (name === 'overview') {
+      currentModule = null;
+      renderOverview();
+      const row = previous && document.querySelector('.module-row[data-module="' + previous + '"]');
+      if (row) row.focus();
+      return;
+    }
+    const back = $('check-' + name).querySelector('.btn-view-back');
+    if (back) back.focus();
+  }
+
+  function renderModuleError() {
+    const box = $('module-error');
+    const error = currentModule && moduleErrors[currentModule];
+    box.textContent = error ? t('check.module.error', { error: error }) : '';
+    box.classList.toggle('hidden', !error);
+  }
+
+  function openModule(id) {
+    const module = moduleById(id);
+    currentModule = id;
+    resultFilter = 'all';
+    $('module-title').textContent = t(module.title);
+    document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('hidden', view.dataset.module !== id));
+    showCheckView('module');
+    renderModuleError();
+    if (module.data()) module.render();
+    else renderFilters();
+    if (!module.data()) run(() => runModuleCheck(module));
+  }
+
+  async function runModuleCheck(module) {
+    delete moduleErrors[module.id];
+    const spinner = currentModule === module.id ? $('btn-module-recheck') : null;
+    if (spinner) spinner.classList.add('loading');
+    try {
+      await module.check();
+    } catch (e) {
+      moduleErrors[module.id] = errorText(e);
+      throw e;
+    } finally {
+      if (spinner) spinner.classList.remove('loading');
+      if (currentModule === module.id) {
+        renderModuleError();
+        renderFilters();
+        if (document.activeElement === document.body) setTimeout(() => {
+          const back = $('check-module').querySelector('.btn-view-back');
+          if (document.activeElement === document.body && !back.disabled) back.focus();
+        }, 0);
+      }
+      renderOverview();
+    }
+  }
+
+  async function checkAll() {
+    const button = $('btn-check-all');
+    const started = Date.now();
+    button.classList.add('loading');
+    try {
+      await loadCheckRules().catch(e => console.warn(e));
+      for (let i = 0; i < CHECK_MODULES.length; i++) {
+        const module = CHECK_MODULES[i];
+        button.textContent = t('check.progress', { name: t(module.title), n: i + 1, total: CHECK_MODULES.length });
+        try {
+          await runModuleCheck(module);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      const now = new Date();
+      lastCheck = {
+        time: now.toLocaleTimeString(UI_LANG === 'en' ? 'en-GB' : 'pl-PL', { hour: '2-digit', minute: '2-digit' }),
+        seconds: Math.round((Date.now() - started) / 1000),
+      };
+    } finally {
+      button.classList.remove('loading');
+      button.textContent = t('check.all');
+      renderOverview();
+    }
+  }
+
+  function renderFilters() {
+    const box = $('module-filters');
+    box.innerHTML = '';
+    const module = currentModule && moduleById(currentModule);
+    const data = module && module.data();
+    if (!data || !data.groups) return;
+    const status = moduleStatus(module);
+    if (status.state === 'unavailable' || status.state === 'ok' || status.state === 'error') return;
+    [['all', status.fix + status.review], ['fix', status.fix], ['review', status.review]].forEach(([key, count]) => {
+      if (key !== 'all' && !count) return;
+      const chip = el('button', 'filter-chip' + (resultFilter === key ? ' active' : ''), t('check.filter.' + key, { count: formatNumber(count) }));
+      chip.setAttribute('aria-pressed', resultFilter === key ? 'true' : 'false');
+      chip.addEventListener('click', () => {
+        resultFilter = key;
+        module.render();
+      });
+      box.append(chip);
+    });
+  }
+
+  function syncCheckType() {
+    $('check-type').value = $('srule-type').value;
+  }
+
+  async function changeCheckType() {
+    const type = $('check-type').value;
+    const previousType = $('srule-type').value;
+    const previousSections = $('srule-sections').value;
+    $('srule-type').value = type;
+    structureTypeChanged();
+    const sections = $('srule-sections').value;
+    try {
+      await call('saveStructureType', type, sections !== previousSections ? sections : null);
+    } catch (e) {
+      $('srule-type').value = previousType;
+      $('srule-sections').value = previousSections;
+      $('check-type').value = previousType;
+      throw e;
+    }
+    for (const id of ['structure', 'bibliography', 'figures']) {
+      const module = moduleById(id);
+      if (!module.data()) continue;
+      try {
+        await runModuleCheck(module);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  }
+
+  document.querySelectorAll('.btn-view-back').forEach(button => button.addEventListener('click', () => showCheckView('overview')));
+  document.querySelectorAll('.module-hint').forEach(hint => makeExpandable(hint, 'collapsed'));
+  $('btn-open-rules').addEventListener('click', () => {
+    showCheckView('rules');
+    loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+  });
+  $('btn-check-all').addEventListener('click', () => run(checkAll));
+  $('btn-module-recheck').addEventListener('click', () => {
+    const module = currentModule && moduleById(currentModule);
+    if (module) run(() => runModuleCheck(module));
+  });
+  $('check-type').addEventListener('change', () => run(changeCheckType));
 
   $('btn-check-fig').addEventListener('click', () => run(checkFigures));
   $('btn-save-bib-rules').addEventListener('click', () => run(saveBibliographyRules));
@@ -1284,13 +1539,14 @@
     }
   });
 
+  if (UI_MODE === 'window') switchTab('assistant');
   run(async () => {
     settings = await call('getSettings');
     $('language-select').value = settings.uiLanguageSetting || '';
     $('link-installer').href = settings.updateUrl;
     checkForUpdate(false);
     renderSettings();
-    if (!settings.sourceFolderId || !settings.hasApiKey) switchTab('settings');
-    await Promise.all([loadSources(), loadModels(), loadAssistant()]);
-  });
+    await loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+  }).then(() => Promise.all([loadSources(), loadModels(), loadAssistant()]).catch(e => showMessage(errorText(e), 'error')));
+  renderOverview();
 </script>

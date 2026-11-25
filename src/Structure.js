@@ -197,6 +197,19 @@ function saveStructureRules(input) {
   return { rules: rules, isDefault: isDefault };
 }
 
+function saveStructureType(type, sections) {
+  const kind = STRUCTURE_TYPES.indexOf(type) >= 0 ? type : 'review';
+  docProps_().setProperty(STRUCTURE_TYPE_PROP, kind);
+  const saved = readStructureRules_();
+  if (saved && saved.type !== kind) {
+    if (typeof sections === 'string' && sections.trim()) saved.sections = sections;
+    else if (saved.sections === defaultStructureRules_(saved.type).sections) saved.sections = defaultStructureRules_(kind).sections;
+    saved.type = kind;
+    saveStructureRules(saved);
+  }
+  return kind;
+}
+
 function readStructureRules_() {
   const raw = docProps_().getProperty(STRUCTURE_RULES_PROP);
   if (!raw) return null;
