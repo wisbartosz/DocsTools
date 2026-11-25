@@ -77,6 +77,8 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   wszystko przed pierwszym podziałem strony (można to wyłączyć w zakładce „Sprawdź”).
 - Przycisk „Powiększ” w stopce otwiera Przybornik w dużym, pływającym oknie. Panel boczny
   w Google Docs ma stałą szerokość, więc przy dłuższej pracy okno jest wygodniejsze.
+  W oknie zakładki są w menu po lewej; w „Sprawdź” lista modułów stoi obok wyników,
+  w Asystencie lista rozmów jest w menu, a cytaty obok odpowiedzi.
   Okno i panel działają niezależnie: wątki z jednego nie są widoczne w drugim.
 - „Zgłoś uwagę” w stopce. Piszesz, co nie działa albo czego brakuje, klikasz „Wyślij”
   i wiadomość trafia prosto do autora. Nie trzeba mieć konta na GitHubie.

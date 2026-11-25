@@ -80,6 +80,8 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   everything before the first page break (you can turn this off in the "Check" tab).
 - The "Enlarge" button in the footer opens the toolkit in a large floating window. The
   Google Docs sidebar has a fixed width, so the window is handier for longer sessions.
+  In the window the tabs are in a menu on the left; in "Check" the module list sits next to
+  the results, and in the assistant the conversations are in the menu and the quotes next to the answer.
   The window and the sidebar work separately: threads from one don't show up in the other.
 - "Send feedback" in the footer. Write what isn't working or what's missing, click "Send"
   and the message goes straight to the author. No GitHub account needed.

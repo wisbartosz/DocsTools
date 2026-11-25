@@ -5,6 +5,9 @@
   let sources = [];
   let assistant = { sources: [], warnChars: 0 };
   let assistantLoaded = false;
+  const threads = [];
+  let activeThread = null;
+  let checkView = 'overview';
   let busy = false;
 
   function $(id) { return document.getElementById(id); }
@@ -43,7 +46,7 @@
   async function run(action) {
     if (busy) return;
     busy = true;
-    const buttons = [...document.querySelectorAll('button:not(.tab), #check-type, #model-select')].filter(b => !b.classList.contains('loading'));
+    const buttons = [...document.querySelectorAll('button:not(.tab):not(.rail-item), #check-type, #model-select')].filter(b => !b.classList.contains('loading'));
     buttons.forEach(b => b.disabled = true);
     hideMessage();
     try {
@@ -133,11 +136,78 @@
     }
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
     $('btn-feedback').classList.toggle('active', name === 'feedback');
-    const lastThread = name === 'assistant' ? document.querySelector('#answers > .thread:last-child') : null;
+    const lastThread = name !== 'assistant' ? null
+      : UI_MODE === 'window' ? activeThread && activeThread.element
+      : document.querySelector('#answers > .thread:last-child');
     if (lastThread) lastThread.scrollIntoView({ block: 'start' });
-    else window.scrollTo(0, 0);
+    else scrollToTop($('tab-' + name));
     hideMessage();
-    if (name === 'check') loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+    if (name === 'check') {
+      if (UI_MODE === 'window' && checkView === 'rules') showCheckView(currentModule ? 'module' : 'overview');
+      loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+    }
+    renderRail();
+  }
+
+  function scrollToTop(scroller) {
+    if (UI_MODE !== 'window') window.scrollTo(0, 0);
+    else if (scroller) scroller.scrollTop = 0;
+  }
+
+  function renderRail() {
+    if (UI_MODE !== 'window') return;
+    const checkOpen = !$('tab-check').classList.contains('hidden');
+    const rulesOpen = checkOpen && checkView === 'rules';
+    document.querySelector('.tab[data-tab="check"]').classList.toggle('active', checkOpen && !rulesOpen);
+    $('rail-rules').classList.toggle('active', rulesOpen);
+    $('rail-sections').classList.toggle('hidden', !rulesOpen);
+    $('rail-threads').classList.toggle('hidden', $('tab-assistant').classList.contains('hidden') || $('assistant-content').classList.contains('hidden'));
+  }
+
+  function renderQuestionPlaceholder() {
+    const key = fragment ? 'assistant.fragment.placeholder'
+      : UI_MODE === 'window' && activeThread ? 'assistant.placeholderNewThread'
+      : 'assistant.placeholder';
+    $('question').placeholder = t(key);
+  }
+
+  function markThreadUnread(thread) {
+    thread.unread = true;
+    renderThreadList();
+  }
+
+  function selectThread(thread) {
+    activeThread = thread;
+    if (thread) thread.unread = false;
+    renderQuestionPlaceholder();
+    threads.forEach(item => {
+      item.element.classList.toggle('active', item === thread);
+      if (item === thread) item.element.open = true;
+    });
+    $('answers').classList.toggle('none-active', !thread);
+    renderThreadList();
+    if (thread) thread.element.scrollIntoView({ block: 'start' });
+    else scrollToTop($('tab-assistant'));
+  }
+
+  function renderThreadList() {
+    if (UI_MODE !== 'window') return;
+    const list = $('rail-thread-list');
+    const hadFocus = document.activeElement && document.activeElement.classList.contains('rail-thread');
+    list.innerHTML = '';
+    threads.slice().reverse().forEach(thread => {
+      const button = el('button', 'rail-item rail-thread' + (thread === activeThread ? ' active' : ''));
+      button.append(el('span', 'rail-thread-label', thread.label));
+      if (thread.unread) button.append(el('span', 'tab-dot'));
+      button.title = thread.title;
+      if (thread === activeThread) button.setAttribute('aria-current', 'true');
+      button.addEventListener('click', () => {
+        switchTab('assistant');
+        selectThread(thread);
+      });
+      list.append(button);
+      if (hadFocus && thread === activeThread) button.focus();
+    });
   }
 
   async function sendFeedback() {
@@ -204,6 +274,7 @@
       { done: hasKey, title: 'assistant.start.key', detail: hasKey ? t('assistant.start.keyDone') : t('assistant.start.keyTodo'),
         action: 'assistant.start.keyAction', run: () => openEditor('key-editor', 'key-input') },
     ];
+    renderRail();
     const current = steps.findIndex(step => !step.done && step.needs !== false);
     const list = $('start-steps');
     list.innerHTML = '';
@@ -383,11 +454,12 @@
     $('fragment-title').textContent = fragment ? t('assistant.fragment.title', { chars: formatNumber(fragment.chars) }) : '';
     $('fragment-text').textContent = fragment ? fragment.text : '';
     $('btn-attach-fragment').textContent = t(fragment ? 'assistant.fragment.replace' : 'assistant.fragment.attach');
-    $('question').placeholder = t(fragment ? 'assistant.fragment.placeholder' : 'assistant.placeholder');
+    renderQuestionPlaceholder();
     renderAssistantSummary();
   }
 
   async function askAssistant() {
+    const viewed = activeThread;
     const attached = fragment;
     const question = $('question').value.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
     const selected = assistant.sources.filter(s => s.selected);
@@ -402,10 +474,13 @@
       turns: [],
     };
     thread.element = renderThread(thread, question);
-    document.querySelectorAll('#answers > .thread').forEach(card => { card.open = false; });
+    threads.push(thread);
+    if (UI_MODE !== 'window') document.querySelectorAll('#answers > .thread').forEach(card => { card.open = false; });
     $('answers').append(thread.element);
     addTurn(thread, question, result);
-    thread.element.scrollIntoView({ block: 'start' });
+    if (UI_MODE !== 'window') thread.element.scrollIntoView({ block: 'start' });
+    else if (activeThread === viewed) selectThread(thread);
+    else markThreadUnread(thread);
     $('question').value = '';
     notifyAssistant();
   }
@@ -418,6 +493,7 @@
     hideMessage();
     addTurn(thread, question, result);
     input.value = '';
+    if (UI_MODE === 'window' && thread !== activeThread) markThreadUnread(thread);
     notifyAssistant();
   }
 
@@ -425,6 +501,8 @@
     const card = el('details', 'thread');
     card.open = true;
     const title = thread.fragment ? (UI_LANG === 'pl' ? '„' : '“') + thread.fragment.slice(0, 80) + '” · ' + firstQuestion : firstQuestion;
+    thread.title = title;
+    thread.label = firstQuestion;
     card.append(el('summary', 'thread-title', title));
     card.append(el('div', 'thread-sources', t('assistant.threadSources', { names: thread.sourceNames.join(', ') })));
     if (thread.fragment) {
@@ -461,18 +539,23 @@
 
   function addTurn(thread, question, result) {
     const turn = el('div', 'turn');
-    turn.append(el('div', 'bubble', question));
+    const main = el('div', 'turn-main');
+    turn.append(main);
+    main.append(el('div', 'bubble', question));
     if (result.raw) {
-      turn.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw), ...answerNotes(result));
+      main.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw), ...answerNotes(result));
       thread.turns.push({ question: question, answer: result.raw });
       thread.turnsElement.append(turn);
       return;
     }
-    if (!result.found) turn.append(el('div', 'not-found', t('assistant.notFound')));
+    if (!result.found) main.append(el('div', 'not-found', t('assistant.notFound')));
     const answer = el('div', 'answer');
     result.answer.split(/\n{2,}/).forEach(part => answer.append(el('p', '', part.trim())));
-    turn.append(answer);
+    const notes = answerNotes(result);
+    main.append(answer);
+    if (UI_MODE === 'window') main.append(...notes);
     if (result.citations.length) {
+      turn.classList.add('has-cites');
       const cites = el('details', 'cites');
       cites.open = true;
       cites.append(el('summary', '', t('assistant.citations', { count: result.citations.length })));
@@ -481,7 +564,7 @@
       cites.append(list);
       turn.append(cites);
     }
-    turn.append(...answerNotes(result));
+    if (UI_MODE !== 'window') turn.append(...notes);
     thread.turns.push({ question: question, answer: result.answer });
     thread.turnsElement.append(turn);
   }
@@ -1469,6 +1552,7 @@
 
   function renderOverview() {
     const list = $('module-list');
+    const focused = document.activeElement && document.activeElement.classList.contains('module-row') ? document.activeElement.dataset.module : null;
     list.innerHTML = '';
     let fix = 0;
     let review = 0;
@@ -1480,8 +1564,10 @@
       fix += status.fix;
       review += status.review;
       if (status.state === 'ok') ok++;
-      const row = el('button', 'module-row state-' + status.state);
+      const selected = UI_MODE === 'window' && module.id === currentModule;
+      const row = el('button', 'module-row state-' + status.state + (selected ? ' selected' : ''));
       row.dataset.module = module.id;
+      if (selected) row.setAttribute('aria-current', 'true');
       row.disabled = busy;
       const badge = el('span', 'module-badge');
       if (status.state === 'fix') badge.textContent = status.fix > 99 ? '99+' : String(status.fix);
@@ -1499,12 +1585,25 @@
     $('count-ok').textContent = formatNumber(ok);
     $('check-last').textContent = lastCheck ? t('check.last', { time: lastCheck.time, seconds: lastCheck.seconds }) : '';
     overviewReady = true;
+    const row = focused && list.querySelector('.module-row[data-module="' + focused + '"]');
+    if (row && !row.disabled) row.focus();
   }
 
   function showCheckView(name) {
     const previous = currentModule;
-    ['overview', 'module', 'rules'].forEach(view => $('check-' + view).classList.toggle('hidden', view !== name));
-    window.scrollTo(0, 0);
+    const wide = UI_MODE === 'window';
+    checkView = name;
+    ['overview', 'module', 'rules'].forEach(view => {
+      const visible = view === name || (wide && name !== 'rules' && view !== 'rules');
+      $('check-' + view).classList.toggle('hidden', !visible);
+    });
+    scrollToTop($('check-' + name));
+    renderRail();
+    if (wide) {
+      $('check-module').classList.toggle('empty', !currentModule);
+      if (name === 'overview') renderOverview();
+      return;
+    }
     if (name === 'overview') {
       currentModule = null;
       renderOverview();
@@ -1530,6 +1629,7 @@
     $('module-title').textContent = t(module.title);
     document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('hidden', view.dataset.module !== id));
     showCheckView('module');
+    if (UI_MODE === 'window') renderOverview();
     renderModuleError();
     if (module.data()) module.render();
     else renderFilters();
@@ -1551,8 +1651,10 @@
         renderModuleError();
         renderFilters();
         if (document.activeElement === document.body) setTimeout(() => {
-          const back = $('check-module').querySelector('.btn-view-back');
-          if (document.activeElement === document.body && !back.disabled) back.focus();
+          const target = UI_MODE === 'window'
+            ? document.querySelector('.module-row[data-module="' + module.id + '"]')
+            : $('check-module').querySelector('.btn-view-back');
+          if (document.activeElement === document.body && target && !target.disabled) target.focus();
         }, 0);
       }
       renderOverview();
@@ -1695,7 +1797,26 @@
     }
   });
 
-  if (UI_MODE === 'window') switchTab('assistant');
+  if (UI_MODE === 'window') {
+    $('rail-rules').addEventListener('click', () => {
+      switchTab('check');
+      showCheckView('rules');
+    });
+    document.querySelectorAll('#rail-sections .rail-link').forEach(link => link.addEventListener('click', () => {
+      const pane = document.querySelector('.rules-pane[data-pane="' + link.dataset.pane + '"]');
+      pane.scrollIntoView({ block: 'nearest' });
+      pane.classList.remove('pane-flash');
+      void pane.offsetWidth;
+      pane.classList.add('pane-flash');
+    }));
+    $('btn-new-thread').addEventListener('click', () => {
+      switchTab('assistant');
+      selectThread(null);
+      $('question').focus();
+    });
+    showCheckView('overview');
+    switchTab('assistant');
+  }
   run(async () => {
     settings = await call('getSettings');
     $('language-select').value = settings.uiLanguageSetting || '';
