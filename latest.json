@@ -1,8 +1,8 @@
 {
-  "version": "0.13.0",
-  "tag": "v0.13.0",
+  "version": "0.13.1",
+  "tag": "v0.13.1",
   "notes": {
-    "pl": "Nowa sekcja „Tabele, ryciny i załączniki” w zakładce „Sprawdź”. Dodatek odnajduje tabele i ryciny z podpisami i pokazuje brak podpisu lub podpis pod obiektem, brak źródła, źródła internetowe bez daty, numerację nie po kolei, odwołania w tekście do nieistniejących numerów, obiekty bez odwołania, rozbieżności ze spisem tabel i rycin oraz załączniki bez odwołania.",
-    "en": "A new \"Tables, figures and appendices\" section in the \"Check\" tab. The add-on finds tables and figures with their captions and shows a missing caption or a caption below the object, a missing source, web sources without a date, numbering out of order, references in the text to numbers that do not exist, objects nothing refers to, mismatches with the list of tables and figures, and appendices nothing refers to."
+    "pl": "Szybsze i pewniejsze liczenie stron w kontroli struktury. Poprawka: dokładne liczenie przez PDF mogło zaniżać liczbę stron w dłuższych pracach. Liczba stron jest teraz szacowana od razu z układu strony, a eksport do PDF odbywa się tylko blisko wymaganego minimum i jest zapamiętywany do następnej zmiany dokumentu.",
+    "en": "Faster and more reliable page count in the structure check. Fix: the exact PDF count could report too few pages for longer theses. The page count is now estimated at once from the page layout, and the PDF export runs only near the required minimum and is remembered until the document changes."
   }
 }

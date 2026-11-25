@@ -994,6 +994,7 @@
   function withPreviousPages(next) {
     if (next.pages === null && structure && structure.pages !== null) {
       next.pages = structure.pages;
+      next.pagesApprox = structure.pagesApprox;
       next.groups = next.groups.map(group => group.kind === 'pages'
         ? structure.groups.find(previous => previous.kind === 'pages') || group
         : group);
@@ -1006,7 +1007,7 @@
     const total = groups.reduce((sum, g) => sum + g.count, 0);
     const summary = $('structure-summary');
     summary.textContent = total ? t('structure.summary', { count: formatNumber(total) }) : t('structure.none');
-    if (structure.pages !== null) summary.append(el('div', 'typo-desc', t('structure.pagesInfo', { count: structure.pages })));
+    if (structure.pages !== null) summary.append(el('div', 'typo-desc', t(structure.pagesApprox ? 'structure.pagesInfoApprox' : 'structure.pagesInfo', { count: structure.pages })));
     summary.classList.remove('hidden');
     const box = $('structure-groups');
     box.innerHTML = '';

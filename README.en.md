@@ -270,7 +270,7 @@ no subfolders, so the manual installation can recreate them.
 - `FormatImport.js`: "Read from sources" – picks the passages about formatting from your
   sources and asks Gemini to fill in the requirements (JSON), with conflicts and quotes.
 - `Structure.js`: thesis structure – table of contents, heading levels and numbering,
-  required parts, keywords, lengths, page count (via PDF export). The pure functions can be
+  required parts, keywords, lengths, page count (estimated from the layout, PDF export only near the minimum). The pure functions can be
   tested in Node.
 - `Figures.js`: tables, figures and appendices – captions, sources, numbering, references
   in the text, list of tables and figures. The pure functions can be tested in Node.

@@ -269,7 +269,7 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `FormatImport.js`: „Wczytaj ze źródeł” – wybiera ze źródeł fragmenty o formatowaniu
   i prosi Gemini o wypełnienie wymagań (JSON), z listą sprzeczności i cytatami.
 - `Structure.js`: struktura pracy – spis treści, poziomy i numeracja nagłówków, wymagane
-  części, słowa kluczowe, długości, liczba stron (eksport do PDF). Czyste funkcje są
+  części, słowa kluczowe, długości, liczba stron (szacunek z układu strony, eksport do PDF tylko blisko minimum). Czyste funkcje są
   testowalne w Node.
 - `Figures.js`: tabele, ryciny i załączniki – podpisy, źródła, numeracja, odwołania
   w tekście, spis tabel i rycin. Czyste funkcje są testowalne w Node.

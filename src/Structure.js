@@ -121,10 +121,13 @@ function parseKeywords_(text) {
 }
 
 function pdfPageCount_(pdf) {
-  const tree = /\/Type\s*\/Pages\b[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages\b/.exec(pdf);
-  if (tree) return Number(tree[1] || tree[2]);
   const pages = pdf.match(/\/Type\s*\/Page\b(?!s)/g);
-  return pages ? pages.length : null;
+  if (pages) return pages.length;
+  const trees = /\/Type\s*\/Pages\b[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages\b/g;
+  let max = null;
+  let match;
+  while ((match = trees.exec(pdf)) !== null) max = Math.max(max || 0, Number(match[1] || match[2]));
+  return max;
 }
 
 function normalizeStructureRules_(input) {
@@ -305,14 +308,19 @@ function checkStructure(options) {
   });
 
   let pages = null;
+  let pagesApprox = false;
   if (rules.minPages && opts.pages !== false) {
-    pages = countPages_();
+    const counted = documentPages_(rules.minPages);
+    if (counted) {
+      pages = counted.count;
+      pagesApprox = counted.approx;
+    }
     if (pages !== null && pages < rules.minPages) {
-      add('pages', plainItem('pages', t_('structure.pages.detail', { count: pages, min: rules.minPages }), ''));
+      add('pages', plainItem('pages', t_(pagesApprox ? 'structure.pages.detailApprox' : 'structure.pages.detail', { count: pages, min: rules.minPages }), ''));
     }
   }
 
-  return { pages: pages, groups: STRUCTURE_KINDS.map(function (kind) { return groups[kind]; }) };
+  return { pages: pages, pagesApprox: pagesApprox, groups: STRUCTURE_KINDS.map(function (kind) { return groups[kind]; }) };
 }
 
 function showStructureIssue(ref) {
@@ -408,6 +416,208 @@ function countPages_() {
     return pdfPageCount_(pdf);
   } catch (e) {
     console.warn('Nie udało się policzyć stron: ' + e.message);
+    return null;
+  }
+}
+
+const PAGE_COUNT_PROP = 'pageCount';
+const PAGE_SAFE_FACTOR = 1.25;
+const PAGE_HEADING_DEFAULTS = {
+  NORMAL: { size: 11, before: 0, after: 0 },
+  HEADING1: { size: 20, before: 20, after: 6 },
+  HEADING2: { size: 16, before: 18, after: 6 },
+  HEADING3: { size: 14, before: 16, after: 4 },
+  HEADING4: { size: 12, before: 14, after: 4 },
+  HEADING5: { size: 11, before: 12, after: 4 },
+  HEADING6: { size: 11, before: 12, after: 4 },
+  TITLE: { size: 26, before: 0, after: 3 },
+  SUBTITLE: { size: 15, before: 0, after: 16 },
+};
+
+function charWidthFactor_(family) {
+  const name = String(family || '').toLowerCase();
+  if (/times|georgia|garamond|cambria|book/.test(name)) return 0.45;
+  if (/calibri|carlito/.test(name)) return 0.47;
+  if (/courier|mono|consol/.test(name)) return 0.6;
+  return 0.5;
+}
+
+function textLines_(text, width, fontSize, family) {
+  const perLine = Math.max(10, Math.floor(width / (fontSize * charWidthFactor_(family))));
+  return String(text || '').split(/[\r\n\v]/).reduce(function (sum, line) {
+    return sum + Math.max(1, Math.ceil(line.length / perLine));
+  }, 0);
+}
+
+function layoutPages_(blocks, pageHeight) {
+  let pages = 0;
+  let y = 0;
+  blocks.forEach(function (block) {
+    if (block.breakBefore && y > 0) {
+      pages++;
+      y = 0;
+    }
+    y += block.height;
+    while (y > pageHeight) {
+      pages++;
+      y -= pageHeight;
+    }
+    if (block.breakAfter) {
+      pages++;
+      y = 0;
+    }
+  });
+  return pages + (y > 0 ? 1 : 0);
+}
+
+function pageStyles_(body) {
+  const styles = {};
+  Object.keys(PAGE_HEADING_DEFAULTS).forEach(function (name) {
+    const defaults = PAGE_HEADING_DEFAULTS[name];
+    let attributes = {};
+    try {
+      attributes = body.getHeadingAttributes(DocumentApp.ParagraphHeading[name]) || {};
+    } catch (e) {
+      attributes = {};
+    }
+    const value = function (attribute, fallback) {
+      const found = attributes[DocumentApp.Attribute[attribute]];
+      return found === null || found === undefined ? fallback : found;
+    };
+    styles[name] = {
+      size: value('FONT_SIZE', defaults.size),
+      family: value('FONT_FAMILY', 'Arial'),
+      spacing: value('LINE_SPACING', 1.15),
+      before: value('SPACING_BEFORE', defaults.before),
+      after: value('SPACING_AFTER', defaults.after),
+    };
+  });
+  return styles;
+}
+
+function estimatePages_() {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    const body = doc.getBody();
+    const width = body.getPageWidth() - body.getMarginLeft() - body.getMarginRight();
+    const height = body.getPageHeight() - body.getMarginTop() - body.getMarginBottom();
+    if (!(width > 0) || !(height > 0)) return null;
+    const styles = pageStyles_(body);
+    const blocks = [];
+    const count = body.getNumChildren();
+    for (let i = 0; i < count; i++) {
+      const child = body.getChild(i);
+      const type = String(child.getType());
+      if (type === 'PARAGRAPH' || type === 'LIST_ITEM') {
+        blocks.push(paragraphBlock_(type === 'PARAGRAPH' ? child.asParagraph() : child.asListItem(), width, styles));
+      } else if (type === 'TABLE') {
+        blocks.push({ height: tableHeight_(child.asTable(), width, styles) });
+      } else if (type === 'TABLE_OF_CONTENTS') {
+        const lines = child.asTableOfContents().getText().split('\n').length;
+        blocks.push({ height: lines * styles.NORMAL.size * 1.17 * 1.15 + 6 });
+      }
+    }
+    const footnotes = doc.getFootnotes().reduce(function (sum, footnote) {
+      const contents = footnote.getFootnoteContents();
+      return sum + (contents ? textLines_(contents.getText(), width, 10, styles.NORMAL.family) * 10 * 1.17 : 0);
+    }, 0);
+    if (footnotes) blocks.push({ height: footnotes });
+    return layoutPages_(blocks, height);
+  } catch (e) {
+    console.warn('Nie udało się oszacować liczby stron: ' + e.message);
+    return null;
+  }
+}
+
+function paragraphBlock_(paragraph, width, styles) {
+  try {
+    const style = styles[String(paragraph.getHeading())] || styles.NORMAL;
+    const text = paragraph.editAsText();
+    const content = text.getText();
+    const size = (content.length && text.getFontSize(0)) || style.size;
+    const family = (content.length && text.getFontFamily(0)) || style.family;
+    const spacing = paragraph.getLineSpacing() || style.spacing || 1.15;
+    const before = paragraph.getSpacingBefore();
+    const after = paragraph.getSpacingAfter();
+    const indent = (paragraph.getIndentStart() || 0) + (paragraph.getIndentEnd() || 0);
+    let height = textLines_(content, Math.max(100, width - indent), size, family) * size * 1.17 * spacing;
+    height += (before === null ? style.before : before) + (after === null ? style.after : after);
+    const images = [];
+    let found = paragraph.findElement(DocumentApp.ElementType.INLINE_IMAGE);
+    while (found) {
+      images.push(found.getElement().asInlineImage().getHeight() * 0.75);
+      found = paragraph.findElement(DocumentApp.ElementType.INLINE_IMAGE, found);
+    }
+    paragraph.getPositionedImages().forEach(function (image) { images.push(image.getHeight() * 0.75); });
+    if (images.length) {
+      const stacked = /[\r\n\v]/.test(content);
+      const imageHeight = stacked ? images.reduce(function (a, b) { return a + b; }, 0) : Math.max.apply(null, images);
+      height = Math.max(height, imageHeight + size * 0.3);
+    }
+    return { height: height, breakAfter: !!paragraph.findElement(DocumentApp.ElementType.PAGE_BREAK) };
+  } catch (e) {
+    console.warn('Nie udało się zmierzyć akapitu: ' + e.message);
+    return { height: styles.NORMAL.size * 1.17 * styles.NORMAL.spacing };
+  }
+}
+
+function tableHeight_(table, width, styles) {
+  let height = 0;
+  const rows = table.getNumRows();
+  for (let r = 0; r < rows; r++) {
+    const row = table.getRow(r);
+    const cells = Math.max(1, row.getNumCells());
+    let tallest = 0;
+    for (let c = 0; c < cells; c++) {
+      const cell = row.getCell(c);
+      let cellHeight = 0;
+      for (let p = 0; p < cell.getNumChildren(); p++) {
+        const child = cell.getChild(p);
+        const type = String(child.getType());
+        if (type === 'PARAGRAPH' || type === 'LIST_ITEM') {
+          cellHeight += paragraphBlock_(type === 'PARAGRAPH' ? child.asParagraph() : child.asListItem(), width / cells - 10, styles).height;
+        }
+      }
+      tallest = Math.max(tallest, cellHeight);
+    }
+    height += tallest + 10;
+  }
+  return height + 12;
+}
+
+function documentPages_(minPages) {
+  const state = pageState_();
+  const cached = cachedPages_(state);
+  if (cached !== null) return { count: cached, approx: false };
+  const estimate = estimatePages_();
+  if (estimate !== null && estimate >= minPages * PAGE_SAFE_FACTOR) return { count: estimate, approx: true };
+  const exact = countPages_();
+  if (exact !== null) {
+    if (state) docProps_().setProperty(PAGE_COUNT_PROP, JSON.stringify({ count: exact, state: state }));
+    return { count: exact, approx: false };
+  }
+  return estimate === null ? null : { count: estimate, approx: true };
+}
+
+function pageState_() {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    const body = doc.getBody();
+    const updated = DriveApp.getFileById(doc.getId()).getLastUpdated().getTime();
+    return [updated, body.getNumChildren(), body.getText().length, doc.getFootnotes().length].join(':');
+  } catch (e) {
+    console.warn('Nie udało się odczytać stanu dokumentu: ' + e.message);
+    return null;
+  }
+}
+
+function cachedPages_(state) {
+  if (!state) return null;
+  try {
+    const cached = JSON.parse(docProps_().getProperty(PAGE_COUNT_PROP) || 'null');
+    return cached && cached.state === state ? cached.count : null;
+  } catch (e) {
+    console.warn('Niepoprawny zapis liczby stron: ' + e.message);
     return null;
   }
 }
