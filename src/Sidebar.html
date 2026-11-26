@@ -147,19 +147,16 @@
       <div id="module-filters" class="filter-chips"></div>
       <section class="module-view hidden" data-module="structure">
         <div class="muted small module-hint collapsed"><?= t_('structure.hint') ?></div>
-        <button id="btn-check-structure" class="hidden"><?= t_('structure.check') ?></button>
         <div id="structure-summary" class="muted hidden"></div>
         <div id="structure-groups" class="result-groups-grid"></div>
       </section>
       <section class="module-view hidden" data-module="bibliography">
         <div class="muted small module-hint collapsed"><?= t_('bib.hint') ?></div>
-        <button id="btn-check-bib" class="hidden"><?= t_('bib.check') ?></button>
         <div id="bib-summary" class="muted hidden"></div>
         <div id="bib-groups" class="result-groups-grid"></div>
       </section>
       <section class="module-view hidden" data-module="figures">
         <div class="muted small module-hint collapsed"><?= t_('fig.hint') ?></div>
-        <button id="btn-check-fig" class="hidden"><?= t_('fig.check') ?></button>
         <div id="fig-summary" class="muted hidden"></div>
         <div id="fig-renumber" class="renumber-card hidden" role="region" aria-label="<?= t_('fig.renumber.title') ?>"></div>
         <div id="fig-list" class="renumber-card hidden" role="region" aria-label="<?= t_('fig.list.heading') ?>"></div>
@@ -167,25 +164,21 @@
       </section>
       <section class="module-view hidden" data-module="style">
         <div class="muted small module-hint collapsed"><?= t_('style.hint') ?></div>
-        <button id="btn-check-style" class="hidden"><?= t_('style.check') ?></button>
         <div id="style-summary" class="muted hidden"></div>
         <div id="style-groups" class="result-groups-grid"></div>
       </section>
       <section class="module-view hidden" data-module="abbreviations">
         <div class="muted small module-hint collapsed"><?= t_('abbr.hint') ?></div>
-        <button id="btn-check-abbr" class="hidden"><?= t_('abbr.check') ?></button>
         <div id="abbr-summary" class="muted hidden"></div>
         <div id="abbr-groups" class="result-groups-grid"></div>
       </section>
       <section class="module-view hidden" data-module="typography">
         <div class="muted small module-hint collapsed"><?= t_('typo.hint') ?></div>
-        <button id="btn-check-typo" class="hidden"><?= t_('typo.check') ?></button>
         <div id="typo-summary" class="muted hidden"></div>
         <div id="typo-groups" class="result-groups-grid"></div>
       </section>
       <section class="module-view hidden" data-module="format">
         <div class="muted small module-hint collapsed"><?= t_('format.hint') ?></div>
-        <button id="btn-check-format" class="hidden"><?= t_('format.check') ?></button>
         <div id="format-summary" class="muted hidden"></div>
         <div id="format-groups" class="result-groups-grid"></div>
       </section>
@@ -229,7 +222,6 @@
       <section id="structure-rules" class="rules-pane" data-pane="structure">
         <h4 class="rules-pane-title"><?= t_('structure.rules.title') ?></h4>
         <div class="muted small rules-pane-hint"><?= t_('structure.rules.hint') ?></div>
-        <div id="structure-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
         <div class="rules-grid">
           <b id="srule-parts-title" class="rules-head"></b>
           <span class="rules-wide muted"><?= t_('structure.rules.sections') ?></span>
@@ -245,14 +237,9 @@
           <input id="srule-aim-min" type="number" min="0" step="10"><input id="srule-aim-max" type="number" min="0" step="10">
           <label for="srule-min-pages"><?= t_('structure.rules.minPages') ?></label><input id="srule-min-pages" type="number" min="0" step="1">
         </div>
-        <div class="row buttons hidden">
-          <button id="btn-save-structure-rules" class="primary"><?= t_('format.rules.save') ?></button>
-          <button id="btn-reset-structure-rules"><?= t_('rules.reset') ?></button>
-        </div>
       </section>
       <section id="bib-rules" class="rules-pane" data-pane="bibliography">
         <h4 class="rules-pane-title"><?= t_('bib.rules.title') ?></h4>
-        <div id="bib-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
         <div class="rules-grid">
           <b class="rules-head"><?= t_('bib.rules.groupCount') ?></b>
           <label for="brule-min-review"><?= t_('bib.rules.minReview') ?></label><input id="brule-min-review" type="number" min="0" step="1">
@@ -265,15 +252,10 @@
           <label class="rules-check"><input id="brule-wikipedia" type="checkbox"> <?= t_('bib.rules.wikipedia') ?></label>
           <label class="rules-check"><input id="brule-web" type="checkbox"> <?= t_('bib.rules.web') ?></label>
         </div>
-        <div class="row buttons hidden">
-          <button id="btn-save-bib-rules" class="primary"><?= t_('format.rules.save') ?></button>
-          <button id="btn-reset-bib-rules"><?= t_('rules.reset') ?></button>
-        </div>
       </section>
       <section id="format-rules" class="rules-pane" data-pane="format">
         <h4 class="rules-pane-title"><?= t_('format.rules.title') ?></h4>
       <div class="muted small rules-pane-hint"><?= t_('format.rules.hint') ?></div>
-      <div id="format-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
       <div class="rules-grid">
         <b class="rules-head"><?= t_('format.rules.text') ?></b>
         <label for="rule-font"><?= t_('format.rules.font') ?></label><input id="rule-font" type="text">
@@ -321,10 +303,6 @@
         <label class="rules-check"><input id="style-rule-words" type="checkbox"> <?= t_('style.rules.words') ?></label>
         <label class="rules-check"><input id="style-rule-tense" type="checkbox"> <?= t_('style.rules.tense') ?></label>
         <label class="rules-check"><input id="style-rule-abstract" type="checkbox"> <?= t_('style.rules.abstractPhrase') ?></label>
-      </div>
-      <div class="row buttons hidden">
-        <button id="btn-save-rules" class="primary"><?= t_('format.rules.save') ?></button>
-        <button id="btn-reset-rules"><?= t_('rules.reset') ?></button>
       </div>
     </section>
       </div>

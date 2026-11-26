@@ -6,7 +6,7 @@ const BIB_NOT_AUTHOR = /^(tabela|tab|rycina|ryc|rysunek|rys|wykres|schemat|fotog
 const BIB_PREFIX = /^(?:(?:por|zob|np|cf|vide|see|patrz|e\.g|za)\s*[.:]?\s*(?:te.|tak.e|r.wnie.|also)?\s*[.:]?\s+)+/i;
 const BIB_WEAK_BEFORE = /(?:^|[^\p{L}])(?:w|we|na|z|ze|do|od|po|o|u|przy|przed|nad|pod|dla|przez)\s+$/iu;
 const BIB_PAGES = /,?\s*(s|ss|str|pp?)\.\s*\d+(\s*[-–]\s*\d+)?\s*$/i;
-const BIB_ABBREVIATIONS = /^(itd|itp|tzw|tzn|red|wyd|por|zob|str|ryc|tab|rys|godz|min|max|ang|jw|etc|al|tys|mln|mld|proc|wsp|ust|art|pkt|poz|mgr|prof|hab|in.|nast|rozdz|oprac|t.um|wydz|kat|dot|ser|vol|eds|ibid|cyt|p.n|p.d|zach|wsch|godz|sek|ryc|fot|zdj|dzi.|ok|ww)$/i;
+const BIB_ABBREVIATIONS = /^(itd|itp|tzw|tzn|red|wyd|por|zob|str|ryc|tab|rys|godz|min|max|ang|jw|etc|al|tys|mln|mld|proc|wsp|ust|art|pkt|poz|mgr|prof|hab|in.|nast|rozdz|oprac|t.um|wydz|kat|dot|ser|vol|eds|ibid|cyt|p.n|p.d|zach|wsch|sek|fot|zdj|dzi.|ok|ww)$/i;
 const BIB_KINDS = ['missing', 'uncited', 'authors', 'letters', 'periodBefore', 'innerSpace', 'commaYear', 'etAl', 'sameAuthor',
   'semicolon', 'quoteItalic', 'order', 'count', 'format', 'wikipedia', 'quoteNoCite', 'noCitation', 'results', 'discussion', 'old', 'web'];
 const BIB_INFO_KINDS = { old: true, web: true, quoteNoCite: true, noCitation: true, results: true, discussion: true };
@@ -651,17 +651,15 @@ function showBibliographyIssue(ref) {
   const resolved = ref.location ? resolveElementPath_(ref.location) : null;
   if (!resolved || resolved.isText) throw userError_('format.err.changed');
   const doc = DocumentApp.getActiveDocument();
-  const range = doc.newRange();
   const text = resolved.element.getText();
   if (ref.start === undefined) {
     if (text.trim().slice(0, 40) !== ref.fingerprint) throw userError_('format.err.changed');
-    range.addElement(resolved.element);
-  } else {
-    const start = text.slice(ref.start, ref.end) === ref.fingerprint ? ref.start : text.indexOf(ref.fingerprint);
-    if (start < 0 || !ref.fingerprint) throw userError_('format.err.changed');
-    range.addElement(resolved.element.editAsText(), start, start + ref.fingerprint.length - 1);
+    selectRange_(doc, function () { return doc.newRange().addElement(resolved.element); });
+    return;
   }
-  doc.setSelection(range.build());
+  const start = text.slice(ref.start, ref.end) === ref.fingerprint ? ref.start : text.indexOf(ref.fingerprint);
+  if (start < 0 || !ref.fingerprint) throw userError_('format.err.changed');
+  selectRange_(doc, function () { return doc.newRange().addElement(resolved.element.editAsText(), start, start + ref.fingerprint.length - 1); });
 }
 
 function citedOnly_(citations, entries) {

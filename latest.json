@@ -1,8 +1,8 @@
 {
-  "version": "0.22.1",
-  "tag": "v0.22.1",
+  "version": "0.22.2",
+  "tag": "v0.22.2",
   "notes": {
-    "pl": "Wymagane części w „Wymaganiach uczelni” (Struktura) jako pigułki w kolejności: kliknięcie otwiera nazwę, nazwy zamienne, przesuwanie i usuwanie, a „+ Dodaj część” dopisuje nową. Zapisane wymagania działają jak dotąd.",
-    "en": "Required parts in the university requirements (Structure) are now pills in order: click one to edit its name and alternative names, move or remove it, and \"+ Add a part\" adds a new one. Saved requirements work as before."
+    "pl": "Poprawki i porządki: panel nie blokuje się, gdy akceptacja informacji o AI się nie powiedzie, „pokaż w dokumencie” daje czytelny komunikat zamiast błędu technicznego, a Formatowanie rozpoznaje podpisy tabel i rycin tak samo jak moduł Tabele i ryciny.",
+    "en": "Fixes and clean-up: the panel no longer locks up when accepting the AI notice fails, \"show in document\" gives a readable message instead of a technical error, and the formatting check recognises table and figure captions the same way as the tables and figures module."
   }
 }

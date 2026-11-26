@@ -101,12 +101,6 @@ function typographyEdits_(issues) {
   return accepted;
 }
 
-function applyTypographyEdits_(text, edits) {
-  return edits.slice().sort(function (a, b) { return b.at - a.at; }).reduce(function (result, edit) {
-    return result.slice(0, edit.at) + edit.insert + result.slice(edit.at + edit.remove);
-  }, text);
-}
-
 function matchAll_(text, pattern, build) {
   const results = [];
   let m;

@@ -347,7 +347,7 @@ function showStructureIssue(ref) {
     element = resolved && !resolved.isText ? resolved.element : null;
   }
   if (!element) throw userError_('format.err.changed');
-  doc.setSelection(doc.newRange().addElement(element).build());
+  selectRange_(doc, function () { return doc.newRange().addElement(element); });
 }
 
 function fixStructureIssue(ref, type) {

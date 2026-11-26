@@ -7,7 +7,6 @@ const FORMAT_KINDS = ['page', 'margins', 'font', 'size', 'color', 'lineSpacing',
 const FORMAT_DOCUMENT_KINDS = { page: true, margins: true };
 const FORMAT_SIDES = ['top', 'right', 'bottom', 'left'];
 const FORMAT_ALIGNMENTS = ['', 'JUSTIFY', 'LEFT'];
-const FORMAT_CAPTION = /^\s*(tabela|tab\.|rycina|ryc\.|rysunek|rys\.|wykres|schemat|fotografia|table|figure|fig\.)\s*(nr\.?\s*)?\d+/i;
 const FORMAT_BACK_MATTER = /bibliograf|pi.miennictw|literatur|references|spis (rycin|tabel|rysunk)|aneks|za..cznik|appendix/i;
 const FORMAT_DEFAULT_RULES = {
   font: 'Calibri',
@@ -108,12 +107,7 @@ function showFormatIssue(ref) {
   const found = resolveElementPath_(ref.location);
   if (!found || found.isText) throw userError_('format.err.changed');
   const doc = DocumentApp.getActiveDocument();
-  try {
-    doc.setSelection(doc.newRange().addElement(found.element).build());
-  } catch (e) {
-    console.warn('Nie udało się zaznaczyć akapitu: ' + e.message);
-    throw userError_('typo.err.show');
-  }
+  selectRange_(doc, function () { return doc.newRange().addElement(found.element); });
 }
 
 function fixFormatIssue(ref) {
@@ -235,7 +229,7 @@ function paragraphFormatIssues_(entry, rules, ctx) {
   }
   if (entry.heading !== 'NORMAL') return issues;
   const style = ctx.styles.NORMAL;
-  if (FORMAT_CAPTION.test(entry.text)) {
+  if (formatCaption_(entry.text)) {
     if (rules.captionSize) {
       wrongSizes_(sizesOf_(text, style), rules.captionSize).forEach(function (size) {
         issues.push({ kind: 'caption', detail: change_(number_(size) + ' pkt', number_(rules.captionSize) + ' pkt') });
@@ -444,4 +438,11 @@ function number_(value) {
 
 function change_(from, to) {
   return t_('format.change', { from: from, to: to });
+}
+
+let formatBareCaption_ = null;
+
+function formatCaption_(text) {
+  if (!formatBareCaption_) formatBareCaption_ = new RegExp('^\\s*' + FIG_LABELS + '\\s*(?:nr\\.?\\s*)?\\d+(?:\\.\\d+)*(?:\\s*[.:\\u2013\\u2014-]|\\s*$)', 'iu');
+  return !!parseCaption_(text) || formatBareCaption_.test(String(text || ''));
 }

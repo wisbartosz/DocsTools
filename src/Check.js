@@ -16,15 +16,19 @@ function checkTypography() {
   return { groups: TYPO_KINDS.map(function (kind) { return groups[kind]; }) };
 }
 
+function selectRange_(doc, buildRange) {
+  try {
+    doc.setSelection(buildRange().build());
+  } catch (e) {
+    console.warn('Nie udalo sie zaznaczyc miejsca: ' + e.message);
+    throw userError_('typo.err.show');
+  }
+}
+
 function showTypographyIssue(ref) {
   const found = locateTypographyIssue_(ref);
   const doc = DocumentApp.getActiveDocument();
-  try {
-    doc.setSelection(doc.newRange().addElement(found.entry.text, found.issue.start, found.issue.end - 1).build());
-  } catch (e) {
-    console.warn('Nie udało się zaznaczyć miejsca: ' + e.message);
-    throw userError_('typo.err.show');
-  }
+  selectRange_(doc, function () { return doc.newRange().addElement(found.entry.text, found.issue.start, found.issue.end - 1); });
 }
 
 function fixTypographyIssue(ref) {

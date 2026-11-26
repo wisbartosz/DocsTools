@@ -132,7 +132,6 @@ with your sources.
 - search across your sources,
 - adding reference entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
-- renumbering tables and figures with one click and generating the list of tables and figures,
 - consistent terminology, editorial notes,
 - questions your supervisor might ask, and comparing your goals with your conclusions,
 - a progress counter.
@@ -226,7 +225,7 @@ the script editor, because the next push will overwrite your changes.
 3. Replace the contents of `appsscript.json` with `src/appsscript.json`.
 4. For each `.js` file in `src`, create a script file with the same name (without the
    extension) and paste the contents. You can delete the default `Code.gs`.
-5. Do the same with the `.html` files: `Sidebar`, `Styles` and `Client`.
+5. Do the same with the `.html` files: `Sidebar`, `Styles`, `Client` and `Logo`.
 6. Save and reload the document.
 
 ## First run
@@ -298,6 +297,7 @@ no subfolders, so the manual installation can recreate them.
 - `Retrieval.js`: picks the passages of long sources that relate to the question (simple
   word ranking, no Google calls).
 - `Feedback.js`: sends feedback from the sidebar to the relay service (`feedback/`).
+- `Updates.js`: checks for a new version (`latest.json` on GitHub, once a day) and links to the installer.
 - `Typography.js`: typography rules on plain text. No Google calls.
 - `Style.js`: style – the personal form, how numbers are written, tenses in the Introduction and
   Conclusion, phrases in the abstract. One shared mask (quotes, citations, references, links) and
@@ -324,7 +324,7 @@ no subfolders, so the manual installation can recreate them.
   matching, alphabetical order, sorting, citation style and placement with fixes. The pure functions can be tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
-- `Sidebar.html`, `Styles.html`, `Client.html`: the sidebar.
+- `Sidebar.html`, `Styles.html`, `Client.html`, `Logo.html`: the sidebar (`Logo.html` is the logo in the header).
 
 Text from PDFs and Word files is produced by converting a copy of the file to a Google
 Doc (with Polish text recognition) and exporting it as plain text. The copy is deleted

@@ -27,7 +27,7 @@ Google.
   pierwszym użyciu AI.
 - Do autora trafia tylko to, co sam wyślesz przez „Zgłoś uwagę”: treść wiadomości,
   adres e-mail (jeśli go podasz) oraz informacje techniczne: wersja Przybornika, język,
-  wybrany model, przeglądarka, ostatni komunikat błędu i to, czy klucz API oraz folder
+  ustawienia regionalne konta, widok (panel boczny albo okno), wybrany model, przeglądarka, ostatni komunikat błędu i to, czy klucz API oraz folder
   źródeł są ustawione. Treść pracy, źródła i klucz API nie są wysyłane. Wiadomość
   przychodzi mailem na konto Google autora i służy tylko do poprawiania Przybornika
   oraz odpowiedzi, jeśli podasz adres.
@@ -68,7 +68,7 @@ account.
   its services. The toolkit reminds you about this the first time you use AI.
 - The author only receives what you send yourself with "Send feedback": your message,
   your email address (if you give one) and technical details: toolkit version, language,
-  chosen model, browser, the last error message, and whether an API key and a sources
+  account locale, view (sidebar or window), chosen model, browser, the last error message, and whether an API key and a sources
   folder are set. Your thesis, sources and API key are never sent. The message arrives by
   email in the author's Google account and is used only to improve the toolkit and to
   reply, if you left an address.

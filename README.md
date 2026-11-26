@@ -127,7 +127,6 @@ Dodatek nie pisze pracy za Ciebie. Ma pomagać ją sprawdzać i pracować ze źr
 - wyszukiwarka w źródłach,
 - dodawanie pozycji bibliografii po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
-- przenumerowanie tabel i rycin jednym kliknięciem i generowanie spisu tabel i rycin,
 - spójność terminologii, uwagi redakcyjne,
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
 - licznik postępu.
@@ -222,7 +221,7 @@ w edytorze skryptów, bo następne wgranie nadpisze te zmiany.
 3. Zastąp zawartość `appsscript.json` plikiem `src/appsscript.json`.
 4. Dla każdego pliku `.js` z katalogu `src` utwórz w edytorze plik skryptu o tej samej
    nazwie (bez końcówki) i wklej zawartość. Domyślny `Kod.gs` możesz usunąć.
-5. Tak samo z plikami `.html`: `Sidebar`, `Styles` i `Client`.
+5. Tak samo z plikami `.html`: `Sidebar`, `Styles`, `Client` i `Logo`.
 6. Zapisz i odśwież dokument.
 
 ## Pierwsze uruchomienie
@@ -296,6 +295,7 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Retrieval.js`: wybór fragmentów źródeł związanych z pytaniem, gdy źródła są długie
   (prosty ranking słów, bez wywołań Google).
 - `Feedback.js`: wysyłka uwag z panelu do usługi pośredniczącej (`feedback/`).
+- `Updates.js`: sprawdzanie nowej wersji (`latest.json` z GitHuba, raz na dobę) i link do instalatora.
 - `Typography.js`: reguły typografii na zwykłym tekście. Bez wywołań Google.
 - `Style.js`: styl – forma osobowa, zapis liczb, czasy we Wstępie i Zakończeniu, zwroty
   w streszczeniu. Wspólna maska (cytaty, przypisy, odwołania, adresy) i czyste funkcje testowalne w Node.
@@ -324,7 +324,7 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   testowalne w Node.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
-- `Sidebar.html`, `Styles.html`, `Client.html`: panel boczny.
+- `Sidebar.html`, `Styles.html`, `Client.html`, `Logo.html`: panel boczny (`Logo.html` to logo w nagłówku).
 
 Teksty z PDF-ów i Worda powstają przez konwersję kopii pliku do Dokumentu Google
 (z rozpoznawaniem tekstu po polsku) i eksport do zwykłego tekstu. Kopia jest od razu

@@ -309,9 +309,7 @@ function showStyleIssue(ref) {
   }
   if (start < 0) throw userError_('format.err.changed');
   const doc = DocumentApp.getActiveDocument();
-  const range = doc.newRange();
-  range.addElement(resolved.element.editAsText(), start, start + ref.fingerprint.length - 1);
-  doc.setSelection(range.build());
+  selectRange_(doc, function () { return doc.newRange().addElement(resolved.element.editAsText(), start, start + ref.fingerprint.length - 1); });
 }
 
 function normalizeStyleRules_(input) {

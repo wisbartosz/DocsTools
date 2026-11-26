@@ -170,8 +170,13 @@
       $('btn-notice-cancel').disabled = false;
       $('btn-notice-accept').onclick = async () => {
         $('ai-notice').classList.add('hidden');
-        settings = await call('acceptAiNotice');
-        resolve(true);
+        try {
+          settings = await call('acceptAiNotice');
+          resolve(true);
+        } catch (e) {
+          showMessage(errorText(e), 'error');
+          resolve(false);
+        }
       };
       $('btn-notice-cancel').onclick = () => {
         $('ai-notice').classList.add('hidden');
@@ -910,28 +915,6 @@
 
   const openFirstGroup = {};
 
-  function makeExpandable(node, collapsedClass) {
-    const collapsed = () => node.classList.contains(collapsedClass);
-    const sync = () => {
-      node.setAttribute('aria-expanded', collapsed() ? 'false' : 'true');
-      node.title = collapsed() ? t('check.more') : '';
-    };
-    const toggle = () => {
-      node.classList.toggle(collapsedClass);
-      sync();
-    };
-    node.tabIndex = 0;
-    node.setAttribute('role', 'button');
-    node.addEventListener('click', toggle);
-    node.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggle();
-      }
-    });
-    sync();
-  }
-
   function fixAllButton(count, handler) {
     const button = el('button', 'btn-tonal', t('typo.fixAll', { count: formatNumber(count) }));
     button.addEventListener('click', () => {
@@ -1283,7 +1266,6 @@
     summaryId: 'typo-summary',
     groupsId: 'typo-groups',
     kindKey: 'typo.kind.',
-    summaryKey: 'typo.summary',
     noneKey: 'typo.none',
     moreKey: 'typo.more',
     open: typoOpen,
@@ -1303,14 +1285,8 @@
   const styleOpen = new Set();
 
   async function checkStyle() {
-    const button = $('btn-check-style');
-    button.classList.add('loading');
-    try {
-      style = await call('checkStyle');
-      renderStyle();
-    } finally {
-      button.classList.remove('loading');
-    }
+    style = await call('checkStyle');
+    renderStyle();
   }
 
   const STYLE_SPEC = {
@@ -1319,7 +1295,6 @@
     summaryId: 'style-summary',
     groupsId: 'style-groups',
     kindKey: 'style.kind.',
-    summaryKey: 'style.summary',
     noneKey: 'style.none',
     moreKey: 'style.more',
     open: styleOpen,
@@ -1365,14 +1340,8 @@
   const abbreviationsOpen = new Set();
 
   async function checkAbbreviations() {
-    const button = $('btn-check-abbr');
-    button.classList.add('loading');
-    try {
-      abbreviations = await call('checkAbbreviations');
-      renderAbbreviations();
-    } finally {
-      button.classList.remove('loading');
-    }
+    abbreviations = await call('checkAbbreviations');
+    renderAbbreviations();
   }
 
   const ABBREVIATIONS_SPEC = {
@@ -1381,7 +1350,6 @@
     summaryId: 'abbr-summary',
     groupsId: 'abbr-groups',
     kindKey: 'abbr.kind.',
-    summaryKey: 'abbr.summary',
     noneKey: 'abbr.none',
     moreKey: 'abbr.more',
     open: abbreviationsOpen,
@@ -1399,14 +1367,8 @@
   }
 
   async function checkTypography() {
-    const button = $('btn-check-typo');
-    button.classList.add('loading');
-    try {
-      typo = await call('checkTypography');
-      renderTypography();
-    } finally {
-      button.classList.remove('loading');
-    }
+    typo = await call('checkTypography');
+    renderTypography();
   }
 
   function renderTypography() {
@@ -1610,8 +1572,6 @@
 
   function setRulesDefault(form, isDefault) {
     rulesDefault[form] = !!isDefault;
-    const example = $(form + '-rules-example');
-    if (example) example.classList.toggle('hidden', !isDefault);
     renderRulesBanner();
   }
 
@@ -1682,22 +1642,9 @@
     }
   }
 
-  async function saveFormatRules() {
-    const saved = await call('saveFormatRules', readFormatRules());
-    fillFormatRules(saved.rules);
-    setRulesDefault('format', saved.isDefault);
-    showMessage(t('format.rules.saved'), 'ok');
-  }
-
   async function checkFormatting() {
-    const button = $('btn-check-format');
-    button.classList.add('loading');
-    try {
-      format = await call('checkFormatting');
-      renderFormatting();
-    } finally {
-      button.classList.remove('loading');
-    }
+    format = await call('checkFormatting');
+    renderFormatting();
   }
 
   const FORMAT_SPEC = {
@@ -1706,7 +1653,6 @@
     summaryId: 'format-summary',
     groupsId: 'format-groups',
     kindKey: 'format.kind.',
-    summaryKey: 'format.summary',
     noneKey: 'format.none',
     moreKey: 'typo.more',
     open: formatOpen,
@@ -2052,22 +1998,9 @@
     renderParts();
   }
 
-  async function saveStructureRules() {
-    const saved = await call('saveStructureRules', readStructureRules());
-    fillStructureRules(saved.rules);
-    setRulesDefault('structure', saved.isDefault);
-    showMessage(t('structure.rules.saved'), 'ok');
-  }
-
   async function checkStructure() {
-    const button = $('btn-check-structure');
-    button.classList.add('loading');
-    try {
-      structure = await call('checkStructure', { type: $('check-type').value, pages: true });
-      renderStructure();
-    } finally {
-      button.classList.remove('loading');
-    }
+    structure = await call('checkStructure', { type: $('check-type').value, pages: true });
+    renderStructure();
   }
 
   function withPreviousPages(next) {
@@ -2087,7 +2020,6 @@
     summaryId: 'structure-summary',
     groupsId: 'structure-groups',
     kindKey: 'structure.kind.',
-    summaryKey: 'structure.summary',
     noneKey: 'structure.none',
     open: structureOpen,
     showFn: 'showStructureIssue',
@@ -2150,27 +2082,14 @@
     return rules;
   }
 
-  async function saveBibliographyRules() {
-    const saved = await call('saveBibliographyRules', readBibliographyRules());
-    fillBibliographyRules(saved.rules);
-    setRulesDefault('bib', saved.isDefault);
-    showMessage(t('structure.rules.saved'), 'ok');
-  }
-
   async function resetBibliographyRules() {
     fillBibliographyRules(await call('getDefaultBibliographyRules'));
     showMessage(t('rules.resetDone'), 'ok');
   }
 
   async function checkBibliography() {
-    const button = $('btn-check-bib');
-    button.classList.add('loading');
-    try {
-      bibliography = await call('checkBibliography', { type: $('check-type').value });
-      renderBibliography();
-    } finally {
-      button.classList.remove('loading');
-    }
+    bibliography = await call('checkBibliography', { type: $('check-type').value });
+    renderBibliography();
   }
 
   const BIBLIOGRAPHY_SPEC = {
@@ -2179,7 +2098,6 @@
     summaryId: 'bib-summary',
     groupsId: 'bib-groups',
     kindKey: 'bib.kind.',
-    summaryKey: 'bib.summary',
     noneKey: 'bib.none',
     open: bibliographyOpen,
     showFn: 'showBibliographyIssue',
@@ -2235,14 +2153,8 @@
   async function checkFigures() {
     hideRenumberPreview();
     hideListPreview();
-    const button = $('btn-check-fig');
-    button.classList.add('loading');
-    try {
-      figures = await call('checkFigures', { type: $('check-type').value });
-      renderFigures();
-    } finally {
-      button.classList.remove('loading');
-    }
+    figures = await call('checkFigures', { type: $('check-type').value });
+    renderFigures();
   }
 
   const FIGURES_SPEC = {
@@ -2251,7 +2163,6 @@
     summaryId: 'fig-summary',
     groupsId: 'fig-groups',
     kindKey: 'fig.kind.',
-    summaryKey: 'fig.summary',
     noneKey: 'fig.none',
     open: figuresOpen,
     showFn: 'showBibliographyIssue',
@@ -2714,7 +2625,6 @@
   });
   $('check-type').addEventListener('change', () => run(changeCheckType));
 
-  $('btn-check-fig').addEventListener('click', () => run(checkFigures));
   $('btn-save-all-rules').addEventListener('click', () => run(saveAllRules));
   $('btn-reset-all-rules').addEventListener('click', () => run(resetAllRules));
   document.querySelectorAll('#check-rules .segment').forEach(segment => segment.addEventListener('click', () => showRulesPane(segment.dataset.pane)));
@@ -2724,20 +2634,12 @@
     input.addEventListener('change', () => setRulesDirty(true));
   });
   renderRulesBanner();
-  $('btn-save-bib-rules').addEventListener('click', () => run(saveBibliographyRules));
-  $('btn-reset-bib-rules').addEventListener('click', () => run(resetBibliographyRules));
-  $('btn-check-bib').addEventListener('click', () => run(checkBibliography));
   $('srule-type').addEventListener('change', () => {
     const type = $('srule-type').value;
     $('srule-type').value = $('check-type').value;
     $('check-type').value = type;
     run(changeCheckType);
   });
-  $('btn-save-structure-rules').addEventListener('click', () => run(saveStructureRules));
-  $('btn-reset-structure-rules').addEventListener('click', () => run(resetStructureRules));
-  $('btn-reset-rules').addEventListener('click', () => run(resetFormatRules));
-  $('btn-check-structure').addEventListener('click', () => run(checkStructure));
-  $('btn-save-rules').addEventListener('click', () => run(saveFormatRules));
   $('btn-title-page-rules').addEventListener('click', () => {
     showCheckView('rules');
     showRulesPane('general');
@@ -2748,8 +2650,6 @@
     call('saveSkipTitlePage', $('skip-title-page').checked).catch(e => showMessage(errorText(e), 'error'));
   });
   $('btn-import-rules').addEventListener('click', () => runInBackground($('btn-import-rules'), importFormatRules));
-  $('btn-check-format').addEventListener('click', () => run(checkFormatting));
-  $('btn-check-typo').addEventListener('click', () => run(checkTypography));
   $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));
   $('btn-remove-fragment').addEventListener('click', removeFragment);
   $('btn-feedback').addEventListener('click', () => switchTab('feedback'));
