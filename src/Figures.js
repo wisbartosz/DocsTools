@@ -342,7 +342,9 @@ function checkFigures(options) {
   const ctx = figuresContext_();
   const groups = {};
   FIG_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [], info: !!FIG_INFO_KINDS[kind] }; });
+  const hide = ignoreFilter_('figures');
   const add = function (kind, item) {
+    if (hide(groups[kind], item)) return;
     groups[kind].count++;
     if (groups[kind].items.length < FIG_MAX_ITEMS) groups[kind].items.push(item);
   };
@@ -353,7 +355,7 @@ function checkFigures(options) {
   };
   const blockItem = function (block, label, detail) {
     const shown = block.type === 'table' ? (label ? label + ': ' : '') + preview(block.text.split('\n')[0], '') : preview(block.text, label);
-    return { ref: { location: block.location, fingerprint: block.text.trim().slice(0, 40) }, showable: true, preview: shown, detail: detail || '' };
+    return { ref: { location: block.location, fingerprint: block.text.trim().slice(0, 40) }, showable: true, preview: shown, detail: detail || '', keyText: block.text };
   };
   const objectLabel = function (object) {
     const caption = object.caption || object.captionBelow;
@@ -361,7 +363,7 @@ function checkFigures(options) {
     return t_(object.kind === 'table' ? 'fig.object.table' : 'fig.object.figure');
   };
   const rangeItem = function (ref, detail) {
-    return { ref: { location: ref.block.location, start: ref.start, end: ref.end, fingerprint: ref.raw }, showable: true, preview: ref.raw, detail: detail };
+    return { ref: { location: ref.block.location, start: ref.start, end: ref.end, fingerprint: ref.raw }, showable: true, preview: ref.raw, detail: detail, keyText: ref.block.text };
   };
 
   let entries = null;
@@ -407,7 +409,7 @@ function checkFigures(options) {
       captions.forEach(function (c) { keys[c.parsed.labelKey] = c.parsed.label; });
       const labels = Object.keys(keys).map(function (k) { return keys[k]; });
       if (labels.length > 1) {
-        add('labels', { ref: {}, showable: false, preview: t_('fig.labels.detail', { labels: labels.join(', ') }), detail: '' });
+        add('labels', { ref: {}, showable: false, preview: t_('fig.labels.detail', { labels: labels.join(', ') }), detail: '', keyText: labels.join(', ') });
       }
     }
     const numbers = captions.map(function (c) { return c.parsed.number; });
@@ -472,7 +474,11 @@ function checkFigures(options) {
       figures: ctx.objects.filter(function (o) { return o.kind === 'figure'; }).length,
       appendices: ctx.appendices.length,
     },
-    groups: FIG_KINDS.map(function (kind) { return groups[kind]; }),
+    groups: (function () {
+      const list = FIG_KINDS.map(function (kind) { return groups[kind]; });
+      hide.finish(list);
+      return list;
+    })(),
   };
 }
 

@@ -39,7 +39,16 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   numbers up to 9 written in digits and from 10 in words, the past tense in sentences about the
   thesis in the Introduction and the future tense in the Conclusion, and announcements instead of
   content in the abstract. Pointers only, no changes to the text; quotes, citations in brackets,
-  tables, the references and the annex are skipped.
+  tables, the references and the annex are skipped. Rule groups and the "numbers in words up to
+  9 or 10" threshold are set in the university requirements (Format).
+- Abbreviations in the "Check" tab: acronyms in the text (NFZ, PKB, COVID-19) compared with the
+  list of abbreviations – abbreviations missing from the list, unused list entries, list order
+  and no full name at first use. Citations in brackets, institutional authors with a year
+  ("GUS 2021"), web addresses, Roman numerals and the references are skipped.
+- "Ignore" on remarks to review (one by one or a whole group). A hidden remark is tied to the
+  exact paragraph text – change it and the remark comes back by itself. Hidden remarks never
+  vanish from view: the module shows "Hidden: N · Show", the overview "+N hidden" and "Restore
+  all hidden remarks". Remarks to fix cannot be hidden.
 - Polish typography in the "Check" tab. The add-on goes through the body of your thesis
   and the footnotes: one-letter words without a non-breaking space (a, i, o, u, w, z),
   straight quotes instead of „…”, hyphens instead of en dashes, three dots instead of an
@@ -290,7 +299,12 @@ no subfolders, so the manual installation can recreate them.
 - `Typography.js`: typography rules on plain text. No Google calls.
 - `Style.js`: style – the personal form, how numbers are written, tenses in the Introduction and
   Conclusion, phrases in the abstract. One shared mask (quotes, citations, references, links) and
-  pure functions testable in Node.
+  pure functions testable in Node. Style rules (groups, number threshold) in document properties.
+- `Abbreviations.js`: abbreviations – acronyms in the text, the list of abbreviations (paragraphs
+  or a two-column table), the full name at first use, list order. Pure functions testable in Node.
+- `Ignore.js`: hidden remarks to review – key from the paragraph text (FNV hash), stored in
+  document properties per module (split into parts), results split into visible and hidden while
+  groups are built.
 - `Check.js`: the "Check" tab. Goes through the text of the document and the footnotes,
   lists the places and applies fixes. Every fix first checks that the text there hasn't
   changed.

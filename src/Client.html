@@ -30,10 +30,13 @@
     return value.toLocaleString(UI_LANG === 'pl' ? 'pl-PL' : 'en-US');
   }
 
+  let ignoreQueue = Promise.resolve();
+
   function call(fn, ...args) {
-    return new Promise((resolve, reject) => {
+    const send = () => new Promise((resolve, reject) => {
       google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
     });
+    return fn === 'updateIgnoredIssues' ? send() : ignoreQueue.then(send);
   }
 
   let lastError = '';
@@ -53,11 +56,20 @@
     box.className = 'message' + (kind ? ' ' + kind : '');
   }
 
-  function showToast(text) {
+  function showToast(text, undo) {
     const toast = $('toast');
     toast.textContent = text;
+    if (undo) {
+      const button = el('button', 'toast-action', t('ignore.undo'));
+      button.addEventListener('click', e => {
+        e.stopPropagation();
+        hideToast();
+        undo();
+      });
+      toast.append(button);
+    }
     toast.classList.remove('hidden');
-    scheduleToastHide(Math.min(12000, Math.max(4000, text.length * 60)));
+    scheduleToastHide(Math.min(12000, Math.max(undo ? 7000 : 4000, text.length * 60)));
   }
 
   function scheduleToastHide(delay) {
@@ -931,11 +943,13 @@
   let pendingResultFocus = null;
 
   function focusFrom(node) {
-    const group = node.closest('.result-group');
+    const section = node.closest('.ignored-section');
+    const group = section || node.closest('.result-group');
     if (!group) return null;
     const item = node.closest('.result-item');
     const items = [...group.querySelectorAll('.result-item')];
-    return { kind: group.dataset.kind, index: item ? items.indexOf(item) : -1, part: node.classList.contains('btn-small') ? 'fix' : 'snippet' };
+    const part = node.classList.contains('btn-small') ? 'fix' : node.classList.contains('ignore-btn') ? 'ignore' : node.classList.contains('btn-ignore-all') ? 'ignoreAll' : 'snippet';
+    return { kind: section ? '#hidden' : group.dataset.kind, index: item ? items.indexOf(item) : -1, part: part };
   }
 
   function rememberResultFocus(box) {
@@ -950,12 +964,170 @@
 
   function restoreResultFocus(box, focus) {
     if (!focus) return;
-    const group = [...box.querySelectorAll('.result-group')].find(g => g.dataset.kind === focus.kind);
-    if (!group) return;
+    const section = box.querySelector('.ignored-section');
+    const group = focus.kind === '#hidden' ? section : [...box.querySelectorAll('.result-group')].find(g => g.dataset.kind === focus.kind);
+    if (!group) {
+      const fallback = (focus.part === 'ignore' || focus.part === 'ignoreAll') && box.querySelector('.ignored-bar, .ignored-head button');
+      if (fallback) fallback.focus();
+      return;
+    }
     const items = [...group.querySelectorAll('.result-item')];
     const item = focus.index >= 0 && items.length ? items[Math.min(focus.index, items.length - 1)] : null;
-    const target = item ? (focus.part === 'fix' && item.querySelector('.btn-small')) || item.querySelector('.result-snippet') : group.querySelector('.result-head');
+    const head = focus.kind === '#hidden' ? group.querySelector('.ignored-bar, .ignored-head button') : group.querySelector('.result-head');
+    const target = item
+      ? ((focus.part === 'fix' && item.querySelector('.btn-small')) || (focus.part === 'ignore' && item.querySelector('.ignore-btn')) || item.querySelector('.result-snippet'))
+      : head;
     if (target) target.focus();
+  }
+
+  const EYE_OFF = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A9.6 9.6 0 0 1 12 5c5 0 9 4.5 10 7-.5 1.2-1.3 2.4-2.4 3.5M6.6 6.6C4.4 8 2.8 10.1 2 12c1 2.5 5 7 10 7 1.6 0 3-.4 4.3-1"/></svg>';
+  const hiddenOpen = new Set();
+
+  function hiddenItems(data) {
+    return (data.groups || []).reduce((all, group) => all.concat((group.hidden || []).map(item => ({ group: group, item: item }))), []);
+  }
+
+  function hiddenCount(data) {
+    return (data.groups || []).reduce((sum, group) => sum + (group.hiddenCount || 0), 0);
+  }
+
+  function hiddenEntries(data) {
+    return (data.groups || []).filter(group => group.hidden && group.hidden.length)
+      .map(group => ({ kind: group.kind, keys: group.hidden.map(item => item.ignoreKey) }));
+  }
+
+  function moveIgnored(data, kind, keys, hide) {
+    const group = (data.groups || []).find(g => g.kind === kind);
+    if (!group) return 0;
+    group.hidden = group.hidden || [];
+    const from = hide ? group.items : group.hidden;
+    const to = hide ? group.hidden : group.items;
+    const moving = from.filter(item => keys.includes(item.ignoreKey));
+    const already = to.filter(item => keys.includes(item.ignoreKey)).length;
+    const changed = Math.max(0, keys.length - already);
+    if (moving.length) {
+      const rest = from.filter(item => !moving.includes(item));
+      const merged = to.concat(moving).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+      if (hide) {
+        group.items = rest;
+        group.hidden = merged;
+      } else {
+        group.hidden = rest;
+        group.items = merged;
+      }
+    }
+    group.count += hide ? -changed : changed;
+    group.hiddenCount = (group.hiddenCount || 0) + (hide ? changed : -changed);
+    if (group.allKeys) group.allKeys = hide ? group.allKeys.filter(key => !keys.includes(key)) : null;
+    return changed;
+  }
+
+  function refreshModule(module) {
+    runModuleCheck(module).catch(e => showMessage(errorText(e), 'error'));
+  }
+
+  function setIgnored(moduleId, entries, hide, options) {
+    const opts = options || {};
+    const module = moduleById(moduleId);
+    const data = module.data();
+    if (!data || !data.groups) return { count: 0, save: Promise.resolve({ removed: [] }) };
+    const kinds = opts.all ? data.groups.filter(group => group.hiddenCount).map(group => group.kind) : null;
+    let count = 0;
+    entries.forEach(entry => { count += moveIgnored(data, entry.kind, entry.keys, hide); });
+    if (opts.all) {
+      data.groups.forEach(group => {
+        count += group.hiddenCount || 0;
+        group.count += group.hiddenCount || 0;
+        group.hiddenCount = 0;
+        group.hidden = [];
+      });
+    }
+    module.render();
+    const keys = [].concat(...entries.map(entry => entry.keys));
+    const save = ignoreQueue.then(() => call('updateIgnoredIssues', moduleId, hide ? keys : [], hide ? [] : kinds ? { kinds: kinds } : keys));
+    ignoreQueue = save.then(() => null, () => null);
+    save.then(() => {
+      if (opts.refresh) refreshModule(module);
+    }, e => {
+      showMessage(errorText(e), 'error');
+      refreshModule(module);
+    });
+    return { count: count, save: save };
+  }
+
+  function rehideKeys(moduleId, keys) {
+    const kinds = {};
+    keys.forEach(key => { (kinds[key.split(':')[0]] = kinds[key.split(':')[0]] || []).push(key); });
+    const entries = Object.keys(kinds).map(kind => ({ kind: kind, keys: kinds[kind] }));
+    if (entries.length) setIgnored(moduleId, entries, true, { refresh: true });
+  }
+
+  function ignoreIssues(moduleId, kind, keys) {
+    const entries = [{ kind: kind, keys: keys }];
+    const result = setIgnored(moduleId, entries, true);
+    if (result.count) showToast(countText('ignore.done', result.count), () => setIgnored(moduleId, entries, false));
+  }
+
+  function restoreIssues(moduleId, entries, all) {
+    const result = setIgnored(moduleId, entries, false, { all: all });
+    if (!result.count) return;
+    showToast(countText('ignore.restored', result.count), all
+      ? () => result.save.then(r => rehideKeys(moduleId, r.removed)).catch(() => null)
+      : () => setIgnored(moduleId, entries, true));
+  }
+
+  function restoreAllIgnored() {
+    const done = [];
+    let count = 0;
+    CHECK_MODULES.forEach(module => {
+      const data = module.data();
+      if (!data || !data.groups || !hiddenCount(data)) return;
+      const result = setIgnored(module.id, hiddenEntries(data), false, { all: true });
+      count += result.count;
+      done.push({ id: module.id, save: result.save });
+    });
+    if (count) {
+      showToast(countText('ignore.restored', count), () => done.forEach(d => d.save.then(r => rehideKeys(d.id, r.removed)).catch(() => null)));
+    }
+  }
+
+  function toggleHidden(spec, open) {
+    if (open) hiddenOpen.add(spec.module);
+    else hiddenOpen.delete(spec.module);
+    pendingResultFocus = { kind: '#hidden', index: -1, part: 'head' };
+    moduleById(spec.module).render();
+  }
+
+  function renderHiddenSection(spec, hidden, total) {
+    const section = el('section', 'ignored-section');
+    if (!hiddenOpen.has(spec.module)) {
+      const bar = el('button', 'ignored-bar');
+      bar.innerHTML = EYE_OFF;
+      bar.append(el('span', 'ignored-text', countText('ignore.bar', total)), el('span', 'ignored-show', t('ignore.show')));
+      bar.addEventListener('click', () => toggleHidden(spec, true));
+      section.append(bar);
+      return section;
+    }
+    section.classList.add('open');
+    const head = el('div', 'ignored-head');
+    head.innerHTML = EYE_OFF;
+    const collapse = el('button', 'link', t('ignore.hide'));
+    collapse.addEventListener('click', () => toggleHidden(spec, false));
+    head.append(el('span', 'ignored-title', t('ignore.title')), el('span', 'result-count', formatNumber(total)), collapse);
+    section.append(head, el('div', 'result-desc', t('ignore.desc')));
+    if (total > hidden.length) section.append(el('div', 'result-desc', t(spec.moreKey || 'bib.more', { shown: hidden.length, count: formatNumber(total) })));
+    const list = el('ul', 'result-list');
+    hidden.forEach(entry => list.append(renderResultItem(spec, entry.item, entry.group, true)));
+    section.append(list);
+    const all = el('button', 'btn-tonal', t('ignore.restoreAll', { count: formatNumber(total) }));
+    all.addEventListener('click', () => {
+      if (busy) return;
+      restoreIssues(spec.module, hiddenEntries(spec.data()), true);
+    });
+    const row = el('div', 'row buttons');
+    row.append(all);
+    section.append(row);
+    return section;
   }
 
   function renderCheckResult(spec) {
@@ -988,6 +1160,8 @@
     groups
       .filter(group => !filtered || resultFilter === 'all' || (resultFilter === 'review') === !!group.info)
       .forEach(group => box.append(renderResultGroup(spec, group)));
+    const hidden = spec.module ? hiddenItems(data) : [];
+    if (hidden.length && (!filtered || resultFilter !== 'fix')) box.append(renderHiddenSection(spec, hidden, hiddenCount(data)));
     restoreResultFocus(box, focus);
     renderFilters();
     renderOverview();
@@ -1007,6 +1181,18 @@
     head.append(mark, el('span', 'result-title', t(spec.kindKey + group.kind + '.title')), infoTip(t(spec.kindKey + group.kind + '.desc')), el('span', 'result-count', formatNumber(group.count)));
     card.append(head);
     const actions = spec.groupActions ? spec.groupActions(group) : [];
+    const ignorable = !group.info || !spec.module ? [] : group.allKeys || group.items.filter(item => item.ignoreKey).map(item => item.ignoreKey);
+    if (ignorable.length > 1) {
+      const ignoreAll = el('button', 'btn-ignore-all');
+      ignoreAll.innerHTML = EYE_OFF;
+      ignoreAll.append(t('ignore.all', { count: formatNumber(ignorable.length) }));
+      ignoreAll.addEventListener('click', () => {
+        if (busy) return;
+        pendingResultFocus = focusFrom(ignoreAll);
+        ignoreIssues(spec.module, group.kind, ignorable);
+      });
+      actions.push(ignoreAll);
+    }
     if (actions.length) {
       const row = el('div', 'row buttons');
       actions.forEach(action => row.append(action));
@@ -1016,13 +1202,13 @@
       card.append(el('div', 'result-desc', t(spec.moreKey || 'bib.more', { shown: group.items.length, count: formatNumber(group.count) })));
     }
     const list = el('ul', 'result-list');
-    group.items.forEach(item => list.append(renderResultItem(spec, item)));
+    group.items.forEach(item => list.append(renderResultItem(spec, item, group)));
     card.append(list);
     return card;
   }
 
-  function renderResultItem(spec, item) {
-    const li = el('li', 'result-item');
+  function renderResultItem(spec, item, group, hidden) {
+    const li = el('li', 'result-item' + (hidden ? ' ignored' : ''));
     const showable = spec.showable ? spec.showable(item) : item.showable;
     const snippet = el('div', 'result-snippet' + (showable ? '' : ' static'));
     if (spec.snippet) {
@@ -1052,7 +1238,30 @@
         }
       });
     }
+    if (hidden) snippet.prepend(el('span', 'result-label', t(spec.kindKey + group.kind + '.title')));
     li.append(snippet);
+    if (hidden) {
+      const restore = el('button', 'btn-small', t('ignore.restore'));
+      restore.addEventListener('click', () => {
+        if (busy) return;
+        pendingResultFocus = focusFrom(restore);
+        restoreIssues(spec.module, [{ kind: group.kind, keys: [item.ignoreKey] }]);
+      });
+      li.append(restore);
+      return li;
+    }
+    if (group && group.info && item.ignoreKey && spec.module) {
+      const ignore = el('button', 'icon-btn ignore-btn');
+      ignore.innerHTML = EYE_OFF;
+      ignore.title = t('ignore.one');
+      ignore.setAttribute('aria-label', t('ignore.one'));
+      ignore.addEventListener('click', () => {
+        if (busy) return;
+        pendingResultFocus = focusFrom(ignore);
+        ignoreIssues(spec.module, group.kind, [item.ignoreKey]);
+      });
+      li.append(ignore);
+    }
     if (spec.fixable && spec.fixable(item)) {
       const fix = el('button', 'btn-small', spec.fixLabel ? spec.fixLabel(item) : t('typo.fix'));
       fix.addEventListener('click', () => {
@@ -1121,6 +1330,71 @@
 
   function renderStyle() {
     renderCheckResult(STYLE_SPEC);
+  }
+
+  const STYLE_RULE_FIELDS = {
+    personal: 'style-rule-personal', digits: 'style-rule-digits', words: 'style-rule-words',
+    tense: 'style-rule-tense', abstractPhrase: 'style-rule-abstract', wordsUpTo: 'style-rule-upto',
+  };
+
+  async function loadStyleRules() {
+    const data = await call('getStyleRules');
+    fillStyleRules(data.rules);
+    setRulesDefault('style', data.isDefault);
+  }
+
+  function fillStyleRules(rules) {
+    Object.keys(STYLE_RULE_FIELDS).forEach(key => {
+      const input = $(STYLE_RULE_FIELDS[key]);
+      if (input.type === 'checkbox') input.checked = !!rules[key];
+      else input.value = String(rules[key]);
+    });
+  }
+
+  function readStyleRules() {
+    const rules = {};
+    Object.keys(STYLE_RULE_FIELDS).forEach(key => {
+      const input = $(STYLE_RULE_FIELDS[key]);
+      rules[key] = input.type === 'checkbox' ? input.checked : Number(input.value);
+    });
+    return rules;
+  }
+
+  let abbreviations = null;
+  const abbreviationsOpen = new Set();
+
+  async function checkAbbreviations() {
+    const button = $('btn-check-abbr');
+    button.classList.add('loading');
+    try {
+      abbreviations = await call('checkAbbreviations');
+      renderAbbreviations();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  const ABBREVIATIONS_SPEC = {
+    module: 'abbreviations',
+    data: () => abbreviations,
+    summaryId: 'abbr-summary',
+    groupsId: 'abbr-groups',
+    kindKey: 'abbr.kind.',
+    summaryKey: 'abbr.summary',
+    noneKey: 'abbr.none',
+    moreKey: 'abbr.more',
+    open: abbreviationsOpen,
+    showFn: 'showStyleIssue',
+    showable: () => true,
+    notes: data => [t('abbr.stats', data.stats)].concat(data.noSection ? [t('abbr.noSection')] : []),
+    snippet: (item, node) => {
+      node.append(item.before, el('mark', '', item.match), item.after);
+      if (item.detail) node.append(el('div', 'result-detail', item.detail));
+    },
+  };
+
+  function renderAbbreviations() {
+    renderCheckResult(ABBREVIATIONS_SPEC);
   }
 
   async function checkTypography() {
@@ -1236,7 +1510,7 @@
   }
 
   function loadCheckRules() {
-    const loaders = { format: loadFormatRules, structure: loadStructureRules, bibliography: loadBibliographyRules };
+    const loaders = { format: loadFormatRules, structure: loadStructureRules, bibliography: loadBibliographyRules, style: loadStyleRules };
     return Promise.all(Object.keys(loaders).filter(key => !loadedRules.has(key))
       .map(key => loaders[key]().then(() => loadedRules.add(key))));
   }
@@ -1303,6 +1577,9 @@
     const bibliographyRules = await call('saveBibliographyRules', readBibliographyRules());
     fillBibliographyRules(bibliographyRules.rules);
     setRulesDefault('bib', bibliographyRules.isDefault);
+    const styleRules = await call('saveStyleRules', readStyleRules());
+    fillStyleRules(styleRules.rules);
+    setRulesDefault('style', styleRules.isDefault);
     hideRulesImport();
     setRulesDirty(false);
     showMessage(t('structure.rules.saved'), 'ok');
@@ -1313,6 +1590,7 @@
     await resetStructureRules();
     await resetBibliographyRules();
     await resetFormatRules();
+    fillStyleRules(await call('getDefaultStyleRules'));
     setRulesDirty(true);
     showMessage(t('rules.resetDone'), 'ok');
   }
@@ -1321,11 +1599,12 @@
     $('rules-dirty').classList.toggle('hidden', !dirty);
   }
 
-  const rulesDefault = { format: null, structure: null, bib: null };
+  const rulesDefault = { format: null, structure: null, bib: null, style: null };
 
   function setRulesDefault(form, isDefault) {
     rulesDefault[form] = !!isDefault;
-    $(form + '-rules-example').classList.toggle('hidden', !isDefault);
+    const example = $(form + '-rules-example');
+    if (example) example.classList.toggle('hidden', !isDefault);
     renderRulesBanner();
   }
 
@@ -1904,6 +2183,7 @@
       unavailable: data => (data.noSection ? t('check.module.noBibliography') : '') },
     { id: 'figures', title: 'fig.title', kindKey: 'fig.kind.', data: () => figures, check: () => checkFigures(), render: () => renderFigures() },
     { id: 'style', title: 'style.title', kindKey: 'style.kind.', data: () => style, check: () => checkStyle(), render: () => renderStyle() },
+    { id: 'abbreviations', title: 'abbr.title', kindKey: 'abbr.kind.', data: () => abbreviations, check: () => checkAbbreviations(), render: () => renderAbbreviations() },
     { id: 'typography', title: 'typo.title', kindKey: 'typo.kind.', data: () => typo, check: () => checkTypography(), render: () => renderTypography() },
     { id: 'format', title: 'format.title', kindKey: 'format.kind.', data: () => format, check: () => checkFormatting(), render: () => renderFormatting() },
   ];
@@ -1925,11 +2205,13 @@
     const groups = data.groups.filter(g => g.count > 0);
     const fix = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
     const review = groups.filter(g => g.info).reduce((sum, g) => sum + g.count, 0);
-    if (!fix && !review) return { state: 'ok', fix: 0, review: 0, text: t('check.module.ok') };
-    if (!fix) return { state: 'review', fix: 0, review: review, text: t('check.module.review', { count: formatNumber(review) }) };
+    const hidden = hiddenCount(data);
+    const withHidden = text => (hidden ? text + ' · ' + countText('ignore.count', hidden) : text);
+    if (!fix && !review) return { state: 'ok', fix: 0, review: 0, hidden: hidden, text: withHidden(t('check.module.ok')) };
+    if (!fix) return { state: 'review', fix: 0, review: review, hidden: hidden, text: withHidden(t('check.module.review', { count: formatNumber(review) })) };
     const top = groups.filter(g => !g.info).sort((a, b) => b.count - a.count).slice(0, 2).map(g => t(module.kindKey + g.kind + '.title'));
     const extra = review ? [t('check.module.moreReview', { count: formatNumber(review) })] : [];
-    return { state: 'fix', fix: fix, review: review, text: top.concat(extra).join(' · ') };
+    return { state: 'fix', fix: fix, review: review, hidden: hidden, text: withHidden(top.concat(extra).join(' · ')) };
   }
 
   function renderOverview() {
@@ -1940,9 +2222,15 @@
     let review = 0;
     let ok = 0;
     let checked = 0;
+    let hidden = 0;
+    let hiddenModules = 0;
     CHECK_MODULES.forEach(module => {
       const status = moduleStatus(module);
       if (status.state !== 'none') checked++;
+      if (status.hidden) {
+        hidden += status.hidden;
+        hiddenModules++;
+      }
       fix += status.fix;
       review += status.review;
       if (status.state === 'ok') ok++;
@@ -1965,6 +2253,10 @@
     $('count-fix').textContent = formatNumber(fix);
     $('count-review').textContent = formatNumber(review);
     $('count-ok').textContent = formatNumber(ok);
+    $('count-hidden').classList.toggle('hidden', !hidden);
+    $('count-hidden-text').textContent = hidden ? countText('ignore.plus', hidden) : '';
+    $('ignored-note').classList.toggle('hidden', !hidden);
+    $('ignored-note-text').textContent = hidden ? t('ignore.note', { count: formatNumber(hidden), modules: countText('ignore.modules', hiddenModules) }) : '';
     $('title-page-note').classList.toggle('hidden', !$('skip-title-page').checked);
     $('check-last').textContent = lastCheck ? t('check.last', { time: lastCheck.time, seconds: lastCheck.seconds }) : '';
     overviewReady = true;
@@ -2224,6 +2516,9 @@
   });
 
   $('toast').addEventListener('click', hideToast);
+  $('btn-restore-ignored').addEventListener('click', () => {
+    if (!busy) restoreAllIgnored();
+  });
   document.querySelectorAll('.rules-grid .rules-check').forEach(label => {
     const node = [...label.childNodes].find(child => child.nodeType === 3 && child.textContent.trim());
     if (node) node.textContent = node.textContent.replace(/\S/, ch => ch.toLocaleUpperCase(UI_LANG));

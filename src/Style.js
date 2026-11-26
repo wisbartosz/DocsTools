@@ -1,6 +1,8 @@
 const STYLE_KINDS = ['personal', 'personalPast', 'digits', 'words', 'introTense', 'conclusionTense', 'abstractPhrase'];
 const STYLE_INFO_KINDS = { personalPast: true, digits: true, words: true, introTense: true, conclusionTense: true, abstractPhrase: true };
 const STYLE_MAX_ITEMS = 100;
+const STYLE_RULES_PROP = 'styleRules';
+const STYLE_RULE_OF_KIND = { personal: 'personal', personalPast: 'personal', digits: 'digits', words: 'words', introTense: 'tense', conclusionTense: 'tense', abstractPhrase: 'abstractPhrase' };
 const STYLE_CONTEXT = 45;
 const STYLE_EDGE = '(?<![\\p{L}\\p{N}])';
 const STYLE_END = '(?![\\p{L}\\p{N}])';
@@ -30,7 +32,7 @@ const STYLE_FUTURE_MARKERS = new RegExp(STYLE_EDGE + '(?:zostanie|zostan[\u0105a
 const STYLE_ABSTRACT = new RegExp(STYLE_EDGE + '(?:b[\u0119e]dzie\\s+mowa|zostan(?:ie|[\u0105a])\\s+om[o\u00f3]wion\\p{L}*|b[\u0119e]d[\u0105a]\\s+om[o\u00f3]wion\\p{L}*|w\\s+(?:niniejszym\\s+|tym\\s+)?tek[\u015bs]cie\\s+(?:opisano|om[o\u00f3]wiono|przedstawiono|zawarto)|w\\s+niniejszym\\s+tek[\u015bs]cie|postaram\\s+si[\u0119e]|praca\\s+(?:ta\\s+)?jest\\s+o)' + STYLE_END, 'giu');
 
 const STYLE_ROLES = [
-  ['skip', /^(?:bibliografia|pi\u015bmiennictwo|wykaz pi\u015bmiennictwa|literatura|references|bibliography|aneks|aneksy|za\u0142\u0105czniki|appendix|appendices|spis tre\u015bci|spis tabel|spis rycin|spis rysunk\u00f3w|spis ilustracji|spis tabel i rycin|spis rycin i tabel|wykaz skr\u00f3t\u00f3w|wykaz skr\u00f3t\u00f3w i oznacze\u0144|wykaz oznacze\u0144|contents|table of contents|list of tables|list of figures|abbreviations|o\u015bwiadczenie|o\u015bwiadczenia|podzi\u0119kowania|acknowledgements?|s\u0142owa kluczowe|keywords|abstract|summary)$|^za\u0142\u0105cznik\s+(?:nr\s*)?\d/],
+  ['skip', /^(?:bibliografia|pi\u015bmiennictwo|wykaz pi\u015bmiennictwa|literatura|references|bibliography|aneks|aneksy|za\u0142\u0105czniki|appendix|appendices|spis tre\u015bci|spis tabel|spis rycin|spis rysunk\u00f3w|spis ilustracji|spis tabel i rycin|spis rycin i tabel|wykaz skr\u00f3t\u00f3w|wykaz skr\u00f3t\u00f3w i oznacze\u0144|wykaz oznacze\u0144|contents|table of contents|list of tables|list of figures|abbreviations|o\u015bwiadczenie|o\u015bwiadczenia|podzi\u0119kowania|acknowledgements?|s\u0142owa kluczowe|keywords|abstract|summary)$|^za\u0142\u0105cznik\s+(?:nr\s*)?\d|^(?:wykaz|spis)(?: \S+)? (?:skr\u00f3t|oznacze\u0144|symboli|akronim)/],
   ['abstract', /^(?:streszczenie|abstrakt)$/],
   ['intro', /^(?:wst[\u0119e]p|wprowadzenie|introduction)/],
   ['conclusion', /^(?:zako[\u0144n]czenie|podsumowanie|wnioski|conclusions?|summary and conclusions)/],
@@ -125,14 +127,16 @@ function styleWordBefore_(text, to) {
   return match ? match[1] : '';
 }
 
-function digitNumbers_(text) {
+function digitNumbers_(text, upTo) {
   const masked = styleMask_(text);
   const out = [];
-  const pattern = /(?<![\p{L}\p{N}.,\-–\/=<>±+_])[1-9](?![\p{N}\p{L}\-–\/%°²³_]|[.,]\p{N})/gu;
+  const pattern = upTo === 10
+    ? /(?<![\p{L}\p{N}.,\-–\/=<>±+_])(?:10|[1-9])(?![\p{N}\p{L}\-–\/%°²³_]|[.,]\p{N})/gu
+    : /(?<![\p{L}\p{N}.,\-–\/=<>±+_])[1-9](?![\p{N}\p{L}\-–\/%°²³_]|[.,]\p{N})/gu;
   let match;
   while ((match = pattern.exec(masked)) !== null) {
     const start = match.index;
-    const end = start + 1;
+    const end = start + match[0].length;
     const next = masked.slice(end);
     if (/^\s*[)\]]/.test(next) || /^\.\s+\p{Ll}/u.test(next) || /^\s*[-–]\s*\d/.test(next) || /^\s*(?:x|×|=|<|>)/.test(next)) continue;
     const before = styleWordBefore_(masked, start);
@@ -197,9 +201,11 @@ function abstractPhrases_(text) {
   return styleMatches_(STYLE_ABSTRACT, styleMask_(text)).map(function (m) { return Object.assign(m, { kind: 'abstractPhrase' }); });
 }
 
-function styleIssues_(text, role) {
+function styleIssues_(text, role, rules) {
   if (role === 'skip') return [];
-  const found = personalForms_(text).concat(tenseIssues_(text, role), role === 'abstract' ? abstractPhrases_(text) : [], digitNumbers_(text), wordNumbers_(text));
+  const active = rules || getDefaultStyleRules();
+  const found = personalForms_(text).concat(tenseIssues_(text, role), role === 'abstract' ? abstractPhrases_(text) : [], digitNumbers_(text, active.wordsUpTo), wordNumbers_(text))
+    .filter(function (issue) { return active[STYLE_RULE_OF_KIND[issue.kind]] !== false; });
   const kept = [];
   found.forEach(function (issue) {
     if (kept.some(function (other) { return issue.start < other.end && other.start < issue.end; })) return;
@@ -258,24 +264,30 @@ function checkStyle() {
   const groups = {};
   STYLE_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [], info: !!STYLE_INFO_KINDS[kind] }; });
   const entries = styleContext_();
+  const rules = readStyleRules_() || getDefaultStyleRules();
+  const hide = ignoreFilter_('style');
   entries.forEach(function (entry) {
     const text = entry.paragraph.text;
-    const issues = styleIssues_(text, entry.role);
+    const issues = styleIssues_(text, entry.role, rules);
     issues.forEach(function (issue) {
       if (issue.kind === 'digits' && entry.paragraph.isList) return;
       const group = groups[issue.kind];
-      group.count++;
-      if (group.items.length >= STYLE_MAX_ITEMS) return;
       const snippet = styleSnippet_(text, issue.start, issue.end);
-      group.items.push({
+      const item = {
         ref: styleRef_(entry.paragraph.location, text, issue),
         before: snippet.before,
         match: snippet.match,
         after: snippet.after,
-      });
+        keyText: text,
+      };
+      if (hide(group, item)) return;
+      group.count++;
+      if (group.items.length < STYLE_MAX_ITEMS) group.items.push(item);
     });
   });
-  return { stats: { paragraphs: entries.length }, groups: STYLE_KINDS.map(function (kind) { return groups[kind]; }) };
+  const list = STYLE_KINDS.map(function (kind) { return groups[kind]; });
+  hide.finish(list);
+  return { stats: { paragraphs: entries.length }, groups: list };
 }
 
 function styleRef_(location, text, issue) {
@@ -300,4 +312,45 @@ function showStyleIssue(ref) {
   const range = doc.newRange();
   range.addElement(resolved.element.editAsText(), start, start + ref.fingerprint.length - 1);
   doc.setSelection(range.build());
+}
+
+function normalizeStyleRules_(input) {
+  const source = input || {};
+  const flag = function (value) { return value === undefined ? true : !!value; };
+  return {
+    personal: flag(source.personal),
+    digits: flag(source.digits),
+    words: flag(source.words),
+    tense: flag(source.tense),
+    abstractPhrase: flag(source.abstractPhrase),
+    wordsUpTo: Number(source.wordsUpTo) === 10 ? 10 : 9,
+  };
+}
+
+function getDefaultStyleRules() {
+  return normalizeStyleRules_({});
+}
+
+function readStyleRules_() {
+  const raw = docProps_().getProperty(STYLE_RULES_PROP);
+  if (!raw) return null;
+  try {
+    return normalizeStyleRules_(JSON.parse(raw));
+  } catch (e) {
+    console.warn('Niepoprawny zapis regul stylu: ' + e.message);
+    return null;
+  }
+}
+
+function getStyleRules() {
+  const saved = readStyleRules_();
+  return { rules: saved || getDefaultStyleRules(), isDefault: !saved };
+}
+
+function saveStyleRules(input) {
+  const rules = normalizeStyleRules_(input);
+  const isDefault = JSON.stringify(rules) === JSON.stringify(getDefaultStyleRules());
+  if (isDefault) docProps_().deleteProperty(STYLE_RULES_PROP);
+  else docProps_().setProperty(STYLE_RULES_PROP, JSON.stringify(rules));
+  return { rules: rules, isDefault: isDefault };
 }

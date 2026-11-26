@@ -1,8 +1,8 @@
 {
-  "version": "0.21.0",
-  "tag": "v0.21.0",
+  "version": "0.22.0",
+  "tag": "v0.22.0",
   "notes": {
-    "pl": "Nowy moduł „Styl” w zakładce „Sprawdź”: forma osobowa („uważam”, „moim zdaniem”), liczby do 9 cyframi i od 10 słownie, czas przeszły w zdaniach o pracy we Wstępie i przyszły w Zakończeniu oraz zapowiedzi zamiast treści w streszczeniu. Tylko wskazania – kliknięcie pokazuje miejsce w dokumencie.",
-    "en": "A new \"Style\" module in the \"Check\" tab: the personal form (\"uważam\", \"moim zdaniem\"), numbers up to 9 in digits and from 10 in words, the past tense in sentences about the thesis in the Introduction and the future tense in the Conclusion, and announcements instead of content in the abstract. Pointers only – click to see the place in the document."
+    "pl": "„Ignoruj” przy uwagach „do przejrzenia” – ukryta uwaga wraca, gdy zmienisz tekst akapitu, a przegląd pokazuje liczbę ukrytych i „Przywróć wszystkie ukryte”. Nowy moduł „Skróty”: skróty spoza wykazu, nieużyte pozycje wykazu, kolejność wykazu i rozwinięcie przy pierwszym użyciu. Ustawienia Stylu w wymaganiach uczelni (grupy reguł, liczby słownie do 9 albo 10).",
+    "en": "\"Ignore\" on remarks to review – a hidden remark comes back when you change the paragraph, and the overview shows how many are hidden and \"Restore all hidden remarks\". A new \"Abbreviations\" module: abbreviations missing from the list, unused list entries, list order and the full name at first use. Style settings in the university requirements (rule groups, numbers in words up to 9 or 10)."
   }
 }

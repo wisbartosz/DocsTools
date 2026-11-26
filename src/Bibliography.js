@@ -495,10 +495,12 @@ function checkBibliography(options) {
   BIB_KINDS.forEach(function (kind) {
     groups[kind] = { kind: kind, count: 0, items: [], info: !!BIB_INFO_KINDS[kind], fixAll: !!BIB_FIX_ALL[kind], fixable: 0 };
   });
+  const hide = ignoreFilter_('bibliography');
   const add = function (kind, item) {
     if (BIB_FORMAT_KINDS[kind] && !rules.citeFormat) return;
     if (BIB_PLACEMENT_KINDS[kind] && !rules.citePlacement) return;
     const group = groups[kind];
+    if (hide(group, item)) return;
     group.count++;
     if (item.fixable && !item.single) group.fixable++;
     if (group.items.length < BIB_MAX_ITEMS) group.items.push(item);
@@ -513,20 +515,23 @@ function checkBibliography(options) {
       showable: true,
       preview: preview(entry.raw),
       detail: detail || '',
+      keyText: entry.raw,
     };
   };
   const paragraphItem = function (p, detail) {
-    return { ref: { location: p.location, fingerprint: p.text.trim().slice(0, 40) }, showable: true, preview: preview(p.text), detail: detail || '' };
+    return { ref: { location: p.location, fingerprint: p.text.trim().slice(0, 40) }, showable: true, preview: preview(p.text), detail: detail || '', keyText: p.text };
   };
-  const rangeItem = function (location, start, end, text, detail) {
-    return { ref: { location: location, start: start, end: end, fingerprint: text }, showable: true, preview: text, detail: detail || '' };
+  const rangeItem = function (location, start, end, text, detail, context) {
+    return { ref: { location: location, start: start, end: end, fingerprint: text }, showable: true, preview: text, detail: detail || '', keyText: context };
   };
   const result = function () {
+    const list = BIB_KINDS.map(function (kind) { return groups[kind]; });
+    hide.finish(list);
     return {
       noSection: !ctx.section,
       sortable: ctx.sortable,
       stats: ctx.stats,
-      groups: BIB_KINDS.map(function (kind) { return groups[kind]; }),
+      groups: list,
     };
   };
   if (!ctx.section) return result();
@@ -601,14 +606,14 @@ function checkBibliography(options) {
       add(issue.kind, item);
     });
     uncitedQuotes_(p.text, p.citations).forEach(function (quote) {
-      add('quoteNoCite', rangeItem(p.location, quote.start, quote.end, p.text.slice(quote.start, quote.end), t_('bib.quoteNoCite.detail')));
+      add('quoteNoCite', rangeItem(p.location, quote.start, quote.end, p.text.slice(quote.start, quote.end), t_('bib.quoteNoCite.detail'), p.text));
     });
     if (p.role === 'theory' && !p.isList && !p.inTable && !p.citations.length && p.text.trim().length >= BIB_NO_CITATION_MIN_CHARS) {
       add('noCitation', paragraphItem(p, t_('bib.noCitation.detail', { chapter: p.chapter })));
     }
     if (p.role === 'results') {
       p.citations.forEach(function (citation) {
-        add('results', rangeItem(p.location, citation.start, citation.end, citation.raw, t_('bib.results.detail', { chapter: p.chapter })));
+        add('results', rangeItem(p.location, citation.start, citation.end, citation.raw, t_('bib.results.detail', { chapter: p.chapter }), p.text));
       });
     }
   });

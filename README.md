@@ -38,6 +38,15 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   liczby do 9 zapisane cyframi i od 10 słownie, czas przeszły w zdaniach o pracy we Wstępie
   i przyszły w Zakończeniu oraz zapowiedzi zamiast treści w streszczeniu. Tylko wskazania,
   bez zmian w tekście; pomija cytaty, przypisy w nawiasach, tabele, bibliografię i aneks.
+  Grupy reguł i próg „liczby słownie do 9 albo 10” ustawia się w wymaganiach uczelni (Format).
+- Skróty w zakładce „Sprawdź”: skrótowce w tekście (NFZ, PKB, COVID-19) porównane z wykazem
+  skrótów – skróty spoza wykazu, nieużyte pozycje wykazu, kolejność wykazu i brak rozwinięcia
+  przy pierwszym użyciu. Pomija przypisy w nawiasach, autorów instytucjonalnych z rokiem
+  („GUS 2021”), adresy WWW, liczby rzymskie i bibliografię.
+- „Ignoruj” przy uwagach „do przejrzenia” (pojedynczo albo całą grupę). Ukryta uwaga trzyma
+  się dokładnego tekstu akapitu – gdy go zmienisz, wraca sama. Ukryte nie znikają z oczu:
+  moduł pokazuje „Ukryte: N · Pokaż”, a przegląd „+N ukryte” i „Przywróć wszystkie ukryte”.
+  Uwag „do poprawy” nie da się ukryć.
 - Polska typografia w zakładce „Sprawdź”. Dodatek przegląda treść pracy i przypisy:
   pojedyncze litery bez twardej spacji (a, i, o, u, w, z), proste cudzysłowy zamiast
   „…”, dywizy zamiast półpauz, trzy kropki zamiast wielokropka, podwójne spacje i spacje
@@ -288,6 +297,12 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Typography.js`: reguły typografii na zwykłym tekście. Bez wywołań Google.
 - `Style.js`: styl – forma osobowa, zapis liczb, czasy we Wstępie i Zakończeniu, zwroty
   w streszczeniu. Wspólna maska (cytaty, przypisy, odwołania, adresy) i czyste funkcje testowalne w Node.
+  Reguły stylu (grupy, próg liczb) we właściwościach dokumentu.
+- `Abbreviations.js`: skróty – skrótowce w tekście, wykaz skrótów, rozwinięcie przy pierwszym
+  użyciu, kolejność wykazu (akapity albo tabela z dwiema kolumnami). Czyste funkcje testowalne w Node.
+- `Ignore.js`: ukryte uwagi „do przejrzenia” – klucz z tekstu akapitu (skrót FNV), zapis
+  we właściwościach dokumentu (osobno na moduł, w częściach), podział wyników na widoczne
+  i ukryte przy budowaniu grup.
 - `Check.js`: zakładka „Sprawdź”. Przechodzi po tekście dokumentu i przypisów, pokazuje
   miejsca i nanosi poprawki. Każda poprawka najpierw sprawdza, czy tekst w tym miejscu
   się nie zmienił.
