@@ -1089,6 +1089,40 @@
     groupActions: group => [fixAllButton(group.count, button => fixTypographyKind(group.kind, button))],
   };
 
+  let style = null;
+  const styleOpen = new Set();
+
+  async function checkStyle() {
+    const button = $('btn-check-style');
+    button.classList.add('loading');
+    try {
+      style = await call('checkStyle');
+      renderStyle();
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  const STYLE_SPEC = {
+    module: 'style',
+    data: () => style,
+    summaryId: 'style-summary',
+    groupsId: 'style-groups',
+    kindKey: 'style.kind.',
+    summaryKey: 'style.summary',
+    noneKey: 'style.none',
+    moreKey: 'style.more',
+    open: styleOpen,
+    showFn: 'showStyleIssue',
+    showable: () => true,
+    notes: data => [t('style.stats', data.stats)],
+    snippet: (item, node) => node.append(item.before, el('mark', '', item.match), item.after),
+  };
+
+  function renderStyle() {
+    renderCheckResult(STYLE_SPEC);
+  }
+
   async function checkTypography() {
     const button = $('btn-check-typo');
     button.classList.add('loading');
@@ -1869,6 +1903,7 @@
     { id: 'bibliography', title: 'bib.title', kindKey: 'bib.kind.', data: () => bibliography, check: () => checkBibliography(), render: () => renderBibliography(),
       unavailable: data => (data.noSection ? t('check.module.noBibliography') : '') },
     { id: 'figures', title: 'fig.title', kindKey: 'fig.kind.', data: () => figures, check: () => checkFigures(), render: () => renderFigures() },
+    { id: 'style', title: 'style.title', kindKey: 'style.kind.', data: () => style, check: () => checkStyle(), render: () => renderStyle() },
     { id: 'typography', title: 'typo.title', kindKey: 'typo.kind.', data: () => typo, check: () => checkTypography(), render: () => renderTypography() },
     { id: 'format', title: 'format.title', kindKey: 'format.kind.', data: () => format, check: () => checkFormatting(), render: () => renderFormatting() },
   ];

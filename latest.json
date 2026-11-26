@@ -1,8 +1,8 @@
 {
-  "version": "0.20.0",
-  "tag": "v0.20.0",
+  "version": "0.21.0",
+  "tag": "v0.21.0",
   "notes": {
-    "pl": "Tabele i ryciny – krok 2. „Przenumeruj…” poprawia numery w podpisach, odwołaniach (także w przypisach i tabelach) i w spisie, z podglądem zmian. „Przenieś nad” przenosi podpis spod tabeli lub ryciny nad nią. „Utwórz spis…” / „Odśwież spis…” wstawia spis tabel i rycin po bibliografii, z linkami do podpisów i szacowanymi numerami stron (sprawdź je przed oddaniem).",
-    "en": "Tables and figures – step 2. \"Renumber…\" fixes the numbers in captions, references (footnotes and tables too) and the list, with a preview. \"Move above\" moves a caption from below a table or figure to above it. \"Create the list…\" / \"Refresh the list…\" inserts the list of tables and figures after the references, with links to the captions and estimated page numbers (check them before you submit)."
+    "pl": "Nowy moduł „Styl” w zakładce „Sprawdź”: forma osobowa („uważam”, „moim zdaniem”), liczby do 9 cyframi i od 10 słownie, czas przeszły w zdaniach o pracy we Wstępie i przyszły w Zakończeniu oraz zapowiedzi zamiast treści w streszczeniu. Tylko wskazania – kliknięcie pokazuje miejsce w dokumencie.",
+    "en": "A new \"Style\" module in the \"Check\" tab: the personal form (\"uważam\", \"moim zdaniem\"), numbers up to 9 in digits and from 10 in words, the past tense in sentences about the thesis in the Introduction and the future tense in the Conclusion, and announcements instead of content in the abstract. Pointers only – click to see the place in the document."
   }
 }

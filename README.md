@@ -34,6 +34,10 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   modułu. Kliknięcie modułu otwiera jego wyniki z filtrami „Do poprawy / Do przejrzenia”.
   Rodzaj pracy (poglądowa / badawcza) wybiera się na górze, a wymagania uczelni są na osobnym
   ekranie „Wymagania uczelni”.
+- Styl w zakładce „Sprawdź”: forma osobowa („uważam”, „moim zdaniem”, „przeprowadziłam”),
+  liczby do 9 zapisane cyframi i od 10 słownie, czas przeszły w zdaniach o pracy we Wstępie
+  i przyszły w Zakończeniu oraz zapowiedzi zamiast treści w streszczeniu. Tylko wskazania,
+  bez zmian w tekście; pomija cytaty, przypisy w nawiasach, tabele, bibliografię i aneks.
 - Polska typografia w zakładce „Sprawdź”. Dodatek przegląda treść pracy i przypisy:
   pojedyncze litery bez twardej spacji (a, i, o, u, w, z), proste cudzysłowy zamiast
   „…”, dywizy zamiast półpauz, trzy kropki zamiast wielokropka, podwójne spacje i spacje
@@ -282,6 +286,8 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   (prosty ranking słów, bez wywołań Google).
 - `Feedback.js`: wysyłka uwag z panelu do usługi pośredniczącej (`feedback/`).
 - `Typography.js`: reguły typografii na zwykłym tekście. Bez wywołań Google.
+- `Style.js`: styl – forma osobowa, zapis liczb, czasy we Wstępie i Zakończeniu, zwroty
+  w streszczeniu. Wspólna maska (cytaty, przypisy, odwołania, adresy) i czyste funkcje testowalne w Node.
 - `Check.js`: zakładka „Sprawdź”. Przechodzi po tekście dokumentu i przypisów, pokazuje
   miejsca i nanosi poprawki. Każda poprawka najpierw sprawdza, czy tekst w tym miejscu
   się nie zmienił.

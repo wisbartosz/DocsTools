@@ -35,6 +35,11 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   each module. Clicking a module opens its results with "To fix / To review" filters. The type of
   thesis (review / research) is chosen at the top, and the university requirements have their own
   "University requirements" screen.
+- Style in the "Check" tab: the personal form ("uważam", "moim zdaniem", "przeprowadziłam"),
+  numbers up to 9 written in digits and from 10 in words, the past tense in sentences about the
+  thesis in the Introduction and the future tense in the Conclusion, and announcements instead of
+  content in the abstract. Pointers only, no changes to the text; quotes, citations in brackets,
+  tables, the references and the annex are skipped.
 - Polish typography in the "Check" tab. The add-on goes through the body of your thesis
   and the footnotes: one-letter words without a non-breaking space (a, i, o, u, w, z),
   straight quotes instead of „…”, hyphens instead of en dashes, three dots instead of an
@@ -283,6 +288,9 @@ no subfolders, so the manual installation can recreate them.
   word ranking, no Google calls).
 - `Feedback.js`: sends feedback from the sidebar to the relay service (`feedback/`).
 - `Typography.js`: typography rules on plain text. No Google calls.
+- `Style.js`: style – the personal form, how numbers are written, tenses in the Introduction and
+  Conclusion, phrases in the abstract. One shared mask (quotes, citations, references, links) and
+  pure functions testable in Node.
 - `Check.js`: the "Check" tab. Goes through the text of the document and the footnotes,
   lists the places and applies fixes. Every fix first checks that the text there hasn't
   changed.
