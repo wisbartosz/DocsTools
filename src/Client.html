@@ -107,6 +107,7 @@
     } finally {
       buttons.forEach(b => { b.disabled = false; });
       busy = false;
+      renderParts();
       renderSettings();
       if (overviewReady) renderOverview();
     }
@@ -1559,7 +1560,11 @@
   function fillImportedStructure(imported) {
     importedSections = imported.sections;
     const sections = imported.sections[$('srule-type').value];
-    if (sections) $('srule-sections').value = sections;
+    if (sections) {
+      $('srule-sections').value = sections;
+      selectedPart = null;
+      renderParts();
+    }
     if (imported.toc !== null) $('srule-toc').checked = imported.toc;
     if (imported.numbering !== null) $('srule-numbering').checked = imported.numbering;
     ['keywordsMin', 'keywordsMax', 'abstractMin', 'abstractMax', 'aimMin', 'aimMax', 'minPages'].forEach(key => {
@@ -1568,6 +1573,8 @@
   }
 
   async function saveAllRules() {
+    closePartEditor();
+    renderParts();
     const format = await call('saveFormatRules', readFormatRules());
     fillFormatRules(format.rules);
     setRulesDefault('format', format.isDefault);
@@ -1761,6 +1768,267 @@
       else input.value = value === null || value === undefined ? '' : value;
     });
     syncCheckType();
+    selectedPart = null;
+    renderParts();
+  }
+
+  let selectedPart = null;
+  let partFocus = null;
+  let newPart = false;
+  let partEditor = null;
+
+  function storePartEditor() {
+    const parts = readParts();
+    parts[selectedPart] = [partEditor.name].concat(partEditor.alts);
+    storeParts(parts);
+    updatePartChip(selectedPart, readParts()[selectedPart]);
+  }
+
+  function sameName(a, b) {
+    return a.toLocaleLowerCase(UI_LANG) === b.toLocaleLowerCase(UI_LANG);
+  }
+
+  function uniqueNames(names) {
+    return names.filter((name, i) => !names.slice(0, i).some(other => sameName(other, name)));
+  }
+
+  function readParts() {
+    return $('srule-sections').value.split('\n')
+      .map(line => uniqueNames(line.split('/').map(name => name.trim()).filter(Boolean)))
+      .filter(names => names.length);
+  }
+
+  function partsText(parts) {
+    return parts.map(names => uniqueNames(names).join(' / ')).join('\n');
+  }
+
+  function storeParts(parts) {
+    $('srule-sections').value = partsText(parts);
+    setRulesDirty(true);
+  }
+
+  function writeParts(parts, focus) {
+    storeParts(parts);
+    partFocus = focus || null;
+    renderParts();
+  }
+
+  function partName(value) {
+    return String(value || '').replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function partIconButton(className, label, path, disabled, handler) {
+    const button = el('button', 'icon-btn ' + className);
+    button.type = 'button';
+    button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="' + path + '"/></svg>';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.disabled = disabled;
+    button.addEventListener('click', handler);
+    return button;
+  }
+
+  function commitPartAlt() {
+    const input = document.querySelector('#srule-parts .part-alt-input');
+    if (selectedPart === null || !partEditor || !input) return false;
+    const value = partName(input.value);
+    input.value = '';
+    if (!value || [partEditor.name].concat(partEditor.alts).some(other => sameName(other, value))) return false;
+    partEditor.alts.push(value);
+    storePartEditor();
+    const list = document.querySelector('#srule-parts .part-alts');
+    if (list) list.append(partAltChip(value));
+    return true;
+  }
+
+  function closePartEditor() {
+    commitPartAlt();
+    if (newPart && selectedPart !== null && partEditor) {
+      const parts = readParts();
+      if (!partEditor.alts.length && sameName(partEditor.name, t('structure.rules.partNew'))) {
+        parts.splice(selectedPart, 1);
+        storeParts(parts);
+      }
+    }
+    newPart = false;
+    selectedPart = null;
+    partEditor = null;
+  }
+
+  function updatePartChip(index, names) {
+    const chip = document.querySelectorAll('#srule-parts .part-chip')[index];
+    if (!chip) return;
+    chip.title = names.join(' / ');
+    chip.querySelector('.part-label').textContent = names[0];
+    let more = chip.querySelector('.part-more');
+    if (names.length > 1) {
+      if (!more) {
+        more = el('span', 'part-more');
+        chip.append(more);
+      }
+      more.textContent = '+' + (names.length - 1);
+    } else if (more) {
+      more.remove();
+    }
+  }
+
+  function partAltChip(alt) {
+    const chip = el('span', 'part-alt-chip', alt);
+    chip.append(partIconButton('part-alt-remove', t('structure.rules.partRemoveAlt', { name: alt }), 'M6 6l12 12M18 6L6 18', busy, () => {
+      if (busy || selectedPart === null || !partEditor) return;
+      partEditor.alts = partEditor.alts.filter(other => other !== alt);
+      storePartEditor();
+      const input = document.querySelector('#srule-parts .part-alt-input');
+      chip.remove();
+      if (input) input.focus();
+    }));
+    return chip;
+  }
+
+  function renderPartEditor(parts, index) {
+    const names = parts[index];
+    partEditor = { name: names[0], alts: names.slice(1) };
+    const card = el('section', 'part-editor');
+    const head = el('div', 'part-editor-head');
+    const move = (offset, focus) => {
+      if (busy) return;
+      commitPartAlt();
+      const next = readParts();
+      const [moved] = next.splice(index, 1);
+      next.splice(index + offset, 0, moved);
+      selectedPart = index + offset;
+      writeParts(next, focus);
+    };
+    head.append(
+      el('span', 'part-editor-title', t('structure.rules.partOf', { n: index + 1, count: parts.length })),
+      partIconButton('part-move part-earlier', t('structure.rules.partEarlier'), 'M15 6l-6 6 6 6', busy || index === 0, () => move(-1, 'earlier')),
+      partIconButton('part-move part-later', t('structure.rules.partLater'), 'M9 6l6 6-6 6', busy || index === parts.length - 1, () => move(1, 'later')));
+    const nameLabel = el('label', 'part-field', t('structure.rules.partName'));
+    const name = el('input', 'part-name-input');
+    name.type = 'text';
+    name.value = names[0];
+    name.disabled = busy;
+    name.addEventListener('input', () => {
+      const value = partName(name.value);
+      if (!value || !partEditor) return;
+      partEditor.name = value;
+      storePartEditor();
+    });
+    name.addEventListener('change', () => {
+      if (!partEditor) return;
+      name.value = partEditor.name;
+      const duplicate = partEditor.alts.find(alt => sameName(alt, partEditor.name));
+      if (!duplicate) return;
+      partEditor.alts = partEditor.alts.filter(alt => alt !== duplicate);
+      storePartEditor();
+      document.querySelectorAll('#srule-parts .part-alt-chip').forEach(chip => {
+        if (chip.firstChild.textContent === duplicate) chip.remove();
+      });
+    });
+    nameLabel.append(name);
+    const alternatives = el('div', 'part-field', t('structure.rules.partAlternatives'));
+    const altList = el('div', 'part-alts');
+    names.slice(1).forEach(alt => altList.append(partAltChip(alt)));
+    const altInput = el('input', 'part-alt-input');
+    altInput.type = 'text';
+    altInput.disabled = busy;
+    altInput.placeholder = t('structure.rules.partAltPlaceholder');
+    altInput.setAttribute('aria-label', t('structure.rules.partAlternatives'));
+    altInput.addEventListener('input', () => setRulesDirty(true));
+    altInput.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      commitPartAlt();
+    });
+    altInput.addEventListener('change', commitPartAlt);
+    alternatives.append(altList, altInput);
+    const actions = el('div', 'part-actions');
+    const done = el('button', 'btn-tonal', t('structure.rules.partDone'));
+    done.type = 'button';
+    done.disabled = busy;
+    done.addEventListener('click', () => {
+      if (busy) return;
+      const at = index;
+      closePartEditor();
+      partFocus = 'chip:' + Math.min(at, readParts().length - 1);
+      renderParts();
+    });
+    const remove = el('button', 'link part-remove', t('structure.rules.partRemove'));
+    remove.type = 'button';
+    remove.disabled = busy;
+    remove.addEventListener('click', () => {
+      if (busy) return;
+      const next = readParts();
+      next.splice(index, 1);
+      selectedPart = null;
+      newPart = false;
+      writeParts(next, 'add');
+    });
+    actions.append(done, remove);
+    card.append(head, nameLabel, alternatives, actions);
+    return card;
+  }
+
+  function renderParts() {
+    const box = $('srule-parts');
+    if (!box) return;
+    const parts = readParts();
+    const type = $('srule-type');
+    const option = type.options[type.selectedIndex];
+    $('srule-parts-title').textContent = t('structure.rules.partsTitle', { type: option ? option.textContent.trim() : '' });
+    if (selectedPart !== null && selectedPart >= parts.length) selectedPart = null;
+    if (selectedPart === null) partEditor = null;
+    box.innerHTML = '';
+    const list = el('div', 'parts-list');
+    parts.forEach((names, i) => {
+      const chip = el('button', 'part-chip' + (i === selectedPart ? ' selected' : ''));
+      chip.type = 'button';
+      chip.disabled = busy;
+      chip.title = names.join(' / ');
+      chip.setAttribute('aria-pressed', i === selectedPart ? 'true' : 'false');
+      chip.append(el('span', 'part-index', String(i + 1)), el('span', 'part-label', names[0]));
+      if (names.length > 1) chip.append(el('span', 'part-more', '+' + (names.length - 1)));
+      chip.addEventListener('click', () => {
+        if (busy) return;
+        const open = selectedPart !== i;
+        const label = names[0];
+        closePartEditor();
+        const fresh = readParts();
+        const at = fresh.findIndex(other => other[0] === label);
+        selectedPart = open && at >= 0 ? at : null;
+        partFocus = selectedPart === null ? 'chip:' + Math.max(0, at) : 'name';
+        renderParts();
+      });
+      list.append(chip);
+    });
+    const add = el('button', 'part-add', t('structure.rules.partAdd'));
+    add.type = 'button';
+    add.disabled = busy;
+    add.addEventListener('click', () => {
+      if (busy) return;
+      closePartEditor();
+      const next = readParts().concat([[t('structure.rules.partNew')]]);
+      selectedPart = next.length - 1;
+      newPart = true;
+      writeParts(next, 'name');
+    });
+    list.append(add);
+    box.append(list);
+    if (selectedPart !== null) box.append(renderPartEditor(parts, selectedPart));
+    const focus = partFocus;
+    partFocus = null;
+    if (!focus) return;
+    let target = null;
+    if (focus.startsWith('chip:')) target = list.querySelectorAll('.part-chip')[Number(focus.slice(5))];
+    else if (focus === 'name') target = box.querySelector('.part-name-input');
+    else if (focus === 'earlier') target = box.querySelector('.part-earlier');
+    else if (focus === 'later') target = box.querySelector('.part-later');
+    else if (focus === 'add') target = add;
+    if (target && target.disabled) target = box.querySelector('.part-name-input');
+    if (target) {
+      target.focus();
+      if (focus === 'name' && target.select) target.select();
+    }
   }
 
   function readStructureRules() {
@@ -1779,7 +2047,9 @@
     const known = Object.values(structureDefaults.sections).concat(importedSections ? Object.values(importedSections) : []);
     if (!sections.value.trim() || known.includes(sections.value)) {
       sections.value = (importedSections && importedSections[type]) || structureDefaults.sections[type];
+      selectedPart = null;
     }
+    renderParts();
   }
 
   async function saveStructureRules() {
@@ -2404,6 +2674,7 @@
       $('srule-type').value = previousType;
       $('srule-sections').value = previousSections;
       $('check-type').value = previousType;
+      renderParts();
       throw e;
     }
     for (const id of ['structure', 'bibliography', 'figures']) {

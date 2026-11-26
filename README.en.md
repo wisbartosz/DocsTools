@@ -67,7 +67,9 @@ from Google AI Studio. You don't have to pay for Gemini or have Google Workspace
   (Introduction, Conclusion, References…) in the right order, the number of keywords, the
   length of the abstract and the aim, and the number of pages. You enter the requirements
   once or read them from the guidelines among your sources (the same button as for the
-  formatting requirements); they are saved in the document.
+  formatting requirements); they are saved in the document. Required parts are pills in
+  order – click one to edit its name, alternative names (e.g. "Zakończenie" or
+  "Podsumowanie"), move or remove it.
 - References and citations, also in the "Check" tab. The add-on finds Harvard citations
   in the text – in brackets, e.g. (Kowalski 2019), and in the sentence, e.g. "according to
   Kowalski (2019)" – and the entries in the reference list. It shows citations with no

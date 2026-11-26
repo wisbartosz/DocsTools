@@ -231,8 +231,10 @@
         <div class="muted small rules-pane-hint"><?= t_('structure.rules.hint') ?></div>
         <div id="structure-rules-example" class="message warn hidden"><?= t_('format.rules.example') ?></div>
         <div class="rules-grid">
+          <b id="srule-parts-title" class="rules-head"></b>
           <span class="rules-wide muted"><?= t_('structure.rules.sections') ?></span>
-          <textarea id="srule-sections" class="rules-wide" rows="6"></textarea>
+          <div id="srule-parts" class="rules-wide parts-box"></div>
+          <textarea id="srule-sections" class="hidden" rows="6" aria-hidden="true" tabindex="-1"></textarea>
           <label class="rules-check"><input id="srule-toc" type="checkbox"> <?= t_('structure.rules.toc') ?></label>
           <label class="rules-check"><input id="srule-numbering" type="checkbox"> <?= t_('structure.rules.numbering') ?></label>
           <span class="rules-wide muted"><?= t_('structure.rules.keywords') ?></span>

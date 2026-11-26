@@ -239,6 +239,30 @@
   #rule-font, label[for=rule-font] { grid-column: 1 / -1; }
   .rules-head, .rules-check, .rules-wide { grid-column: 1 / -1; }
   .rules-head { margin-top: 10px; font-size: 11px; font-weight: 500; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); }
+  .parts-box { display: flex; flex-direction: column; gap: 10px; margin: 2px 0 6px; }
+  .parts-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  button.part-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 400; color: var(--text); background: var(--chip); border: 1px solid var(--border); border-radius: 14px; padding: 3px 10px 3px 4px; }
+  button.part-chip:not(:disabled):hover { background: #e3e7ed; }
+  button.part-chip.selected { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+  .part-index { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 9px; background: #fff; color: var(--muted); font-size: 11px; }
+  .part-chip.selected .part-index { background: var(--accent); color: #fff; }
+  .part-more { color: var(--muted); }
+  .part-chip.selected .part-more { color: var(--accent-strong); }
+  button.part-add { font-size: 12px; font-weight: 400; color: var(--accent); background: none; border: 1px dashed #a8c7fa; border-radius: 14px; padding: 3px 10px; }
+  .part-editor { border: 1px solid var(--accent); border-radius: var(--radius-m); background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .part-editor-head { display: flex; align-items: center; gap: 8px; }
+  .part-editor-title { flex: 1; font-weight: 500; }
+  button.icon-btn.part-move { border: 1px solid var(--border); background: #fff; }
+  .part-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #444746; }
+  .part-field input { font: inherit; font-size: 13px; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-s); padding: 6px 8px; background: #fff; margin: 0; }
+  .part-field input.part-alt-input { border-style: dashed; border-color: #a8c7fa; }
+  .part-alts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .part-alts:empty { display: none; }
+  .part-alt-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 1px 2px 1px 10px; }
+  button.icon-btn.part-alt-remove { width: 22px; height: 22px; border-radius: 11px; color: var(--muted); }
+  button.icon-btn.part-alt-remove svg { width: 12px; height: 12px; }
+  .part-actions { display: flex; align-items: center; gap: 14px; }
+  button.link.part-remove { color: var(--err); font-size: 12px; }
   .rules-grid .rules-check { flex-direction: row-reverse; justify-content: space-between; gap: 10px; margin: 0; padding: 8px 12px; min-height: 38px; font-size: 13px; border: 1px solid var(--border); border-top-color: #eef0f2; }
   .rules-grid :not(.rules-check) + .rules-check { border-top-color: var(--border); border-radius: var(--radius-m) var(--radius-m) 0 0; margin-top: 2px; }
   .rules-grid .rules-check:not(:has(+ .rules-check)) { border-radius: 0 0 var(--radius-m) var(--radius-m); margin-bottom: 2px; }

@@ -64,7 +64,9 @@ W menu dokumentu dodatek nazywa się po prostu **PDZ**.
   jednym kliknięciem), czy są wymagane części (Wstęp, Zakończenie, Bibliografia…) we
   właściwej kolejności, ile jest słów kluczowych, jak długi jest abstrakt i cel pracy, ile
   stron ma praca. Wymagania wpisujesz raz albo wczytujesz z regulaminu wśród źródeł
-  (tym samym przyciskiem co wymagania edytorskie); zapisują się w dokumencie.
+  (tym samym przyciskiem co wymagania edytorskie); zapisują się w dokumencie. Wymagane
+  części to pigułki w kolejności – kliknięcie otwiera nazwę, nazwy zamienne (np. „Zakończenie”
+  albo „Podsumowanie”), przesuwanie i usuwanie.
 - Bibliografia i przypisy, też w zakładce „Sprawdź”. Dodatek odnajduje przypisy
   harwardzkie w tekście – w nawiasie, np. (Kowalski 2019), i w zdaniu, np. „według
   Kowalskiego (2019)” – oraz pozycje w bibliografii. Pokazuje przypisy bez pozycji

@@ -1,8 +1,8 @@
 {
-  "version": "0.22.0",
-  "tag": "v0.22.0",
+  "version": "0.22.1",
+  "tag": "v0.22.1",
   "notes": {
-    "pl": "„Ignoruj” przy uwagach „do przejrzenia” – ukryta uwaga wraca, gdy zmienisz tekst akapitu, a przegląd pokazuje liczbę ukrytych i „Przywróć wszystkie ukryte”. Nowy moduł „Skróty”: skróty spoza wykazu, nieużyte pozycje wykazu, kolejność wykazu i rozwinięcie przy pierwszym użyciu. Ustawienia Stylu w wymaganiach uczelni (grupy reguł, liczby słownie do 9 albo 10).",
-    "en": "\"Ignore\" on remarks to review – a hidden remark comes back when you change the paragraph, and the overview shows how many are hidden and \"Restore all hidden remarks\". A new \"Abbreviations\" module: abbreviations missing from the list, unused list entries, list order and the full name at first use. Style settings in the university requirements (rule groups, numbers in words up to 9 or 10)."
+    "pl": "Wymagane części w „Wymaganiach uczelni” (Struktura) jako pigułki w kolejności: kliknięcie otwiera nazwę, nazwy zamienne, przesuwanie i usuwanie, a „+ Dodaj część” dopisuje nową. Zapisane wymagania działają jak dotąd.",
+    "en": "Required parts in the university requirements (Structure) are now pills in order: click one to edit its name and alternative names, move or remove it, and \"+ Add a part\" adds a new one. Saved requirements work as before."
   }
 }
