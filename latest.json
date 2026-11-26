@@ -1,8 +1,8 @@
 {
-  "version": "0.22.5",
-  "tag": "v0.22.5",
+  "version": "0.22.6",
+  "tag": "v0.22.6",
   "notes": {
-    "pl": "Przetwarzanie źródeł nie kończy się błędem „The user has not granted the app … write access”, gdy folder „PDZ – dane” założyła inna kopia dodatku (np. kopia gotowego dokumentu z tym samym folderem źródeł) – dodatek zakłada wtedy własny folder i jednorazowo przetwarza źródła od nowa.",
-    "en": "Processing sources no longer fails with \"The user has not granted the app … write access\" when the \"PDZ – dane\" folder was created by another copy of the add-on (e.g. a copy of the ready-made document using the same sources folder) – the add-on then creates its own folder and processes the sources again once."
+    "pl": "Asystent nie zawiesza się na kilka minut przy przeciążonym Gemini: każde zapytanie ma limit czasu, a po jednej nieudanej próbie dodatek przechodzi na model zapasowy. Cytaty rozpoznają źródło także przy plikach z Maca (dotąd „nieznane źródło” bez linku). Folder „PDZ – dane” zapamiętywany osobno dla każdej osoby i folderu źródeł.",
+    "en": "The Assistant no longer hangs for minutes when Gemini is overloaded: each request has a time limit and after one failed attempt the add-on switches to a fallback model. Citations now recognise sources with file names from a Mac (previously \"unknown source\" without a link). The \"PDZ – dane\" folder is remembered per person and per sources folder."
   }
 }

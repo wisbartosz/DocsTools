@@ -146,7 +146,7 @@ function importFormatRules() {
     systemInstruction: { parts: [{ text: FORMAT_IMPORT_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: blocks.join('\n\n') }] }],
     generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: FORMAT_IMPORT_SCHEMA },
-  }, { feature: 'formatRules', thinking: 'LOW' });
+  }, { feature: 'formatRules', thinking: 'LOW', requestTimeoutS: 120, budgetMs: 240000 });
 
   let parsed;
   try {

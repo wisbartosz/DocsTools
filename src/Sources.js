@@ -156,7 +156,7 @@ function convertAndExport_(file, workFolderId) {
       { ocrLanguage: 'pl', supportsAllDrives: true }
     );
   } catch (e) {
-    if (isAppAccessError_(e)) {
+    if (isAppGrantError_(e)) {
       forgetDataFolder_();
       throw userError_('store.err.foreign');
     }

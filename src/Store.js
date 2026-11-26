@@ -5,72 +5,91 @@ const STORE = {
   TEXTS: 'teksty',
 };
 
-const DATA_FOLDER_WRITABLE_PROP = 'dataFolderWritable';
+const OWN_DATA_FOLDERS_PROP = 'ownDataFolders';
+const LEGACY_OWN_DATA_FOLDERS_PROP = 'dataFolderWritable';
 const DATA_FOLDER_OWN_MAX = 20;
 
 function isDataFolderName_(name) {
   return LEGACY_DATA_FOLDER_PREFIXES.some(function (prefix) { return name.indexOf(prefix) === 0; });
 }
 
+function ownDataFolders_() {
+  try {
+    return JSON.parse(userProps_().getProperty(OWN_DATA_FOLDERS_PROP) || '{}') || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function legacyOwnDataFolders_() {
+  const saved = (docProps_().getProperty(LEGACY_OWN_DATA_FOLDERS_PROP) || '').split('|');
+  if (saved.length !== 2 || saved[0] !== ScriptApp.getScriptId()) return [];
+  return saved[1].split(',').filter(Boolean);
+}
+
+function setOwnDataFolder_(sourceFolderId, dataFolderId) {
+  const own = ownDataFolders_();
+  delete own[sourceFolderId];
+  if (dataFolderId) own[sourceFolderId] = dataFolderId;
+  const keys = Object.keys(own);
+  keys.slice(0, Math.max(0, keys.length - DATA_FOLDER_OWN_MAX)).forEach(function (key) { delete own[key]; });
+  userProps_().setProperty(OWN_DATA_FOLDERS_PROP, JSON.stringify(own));
+}
+
+function usableFolder_(id) {
+  if (!id) return false;
+  try {
+    return !DriveApp.getFolderById(id).isTrashed();
+  } catch (e) {
+    console.warn('Folder danych ' + id + ' niedostepny: ' + e.message);
+    return false;
+  }
+}
+
 function dataFolderId_(create) {
+  const sourceFolderId = getSourceFolderId_();
+  const own = ownDataFolders_()[sourceFolderId];
+  if (usableFolder_(own)) return own;
   const props = docProps_();
   const savedId = props.getProperty(PROP.DATA_FOLDER);
-  if (savedId) {
-    try {
-      if (!DriveApp.getFolderById(savedId).isTrashed()) return savedId;
-    } catch (e) {
-      console.warn('Folder danych ' + savedId + ' niedostępny: ' + e.message);
-    }
-  }
-  const sourceFolder = DriveApp.getFolderById(getSourceFolderId_());
-  const own = ownDataFolders_();
+  if (usableFolder_(savedId)) return savedId;
+  const sourceFolder = DriveApp.getFolderById(sourceFolderId);
+  const known = legacyOwnDataFolders_();
   const found = sourceFolder.searchFolders('title = "' + driveQueryValue_(DATA_FOLDER_NAME) + '" and trashed = false');
   let id = null;
   while (found.hasNext()) {
     const candidate = found.next().getId();
-    if (own.indexOf(candidate) >= 0) {
+    if (known.indexOf(candidate) >= 0) {
       id = candidate;
+      setOwnDataFolder_(sourceFolderId, id);
       break;
     }
     if (!id) id = candidate;
   }
   if (!id && create) {
-    id = createFolder_(DATA_FOLDER_NAME, sourceFolder.getId(), true);
-    rememberOwnDataFolder_(id);
+    id = createFolder_(DATA_FOLDER_NAME, sourceFolderId, true);
+    setOwnDataFolder_(sourceFolderId, id);
   }
   if (id) props.setProperty(PROP.DATA_FOLDER, id);
   return id;
 }
 
+function isAppGrantError_(e) {
+  return /not granted the app|appNotAuthorizedToFile/i.test(String(e && e.message));
+}
+
 function isAppAccessError_(e) {
-  return /not granted the app|appNotAuthorizedToFile|insufficientFilePermissions|sufficient permissions/i.test(String(e && e.message));
-}
-
-function ownDataFolders_() {
-  const saved = (docProps_().getProperty(DATA_FOLDER_WRITABLE_PROP) || '').split('|');
-  if (saved.length !== 2 || saved[0] !== ScriptApp.getScriptId()) return [];
-  return saved[1].split(',').filter(Boolean);
-}
-
-function rememberOwnDataFolder_(id) {
-  const own = ownDataFolders_().filter(function (other) { return other !== id; });
-  own.push(id);
-  docProps_().setProperty(DATA_FOLDER_WRITABLE_PROP, ScriptApp.getScriptId() + '|' + own.slice(-DATA_FOLDER_OWN_MAX).join(','));
+  return isAppGrantError_(e) || /insufficientFilePermissions|sufficient permissions/i.test(String(e && e.message));
 }
 
 function forgetDataFolder_() {
-  const props = docProps_();
-  const id = props.getProperty(PROP.DATA_FOLDER);
-  props.deleteProperty(PROP.DATA_FOLDER);
-  if (!id) return;
-  const own = ownDataFolders_().filter(function (other) { return other !== id; });
-  props.setProperty(DATA_FOLDER_WRITABLE_PROP, ScriptApp.getScriptId() + '|' + own.join(','));
+  setOwnDataFolder_(getSourceFolderId_(), null);
 }
 
 function ensureWritableDataFolder_() {
-  const props = docProps_();
+  const sourceFolderId = getSourceFolderId_();
   const id = dataFolderId_(false);
-  if (!id || ownDataFolders_().indexOf(id) >= 0) return id;
+  if (!id || ownDataFolders_()[sourceFolderId] === id) return id;
   const probes = [id];
   const textsId = activeChildFolderId_(DriveApp.getFolderById(id), STORE.TEXTS);
   if (textsId) {
@@ -84,13 +103,12 @@ function ensureWritableDataFolder_() {
       console.warn('Nie udalo sie sprawdzic folderu danych ' + id + ': ' + e.message);
       return id;
     }
-    console.warn('Folder danych ' + id + ' utworzyla inna kopia dodatku, zakladam nowy: ' + e.message);
-    const created = createFolder_(DATA_FOLDER_NAME, getSourceFolderId_(), true);
-    props.setProperty(PROP.DATA_FOLDER, created);
-    rememberOwnDataFolder_(created);
+    console.warn('Folder danych ' + id + ' nie jest zapisywalny dla tej kopii dodatku, zakladam nowy: ' + e.message);
+    const created = createFolder_(DATA_FOLDER_NAME, sourceFolderId, true);
+    setOwnDataFolder_(sourceFolderId, created);
     return created;
   }
-  rememberOwnDataFolder_(id);
+  setOwnDataFolder_(sourceFolderId, id);
   return id;
 }
 
@@ -149,12 +167,13 @@ function storeWriteBlob_(folderId, fileId, name, mimeType, blob) {
       Drive.Files.update({ name: name, trashed: false }, fileId, blob, { supportsAllDrives: true });
       return fileId;
     } catch (e) {
-      if (isAppAccessError_(e)) {
-        forgetDataFolder_();
-        throw userError_('store.err.foreign');
+      if (isAppGrantError_(e)) {
+        console.warn('Plik ' + fileId + ' zalozyla inna kopia dodatku, tworze nowy: ' + e.message);
+      } else if (/not ?found|404/i.test(e.message)) {
+        console.warn('Plik ' + fileId + ' nie istnieje, tworzę nowy: ' + e.message);
+      } else {
+        throw e;
       }
-      if (!/not ?found|404/i.test(e.message)) throw e;
-      console.warn('Plik ' + fileId + ' nie istnieje, tworzę nowy: ' + e.message);
     }
   }
   try {

@@ -1,3 +1,4 @@
+const CITATION_NAME_SIMILARITY = 0.6;
 const ASSISTANT_EXCLUDED_PROP = 'assistantExcludedSources';
 const ASSISTANT_WARN_CHARS = 400000;
 const ASSISTANT_HISTORY_TURNS = 4;
@@ -142,7 +143,7 @@ function askAssistant(question, sourceIds, history, fragment) {
       responseMimeType: 'application/json',
       responseSchema: ASSISTANT_RESPONSE_SCHEMA,
     },
-  }, { feature: 'assistant', thinking: 'LOW' });
+  }, { feature: 'assistant', thinking: 'LOW', primaryAttempts: 1 });
 
   let parsed;
   try {
@@ -179,20 +180,57 @@ function lastQuestion_(history) {
 function buildSourcesBlock_(sources, excerpts) {
   return sources.map(function (s, index) {
     const pages = s.pages ? 'This text contains page markers.' : 'This text has no page markers.';
-    if (!excerpts) return '=== SOURCE: ' + s.name + ' ===\n' + pages + ' Full text.\n\n' + s.text;
+    if (!excerpts) return '=== SOURCE: ' + s.name.normalize('NFC') + ' ===\n' + pages + ' Full text.\n\n' + s.text;
     const passages = excerpts[index];
     const body = passages.length ? passages.join('\n[...]\n') : '(no passages related to the question)';
-    return '=== SOURCE: ' + s.name + ' ===\n' + pages + ' Only passages related to the question.\n\n' + body;
+    return '=== SOURCE: ' + s.name.normalize('NFC') + ' ===\n' + pages + ' Only passages related to the question.\n\n' + body;
   }).join('\n\n');
+}
+
+function sourceNameKey_(name) {
+  return String(name || '').normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function nameSimilarity_(a, b) {
+  const grams = function (text) {
+    const out = {};
+    for (let i = 0; i < text.length - 1; i++) out[text.slice(i, i + 2)] = (out[text.slice(i, i + 2)] || 0) + 1;
+    return out;
+  };
+  const x = grams(a);
+  const y = grams(b);
+  let shared = 0;
+  let total = 0;
+  Object.keys(x).forEach(function (g) { shared += Math.min(x[g], y[g] || 0); total += x[g]; });
+  Object.keys(y).forEach(function (g) { total += y[g]; });
+  return total ? (2 * shared) / total : 0;
+}
+
+function sourceIndex_(source) {
+  if (!source.wordIndex) source.wordIndex = indexSourceWords_(source.text);
+  return source.wordIndex;
+}
+
+function citedSource_(name, quote, sources) {
+  const exact = sources.filter(function (s) { return s.name === name; })[0];
+  if (exact) return exact;
+  const key = sourceNameKey_(name);
+  const byKey = sources.filter(function (s) { return sourceNameKey_(s.name) === key; });
+  if (byKey.length === 1) return byKey[0];
+  const ranked = sources
+    .map(function (s) { return { source: s, score: nameSimilarity_(sourceNameKey_(s.name), key) }; })
+    .sort(function (a, b) { return b.score - a.score; });
+  if (ranked.length && ranked[0].score >= CITATION_NAME_SIMILARITY && (ranked.length === 1 || ranked[1].score < ranked[0].score)) return ranked[0].source;
+  if (!quote) return null;
+  const holding = sources.filter(function (s) { return locateQuote_(sourceIndex_(s), quote).status !== 'missing'; });
+  return holding.length === 1 ? holding[0] : null;
 }
 
 function resolveCitation_(citation, sources) {
   const name = String(citation.source || '').trim();
-  const source = sources.filter(function (s) { return s.name === name; })[0] ||
-    sources.filter(function (s) { return s.name.toLowerCase() === name.toLowerCase(); })[0] || null;
   const quote = String(citation.quote || '').trim();
-  if (source && !source.wordIndex) source.wordIndex = indexSourceWords_(source.text);
-  const match = source ? locateQuote_(source.wordIndex, quote) : { status: 'missing', page: null };
+  const source = citedSource_(name, quote, sources);
+  const match = source ? locateQuote_(sourceIndex_(source), quote) : { status: 'missing', page: null };
   return {
     sourceName: source ? source.name : name,
     sourceUrl: source ? source.url : null,

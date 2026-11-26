@@ -4,6 +4,8 @@ const GEMINI_ATTEMPTS_LAST_MODEL = 3;
 const GEMINI_MAX_WAIT_MS = 20000;
 const GEMINI_MAX_WAIT_LAST_MS = 60000;
 const GEMINI_RETRY_BUDGET_MS = 120000;
+const GEMINI_REQUEST_TIMEOUT_S = 45;
+const GEMINI_MIN_SERVER_TIMEOUT_S = 10;
 const GEMINI_MAX_FALLBACKS = 3;
 const GEMINI_UNAVAILABLE_PREFIX = 'geminiOff:';
 const GEMINI_NO_THINKING_PREFIX = 'geminiNoThinking:';
@@ -14,25 +16,26 @@ const GEMINI_UNSTABLE = /preview|exp|latest|tts|image|embedding|live|audio|nativ
 
 function geminiGenerate_(request, options) {
   const opts = options || {};
-  const deadline = Date.now() + GEMINI_RETRY_BUDGET_MS;
+  const deadline = Date.now() + (opts.budgetMs || GEMINI_RETRY_BUDGET_MS);
   const apiKey = getApiKey_();
   const primary = getModel_();
   const useFallback = opts.fallback !== false && fallbackEnabled_();
   const inputChars = JSON.stringify(request.contents || []).length;
-  const models = [primary];
+  const models = [primary].concat(useFallback ? fallbackModels_(primary) : []);
   const tried = [];
   let primaryError = null;
   let allBusy = true;
   for (let i = 0; i < models.length; i++) {
-    const last = !useFallback || (i > 0 && i === models.length - 1);
-    const outcome = callGeminiModel_(models[i], request, opts, deadline, apiKey, last);
+    const last = i === models.length - 1;
+    const modelOpts = i === 0 && !last && opts.primaryAttempts ? Object.assign({}, opts, { maxAttempts: opts.primaryAttempts }) : opts;
+    const outcome = callGeminiModel_(models[i], request, modelOpts, deadline, apiKey, last);
     if (outcome.data) return geminiResult_(outcome.data, models[i], primary, opts, inputChars, outcome.ms);
+    if (outcome.skipped) break;
     tried.push(models[i]);
     if (i === 0) primaryError = outcome.error;
     allBusy = allBusy && outcome.busy;
     if (i === 0 && !outcome.switchModel) break;
     if (Date.now() >= deadline) break;
-    if (i === 0 && useFallback) Array.prototype.push.apply(models, fallbackModels_(primary));
     if (i + 1 < models.length) console.warn('Gemini: model ' + models[i] + ' niedostępny, próbuję ' + models[i + 1]);
   }
   if (allBusy && tried.length > 1) throw userError_('gemini.allBusy', { models: tried.join(', ') });
@@ -46,7 +49,11 @@ function callGeminiModel_(model, request, opts, deadline, apiKey, last) {
   const attempts = opts.maxAttempts || (last ? GEMINI_ATTEMPTS_LAST_MODEL : GEMINI_ATTEMPTS_PER_MODEL);
   const maxWait = last ? GEMINI_MAX_WAIT_LAST_MS : GEMINI_MAX_WAIT_MS;
   const started = Date.now();
+  let lastFailure = null;
   for (let attempt = 1; attempt <= attempts; ) {
+    const remainingS = Math.floor((deadline - Date.now()) / 1000);
+    if (remainingS < GEMINI_MIN_SERVER_TIMEOUT_S) return lastFailure || { skipped: true };
+    const timeoutS = last ? remainingS : Math.min(opts.requestTimeoutS || GEMINI_REQUEST_TIMEOUT_S, remainingS);
     let response;
     try {
       response = UrlFetchApp.fetch(url, {
@@ -54,7 +61,7 @@ function callGeminiModel_(model, request, opts, deadline, apiKey, last) {
         contentType: 'application/json',
         payload: JSON.stringify(body),
         muteHttpExceptions: true,
-        headers: { 'x-goog-api-key': apiKey },
+        headers: { 'x-goog-api-key': apiKey, 'X-Server-Timeout': String(timeoutS) },
       });
     } catch (e) {
       if (/too many times|quota|limit exceeded/i.test(e.message)) throw e;
@@ -77,9 +84,11 @@ function callGeminiModel_(model, request, opts, deadline, apiKey, last) {
       return { error: error, switchModel: true, busy: false };
     }
     const busy = code === 500 || code === 503 || code === 504;
+    if (code === 504 && !last) return { error: error, switchModel: true, busy: true };
+    lastFailure = { error: error, switchModel: busy || code === 429, busy: busy };
     if ((busy || code === 429) && attempt < attempts) {
       const waitMs = retryDelayMs_(response, attempt, maxWait);
-      if (waitMs !== null && Date.now() + waitMs < deadline) {
+      if (waitMs !== null && Date.now() + waitMs + GEMINI_MIN_SERVER_TIMEOUT_S * 1000 < deadline) {
         console.warn('Gemini ' + model + ' HTTP ' + code + ', ponawiam za ' + waitMs + ' ms');
         Utilities.sleep(waitMs);
         attempt++;
