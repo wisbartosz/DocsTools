@@ -962,6 +962,7 @@ function moveFigureCaption(options, ref) {
   })[0];
   if (!object) throw userError_('err.figCaptionMoved');
   moveCaptionAbove_(body, object);
+  if (ref.keepCursor) keepCursorAt_(body.getChild(object.first.index), 0);
   return checkFigures(options);
 }
 

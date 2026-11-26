@@ -107,6 +107,7 @@ function fixFormatIssue(ref) {
     paragraphFormatIssues_(entry, rules, ctx).some(function (issue) { return issue.kind === ref.kind; });
   if (!valid) throw userError_('format.err.changed');
   applyParagraphFormatFix_(ref.kind, entry, rules, ctx);
+  if (ref.keepCursor) keepCursorAt_(entry.element, 0);
   return checkFormatting();
 }
 

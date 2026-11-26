@@ -22,6 +22,7 @@ function fixTypographyIssue(ref) {
   const found = locateTypographyIssue_(ref);
   const before = countByKind_(typographyIssuesFor_(found.entry));
   applyDocumentEdits_(found.entry.text, found.issue.edits);
+  if (ref.keepCursor) keepCursorAt_(found.entry.text, found.issue.start);
   const issues = typographyIssuesFor_(found.entry);
   return {
     key: ref.key,

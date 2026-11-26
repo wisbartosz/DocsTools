@@ -168,3 +168,26 @@ function flagDefaultTrue_(value) {
 function preview_(text, max) {
   return text.length > max ? text.slice(0, max) + '…' : text;
 }
+
+function cursorAtDocumentStart_(doc) {
+  if (doc.getSelection()) return false;
+  const cursor = doc.getCursor();
+  if (!cursor) return true;
+  if (cursor.getOffset() !== 0) return false;
+  let element = cursor.getElement();
+  while (element.getParent() && String(element.getParent().getType()) !== 'BODY_SECTION') element = element.getParent();
+  return !!element.getParent() && element.getParent().getChildIndex(element) === 0;
+}
+
+function keepCursorAt_(element, offset) {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    if (!cursorAtDocumentStart_(doc)) return;
+    const text = element.editAsText ? element.editAsText() : element;
+    const length = text.getText().length;
+    if (!length) return;
+    doc.setCursor(doc.newPosition(text, Math.max(0, Math.min(offset || 0, length - 1))));
+  } catch (e) {
+    console.warn('Nie udalo sie ustawic kursora przy poprawce: ' + e.message);
+  }
+}

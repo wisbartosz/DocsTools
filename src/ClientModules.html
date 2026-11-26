@@ -1,3 +1,7 @@
+  function fixRef(ref) {
+    return BROWSER_QUIRKS.keepCursorAfterFix ? Object.assign({}, ref, { keepCursor: true }) : ref;
+  }
+
   let typo = null;
 
   const typoOpen = new Set();
@@ -94,7 +98,7 @@
   }
 
   async function fixTypographyIssue(item) {
-    const update = await call('fixTypographyIssue', item.ref);
+    const update = await call('fixTypographyIssue', fixRef(item.ref));
     update.items.forEach(fresh => { fresh.order = item.order; });
     typo.groups.forEach(group => {
       group.count += (update.after[group.kind] || 0) - (update.before[group.kind] || 0);
@@ -146,7 +150,7 @@
     notes: data => (data.noHeadings ? [t('format.noHeadings')] : []),
     fixable: () => true,
     fixItem: async item => {
-      format = await call('fixFormatIssue', item.ref);
+      format = await call('fixFormatIssue', fixRef(item.ref));
       renderFormatting();
     },
     groupActions: group => [fixAllButton(group.count, button => fixFormatKind(group.kind, button))],
@@ -195,7 +199,7 @@
     notes: data => (data.pages !== null ? [t(data.pagesApprox ? 'structure.pagesInfoApprox' : 'structure.pagesInfo', { count: data.pages })] : []),
     fixable: item => !!item.fixable,
     fixItem: async item => {
-      structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('check-type').value));
+      structure = withPreviousPages(await call('fixStructureIssue', fixRef(item.ref), $('check-type').value));
       renderStructure();
     },
     groupActions: group => {
@@ -263,7 +267,7 @@
   }
 
   async function fixBibliographyIssue(item) {
-    bibliography = await call('fixBibliographyIssue', item.ref, { type: $('check-type').value });
+    bibliography = await call('fixBibliographyIssue', fixRef(item.ref), { type: $('check-type').value });
     renderBibliography();
   }
 
@@ -298,7 +302,7 @@
     fixable: item => !!item.fixable,
     fixLabel: () => t('fig.moveAbove'),
     fixItem: async item => {
-      figures = await call('moveFigureCaption', { type: $('check-type').value }, item.ref);
+      figures = await call('moveFigureCaption', { type: $('check-type').value }, fixRef(item.ref));
       hideListPreview();
       hideRenumberPreview();
       renderFigures();

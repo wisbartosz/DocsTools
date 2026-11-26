@@ -336,6 +336,8 @@ function showStructureIssue(ref) {
 
 function fixStructureIssue(ref, type) {
   applyStructureFix_(ref.kind, ref);
+  const resolved = ref.keepCursor && ref.location ? resolveElementPath_(ref.location) : null;
+  if (resolved && !resolved.isText) keepCursorAt_(resolved.element, 0);
   return checkStructure({ type: type, pages: false });
 }
 

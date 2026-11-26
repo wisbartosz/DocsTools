@@ -661,6 +661,7 @@ function fixBibliographyIssue(ref, options) {
   })[0];
   if (!issue) throw userError_('format.err.changed');
   applyBibliographyIssue_(resolved.element, issue);
+  if (ref.keepCursor) keepCursorAt_(resolved.element, issue.start);
   return checkBibliography(options);
 }
 
