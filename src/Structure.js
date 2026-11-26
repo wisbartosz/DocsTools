@@ -132,10 +132,7 @@ function pdfPageCount_(pdf) {
 
 function normalizeStructureRules_(input) {
   const source = input || {};
-  const number = function (value) {
-    const parsed = parseInt(String(value === undefined || value === null ? '' : value), 10);
-    return isFinite(parsed) && parsed > 0 ? parsed : null;
-  };
+  const number = positiveInt_;
   return {
     type: STRUCTURE_TYPES.indexOf(source.type) >= 0 ? source.type : 'review',
     sections: String(source.sections || '').slice(0, 3000),
@@ -189,12 +186,8 @@ function defaultStructureRules_(type) {
 
 function saveStructureRules(input) {
   const rules = normalizeStructureRules_(input);
-  const props = docProps_();
-  props.setProperty(STRUCTURE_TYPE_PROP, rules.type);
-  const isDefault = JSON.stringify(rules) === JSON.stringify(defaultStructureRules_(rules.type));
-  if (isDefault) props.deleteProperty(STRUCTURE_RULES_PROP);
-  else props.setProperty(STRUCTURE_RULES_PROP, JSON.stringify(rules));
-  return { rules: rules, isDefault: isDefault };
+  docProps_().setProperty(STRUCTURE_TYPE_PROP, rules.type);
+  return writeRulesProp_(STRUCTURE_RULES_PROP, rules, defaultStructureRules_(rules.type));
 }
 
 function saveStructureType(type, sections) {
@@ -211,29 +204,20 @@ function saveStructureType(type, sections) {
 }
 
 function readStructureRules_() {
-  const raw = docProps_().getProperty(STRUCTURE_RULES_PROP);
-  if (!raw) return null;
-  try {
-    return normalizeStructureRules_(JSON.parse(raw));
-  } catch (e) {
-    console.warn('Niepoprawny zapis wymagań struktury: ' + e.message);
-    return null;
-  }
+  return readRulesProp_(STRUCTURE_RULES_PROP, normalizeStructureRules_);
 }
 
 function checkStructure(options) {
   const opts = options || {};
   const rules = currentStructureRules_(opts.type);
   const ctx = structureContext_();
-  const groups = {};
-  STRUCTURE_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [] }; });
+  const groups = checkGroups_(STRUCTURE_KINDS, { max: Infinity });
   const add = function (kind, item) {
-    groups[kind].count++;
-    groups[kind].items.push(item);
+    groups.add(kind, item);
   };
   const headingItem = function (kind, heading, detail) {
     return {
-      ref: { kind: kind, location: heading.entry.location, fingerprint: heading.text.slice(0, 40) },
+      ref: { kind: kind, location: heading.entry.location, fingerprint: heading.text.slice(0, FINGERPRINT_CHARS) },
       showable: true, fixable: !!STRUCTURE_FIXABLE[kind], preview: heading.text, detail: detail || '',
     };
   };
@@ -280,7 +264,7 @@ function checkStructure(options) {
       })[0];
       if (untagged) {
         add('untagged', {
-          ref: { kind: 'untagged', location: untagged.location, fingerprint: untagged.text.slice(0, 40) },
+          ref: { kind: 'untagged', location: untagged.location, fingerprint: untagged.text.slice(0, FINGERPRINT_CHARS) },
           showable: true, fixable: true, preview: untagged.text, detail: t_('structure.untagged.detail'),
         });
       } else {
@@ -301,7 +285,7 @@ function checkStructure(options) {
     if (!words) return;
     if ((rules.keywordsMin && words.length < rules.keywordsMin) || (rules.keywordsMax && words.length > rules.keywordsMax)) {
       add('keywords', {
-        ref: { kind: 'keywords', location: entry.location, fingerprint: entry.text.slice(0, 40) },
+        ref: { kind: 'keywords', location: entry.location, fingerprint: entry.text.slice(0, FINGERPRINT_CHARS) },
         showable: true, fixable: false, preview: entry.text,
         detail: t_('structure.range', { count: words.length, min: rules.keywordsMin || 0, max: rules.keywordsMax || '∞' }),
       });
@@ -333,7 +317,7 @@ function checkStructure(options) {
     }
   }
 
-  return { pages: pages, pagesApprox: pagesApprox, groups: STRUCTURE_KINDS.map(function (kind) { return groups[kind]; }) };
+  return { pages: pages, pagesApprox: pagesApprox, groups: groups.list() };
 }
 
 function showStructureIssue(ref) {
@@ -366,7 +350,7 @@ function fixStructureKind(kind, type) {
 
 function applyStructureFix_(kind, ref) {
   const resolved = resolveElementPath_(ref.location);
-  if (!resolved || resolved.isText || resolved.element.getText().slice(0, 40) !== ref.fingerprint) {
+  if (!resolved || resolved.isText || resolved.element.getText().slice(0, FINGERPRINT_CHARS) !== ref.fingerprint) {
     throw userError_('format.err.changed');
   }
   const element = resolved.element;
@@ -386,18 +370,12 @@ function applyStructureFix_(kind, ref) {
 
 function structureContext_() {
   const body = DocumentApp.getActiveDocument().getBody();
-  const all = [];
-  collectParagraphs_(body, [], false, all);
-  const paragraphs = outsideTitlePage_(all, titlePageEnd_(body)).filter(function (entry) { return !entry.inTable; });
-  paragraphs.forEach(function (entry) {
-    entry.heading = String(entry.element.getHeading());
-    entry.text = entry.element.getText();
-  });
+  const paragraphs = documentParagraphs_(body, { skipTables: true });
   const headings = [];
   paragraphs.forEach(function (entry, position) {
-    const match = /^HEADING([1-6])$/.exec(entry.heading);
-    if (!match || !entry.text.trim()) return;
-    headings.push({ level: Number(match[1]), text: entry.text, isList: entry.isList, entry: entry, position: position });
+    const level = headingLevel_(entry.heading);
+    if (!level || !entry.text.trim()) return;
+    headings.push({ level: level, text: entry.text, isList: entry.isList, entry: entry, position: position });
   });
   const tocFound = body.findElement(DocumentApp.ElementType.TABLE_OF_CONTENTS);
   const toc = tocFound ? tocFound.getElement().asTableOfContents() : null;

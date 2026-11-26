@@ -307,9 +307,12 @@ no subfolders, so the manual installation can recreate them.
 - `Ignore.js`: hidden remarks to review – key from the paragraph text (FNV hash), stored in
   document properties per module (split into parts), results split into visible and hidden while
   groups are built.
-- `Check.js`: the "Check" tab. Goes through the text of the document and the footnotes,
-  lists the places and applies fixes. Every fix first checks that the text there hasn't
-  changed.
+- `Document.js`: helpers shared by the check modules – document paragraphs without the
+  title page, heading level, finding a place by its path, applying fixes and selecting,
+  result groups with an item limit, preview shortening.
+- `Check.js`: typography in the "Check" tab. Goes through the text of the document and the
+  footnotes, lists the places and applies fixes. Every fix first checks that the text there
+  hasn't changed.
 - `Format.js`: formatting requirements (stored in the document properties) and checks of
   paragraphs, titles, margins and page size.
 - `FormatImport.js`: "Read from sources" – picks the passages about formatting from your

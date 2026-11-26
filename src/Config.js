@@ -104,3 +104,21 @@ function parseDriveId_(input) {
   if (fromUrl) return fromUrl[1];
   return /^[A-Za-z0-9_-]{10,}$/.test(text) ? text : null;
 }
+
+function readRulesProp_(prop, normalize) {
+  const raw = docProps_().getProperty(prop);
+  if (!raw) return null;
+  try {
+    return normalize(JSON.parse(raw));
+  } catch (e) {
+    console.warn('Niepoprawny zapis ' + prop + ': ' + e.message);
+    return null;
+  }
+}
+
+function writeRulesProp_(prop, rules, defaults) {
+  const isDefault = JSON.stringify(rules) === JSON.stringify(defaults);
+  if (isDefault) docProps_().deleteProperty(prop);
+  else docProps_().setProperty(prop, JSON.stringify(rules));
+  return { rules: rules, isDefault: isDefault };
+}

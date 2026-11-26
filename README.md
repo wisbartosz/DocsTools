@@ -305,9 +305,12 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
 - `Ignore.js`: ukryte uwagi „do przejrzenia” – klucz z tekstu akapitu (skrót FNV), zapis
   we właściwościach dokumentu (osobno na moduł, w częściach), podział wyników na widoczne
   i ukryte przy budowaniu grup.
-- `Check.js`: zakładka „Sprawdź”. Przechodzi po tekście dokumentu i przypisów, pokazuje
-  miejsca i nanosi poprawki. Każda poprawka najpierw sprawdza, czy tekst w tym miejscu
-  się nie zmienił.
+- `Document.js`: wspólne pomocniki modułów sprawdzania – akapity dokumentu bez strony
+  tytułowej, poziom nagłówka, odnajdywanie miejsca po ścieżce, nanoszenie poprawek
+  i zaznaczanie, grupy uwag z limitem pozycji, skracanie podglądu.
+- `Check.js`: typografia w zakładce „Sprawdź”. Przechodzi po tekście dokumentu i przypisów,
+  pokazuje miejsca i nanosi poprawki. Każda poprawka najpierw sprawdza, czy tekst w tym
+  miejscu się nie zmienił.
 - `Format.js`: wymagania edytorskie (zapisane we właściwościach dokumentu) i sprawdzanie
   formatowania akapitów, tytułów, marginesów i formatu strony.
 - `FormatImport.js`: „Wczytaj ze źródeł” – wybiera ze źródeł fragmenty o formatowaniu

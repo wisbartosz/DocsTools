@@ -1,8 +1,8 @@
 {
-  "version": "0.22.2",
-  "tag": "v0.22.2",
+  "version": "0.22.3",
+  "tag": "v0.22.3",
   "notes": {
-    "pl": "Poprawki i porządki: panel nie blokuje się, gdy akceptacja informacji o AI się nie powiedzie, „pokaż w dokumencie” daje czytelny komunikat zamiast błędu technicznego, a Formatowanie rozpoznaje podpisy tabel i rycin tak samo jak moduł Tabele i ryciny.",
-    "en": "Fixes and clean-up: the panel no longer locks up when accepting the AI notice fails, \"show in document\" gives a readable message instead of a technical error, and the formatting check recognises table and figure captions the same way as the tables and figures module."
+    "pl": "Przebudowa wewnętrzna bez zmian w działaniu: wspólne pomocniki modułów sprawdzania, jedno zbieranie akapitów i jedna obsługa zapisu wymagań. Przy dużych tabelach Styl i Struktura działają szybciej.",
+    "en": "Internal rework with no change in behaviour: shared helpers for the check modules, one way to collect paragraphs and one way to save requirements. Style and Structure are faster on documents with large tables."
   }
 }

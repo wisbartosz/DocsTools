@@ -1,6 +1,5 @@
 const STYLE_KINDS = ['personal', 'personalPast', 'digits', 'words', 'introTense', 'conclusionTense', 'abstractPhrase'];
 const STYLE_INFO_KINDS = { personalPast: true, digits: true, words: true, introTense: true, conclusionTense: true, abstractPhrase: true };
-const STYLE_MAX_ITEMS = 100;
 const STYLE_RULES_PROP = 'styleRules';
 const STYLE_RULE_OF_KIND = { personal: 'personal', personalPast: 'personal', digits: 'digits', words: 'words', introTense: 'tense', conclusionTense: 'tense', abstractPhrase: 'abstractPhrase' };
 const STYLE_CONTEXT = 45;
@@ -235,14 +234,11 @@ function styleSnippet_(text, start, end) {
 
 function styleContext_() {
   const body = DocumentApp.getActiveDocument().getBody();
-  const all = [];
-  collectParagraphs_(body, [], false, all);
-  const paragraphs = outsideTitlePage_(all, titlePageEnd_(body)).filter(function (p) { return !p.inTable; });
+  const paragraphs = documentParagraphs_(body, { skipTables: true });
   const headings = [];
   paragraphs.forEach(function (p) {
-    p.text = p.element.getText();
-    const match = /^HEADING([1-6])$/.exec(String(p.element.getHeading()));
-    p.level = match && p.text.trim() ? Number(match[1]) : 0;
+    const level = headingLevel_(p.heading);
+    p.level = level && p.text.trim() ? level : 0;
     if (p.level) headings.push({ level: p.level, text: p.text, paragraph: p });
   });
   const roles = styleRoles_(headings);
@@ -261,17 +257,14 @@ function styleContext_() {
 }
 
 function checkStyle() {
-  const groups = {};
-  STYLE_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [], info: !!STYLE_INFO_KINDS[kind] }; });
   const entries = styleContext_();
   const rules = readStyleRules_() || getDefaultStyleRules();
-  const hide = ignoreFilter_('style');
+  const groups = checkGroups_(STYLE_KINDS, { info: STYLE_INFO_KINDS, hide: ignoreFilter_('style') });
   entries.forEach(function (entry) {
     const text = entry.paragraph.text;
     const issues = styleIssues_(text, entry.role, rules);
     issues.forEach(function (issue) {
       if (issue.kind === 'digits' && entry.paragraph.isList) return;
-      const group = groups[issue.kind];
       const snippet = styleSnippet_(text, issue.start, issue.end);
       const item = {
         ref: styleRef_(entry.paragraph.location, text, issue),
@@ -280,14 +273,10 @@ function checkStyle() {
         after: snippet.after,
         keyText: text,
       };
-      if (hide(group, item)) return;
-      group.count++;
-      if (group.items.length < STYLE_MAX_ITEMS) group.items.push(item);
+      groups.add(issue.kind, item);
     });
   });
-  const list = STYLE_KINDS.map(function (kind) { return groups[kind]; });
-  hide.finish(list);
-  return { stats: { paragraphs: entries.length }, groups: list };
+  return { stats: { paragraphs: entries.length }, groups: groups.list() };
 }
 
 function styleRef_(location, text, issue) {
@@ -314,7 +303,7 @@ function showStyleIssue(ref) {
 
 function normalizeStyleRules_(input) {
   const source = input || {};
-  const flag = function (value) { return value === undefined ? true : !!value; };
+  const flag = flagDefaultTrue_;
   return {
     personal: flag(source.personal),
     digits: flag(source.digits),
@@ -330,14 +319,7 @@ function getDefaultStyleRules() {
 }
 
 function readStyleRules_() {
-  const raw = docProps_().getProperty(STYLE_RULES_PROP);
-  if (!raw) return null;
-  try {
-    return normalizeStyleRules_(JSON.parse(raw));
-  } catch (e) {
-    console.warn('Niepoprawny zapis regul stylu: ' + e.message);
-    return null;
-  }
+  return readRulesProp_(STYLE_RULES_PROP, normalizeStyleRules_);
 }
 
 function getStyleRules() {
@@ -346,9 +328,5 @@ function getStyleRules() {
 }
 
 function saveStyleRules(input) {
-  const rules = normalizeStyleRules_(input);
-  const isDefault = JSON.stringify(rules) === JSON.stringify(getDefaultStyleRules());
-  if (isDefault) docProps_().deleteProperty(STYLE_RULES_PROP);
-  else docProps_().setProperty(STYLE_RULES_PROP, JSON.stringify(rules));
-  return { rules: rules, isDefault: isDefault };
+  return writeRulesProp_(STYLE_RULES_PROP, normalizeStyleRules_(input), getDefaultStyleRules());
 }

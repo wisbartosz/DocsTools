@@ -21,7 +21,6 @@ const FIG_LIST_HEADING = /^(spis|wykaz)\s+(tabel|rycin|rysunk|wykres|ilustracji|
 const FIG_KINDS = ['noCaption', 'captionBelow', 'noSource', 'sourceDate', 'sourceCitation', 'numbering', 'labels', 'badRef',
   'noRef', 'refAfter', 'noList', 'listPlace', 'listMissing', 'listExtra', 'listTitle', 'appendixNoRef', 'appendixBadRef'];
 const FIG_INFO_KINDS = { labels: true, noRef: true, refAfter: true };
-const FIG_MAX_ITEMS = 100;
 const FIG_MAX_GAP = 2;
 
 function parseCaption_(text) {
@@ -195,11 +194,6 @@ function hasImage_(element) {
   return !!(element.findElement(DocumentApp.ElementType.INLINE_IMAGE) || element.findElement(DocumentApp.ElementType.INLINE_DRAWING));
 }
 
-function headingLevel_(heading) {
-  const match = /^HEADING([1-6])$/.exec(heading || '');
-  return match ? Number(match[1]) : 0;
-}
-
 function figuresContext_() {
   const body = DocumentApp.getActiveDocument().getBody();
   const blocks = figureBlocks_(body);
@@ -340,22 +334,18 @@ function lastCellText_(table) {
 
 function checkFigures(options) {
   const ctx = figuresContext_();
-  const groups = {};
-  FIG_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [], info: !!FIG_INFO_KINDS[kind] }; });
-  const hide = ignoreFilter_('figures');
+  const groups = checkGroups_(FIG_KINDS, { info: FIG_INFO_KINDS, hide: ignoreFilter_('figures') });
   const add = function (kind, item) {
-    if (hide(groups[kind], item)) return;
-    groups[kind].count++;
-    if (groups[kind].items.length < FIG_MAX_ITEMS) groups[kind].items.push(item);
+    groups.add(kind, item);
   };
   const preview = function (text, fallback) {
     const clean = String(text || '').trim();
     if (!clean) return fallback;
-    return clean.length > 120 ? clean.slice(0, 120) + '…' : clean;
+    return preview_(clean, 120);
   };
   const blockItem = function (block, label, detail) {
     const shown = block.type === 'table' ? (label ? label + ': ' : '') + preview(block.text.split('\n')[0], '') : preview(block.text, label);
-    return { ref: { location: block.location, fingerprint: block.text.trim().slice(0, 40) }, showable: true, preview: shown, detail: detail || '', keyText: block.text };
+    return { ref: { location: block.location, fingerprint: block.text.trim().slice(0, FINGERPRINT_CHARS) }, showable: true, preview: shown, detail: detail || '', keyText: block.text };
   };
   const objectLabel = function (object) {
     const caption = object.caption || object.captionBelow;
@@ -474,11 +464,7 @@ function checkFigures(options) {
       figures: ctx.objects.filter(function (o) { return o.kind === 'figure'; }).length,
       appendices: ctx.appendices.length,
     },
-    groups: (function () {
-      const list = FIG_KINDS.map(function (kind) { return groups[kind]; });
-      hide.finish(list);
-      return list;
-    })(),
+    groups: groups.list(),
   };
 }
 
@@ -972,7 +958,7 @@ function moveFigureCaption(options, ref) {
   const body = DocumentApp.getActiveDocument().getBody();
   const ctx = figuresContext_();
   const object = captionBelowObjects_(ctx).filter(function (o) {
-    return o.captionBelow.block.index === ref.location.path[0] && o.captionBelow.block.text.trim().slice(0, 40) === ref.fingerprint;
+    return o.captionBelow.block.index === ref.location.path[0] && o.captionBelow.block.text.trim().slice(0, FINGERPRINT_CHARS) === ref.fingerprint;
   })[0];
   if (!object) throw userError_('err.figCaptionMoved');
   moveCaptionAbove_(body, object);

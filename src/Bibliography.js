@@ -20,7 +20,6 @@ const BIB_EN_WORDS = /\b(the|of|and|with|for|in|on|to|from|an|by|is|are|study|re
 const BIB_PL_WORDS = /\b(i|w|z|na|do|oraz|dla|od|po|jako|przez|badanie|leczenie|pacjent\w*)\b/gi;
 const BIB_QUOTE_MIN_WORDS = 5;
 const BIB_NO_CITATION_MIN_CHARS = 300;
-const BIB_MAX_ITEMS = 100;
 
 function normalizeSurname_(name) {
   return String(name || '').normalize('NFC').toLowerCase().replace(/['’-]/g, '');
@@ -434,33 +433,17 @@ function getDefaultBibliographyRules() {
 }
 
 function saveBibliographyRules(input) {
-  const rules = normalizeBibliographyRules_(input);
-  const isDefault = JSON.stringify(rules) === JSON.stringify(getDefaultBibliographyRules());
-  if (isDefault) docProps_().deleteProperty(BIB_RULES_PROP);
-  else docProps_().setProperty(BIB_RULES_PROP, JSON.stringify(rules));
-  return { rules: rules, isDefault: isDefault };
+  return writeRulesProp_(BIB_RULES_PROP, normalizeBibliographyRules_(input), getDefaultBibliographyRules());
 }
 
 function readBibliographyRules_() {
-  const raw = docProps_().getProperty(BIB_RULES_PROP);
-  if (!raw) return null;
-  try {
-    return normalizeBibliographyRules_(JSON.parse(raw));
-  } catch (e) {
-    console.warn('Niepoprawny zapis wymagań bibliografii: ' + e.message);
-    return null;
-  }
+  return readRulesProp_(BIB_RULES_PROP, normalizeBibliographyRules_);
 }
 
 function normalizeBibliographyRules_(input) {
   const source = input || {};
-  const number = function (value) {
-    const parsed = parseInt(String(value === undefined || value === null ? '' : value), 10);
-    return isFinite(parsed) && parsed > 0 ? parsed : null;
-  };
-  const flag = function (value) {
-    return value === undefined ? true : !!value;
-  };
+  const number = positiveInt_;
+  const flag = flagDefaultTrue_;
   return {
     minReview: number(source.minReview),
     minResearch: number(source.minResearch),
@@ -491,27 +474,22 @@ function checkBibliography(options) {
   const rules = readBibliographyRules_() || getDefaultBibliographyRules();
   const type = opts.type || savedStructureType_();
   const ctx = bibliographyContext_(type);
-  const groups = {};
-  BIB_KINDS.forEach(function (kind) {
-    groups[kind] = { kind: kind, count: 0, items: [], info: !!BIB_INFO_KINDS[kind], fixAll: !!BIB_FIX_ALL[kind], fixable: 0 };
+  const groups = checkGroups_(BIB_KINDS, {
+    info: BIB_INFO_KINDS,
+    hide: ignoreFilter_('bibliography'),
+    extra: function (kind) { return { fixAll: !!BIB_FIX_ALL[kind], fixable: 0 }; },
   });
-  const hide = ignoreFilter_('bibliography');
   const add = function (kind, item) {
     if (BIB_FORMAT_KINDS[kind] && !rules.citeFormat) return;
     if (BIB_PLACEMENT_KINDS[kind] && !rules.citePlacement) return;
-    const group = groups[kind];
-    if (hide(group, item)) return;
-    group.count++;
-    if (item.fixable && !item.single) group.fixable++;
-    if (group.items.length < BIB_MAX_ITEMS) group.items.push(item);
+    if (groups.add(kind, item) && item.fixable && !item.single) groups.groups[kind].fixable++;
   };
   const preview = function (text) {
-    const clean = text.trim();
-    return clean.length > 120 ? clean.slice(0, 120) + '…' : clean;
+    return preview_(text.trim(), 120);
   };
   const entryItem = function (entry, detail) {
     return {
-      ref: { location: entry.location, fingerprint: entry.raw.slice(0, 40) },
+      ref: { location: entry.location, fingerprint: entry.raw.slice(0, FINGERPRINT_CHARS) },
       showable: true,
       preview: preview(entry.raw),
       detail: detail || '',
@@ -519,14 +497,13 @@ function checkBibliography(options) {
     };
   };
   const paragraphItem = function (p, detail) {
-    return { ref: { location: p.location, fingerprint: p.text.trim().slice(0, 40) }, showable: true, preview: preview(p.text), detail: detail || '', keyText: p.text };
+    return { ref: { location: p.location, fingerprint: p.text.trim().slice(0, FINGERPRINT_CHARS) }, showable: true, preview: preview(p.text), detail: detail || '', keyText: p.text };
   };
   const rangeItem = function (location, start, end, text, detail, context) {
     return { ref: { location: location, start: start, end: end, fingerprint: text }, showable: true, preview: text, detail: detail || '', keyText: context };
   };
   const result = function () {
-    const list = BIB_KINDS.map(function (kind) { return groups[kind]; });
-    hide.finish(list);
+    const list = groups.list();
     return {
       noSection: !ctx.section,
       sortable: ctx.sortable,
@@ -653,7 +630,7 @@ function showBibliographyIssue(ref) {
   const doc = DocumentApp.getActiveDocument();
   const text = resolved.element.getText();
   if (ref.start === undefined) {
-    if (text.trim().slice(0, 40) !== ref.fingerprint) throw userError_('format.err.changed');
+    if (text.trim().slice(0, FINGERPRINT_CHARS) !== ref.fingerprint) throw userError_('format.err.changed');
     selectRange_(doc, function () { return doc.newRange().addElement(resolved.element); });
     return;
   }
@@ -718,37 +695,27 @@ function sortBibliography(options) {
 
 function bibliographyContext_(type) {
   const body = DocumentApp.getActiveDocument().getBody();
-  const all = [];
-  collectParagraphs_(body, [], false, all);
-  const paragraphs = outsideTitlePage_(all, titlePageEnd_(body));
-  paragraphs.forEach(function (entry) {
-    entry.heading = String(entry.element.getHeading());
-    entry.text = entry.element.getText();
-  });
-  const level = function (heading) {
-    const match = /^HEADING([1-6])$/.exec(heading);
-    return match ? Number(match[1]) : 0;
-  };
+  const paragraphs = documentParagraphs_(body);
   const candidates = [];
   paragraphs.forEach(function (p, i) {
     if (!p.inTable && p.text.trim().length <= 60 && BIB_HEADING.test(normalizeTitle_(p.text))) candidates.push(i);
   });
-  const headed = candidates.filter(function (i) { return level(paragraphs[i].heading); });
+  const headed = candidates.filter(function (i) { return headingLevel_(paragraphs[i].heading); });
   const pool = headed.length ? headed : candidates;
   const start = pool.length ? pool[pool.length - 1] : -1;
   const ctx = { section: start >= 0, entries: [], citations: [], paragraphs: [], discussion: null, sortable: false, stats: { citations: 0, entries: 0, english: 0 } };
   let end = paragraphs.length;
   if (start >= 0) {
-    const startLevel = level(paragraphs[start].heading) || 7;
+    const startLevel = headingLevel_(paragraphs[start].heading) || 7;
     for (let i = start + 1; i < paragraphs.length; i++) {
-      const l = level(paragraphs[i].heading);
+      const l = headingLevel_(paragraphs[i].heading);
       if (l && l <= startLevel) {
         end = i;
         break;
       }
     }
     ctx.entries = paragraphs.slice(start + 1, end)
-      .filter(function (p) { return p.text.trim() && !level(p.heading); })
+      .filter(function (p) { return p.text.trim() && !headingLevel_(p.heading); })
       .map(function (p) {
         const parsed = parseBibliographyEntry_(p.text);
         parsed.raw = p.text.trim();
@@ -767,7 +734,7 @@ function bibliographyContext_(type) {
   let ownPart = false;
   paragraphs.forEach(function (p, i) {
     p.order = i;
-    const l = level(p.heading);
+    const l = headingLevel_(p.heading);
     if (l) {
       if (p.inTable || !p.text.trim()) return;
       let role = chapterRole_(p.text, roles);

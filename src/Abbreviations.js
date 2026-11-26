@@ -1,4 +1,3 @@
-const ABBR_MAX_ITEMS = 100;
 const ABBR_KINDS = ['missing', 'unused', 'noExpansion', 'order'];
 const ABBR_INFO_KINDS = { unused: true, noExpansion: true, order: true };
 const ABBR_SECTION = /^(?:(?:wykaz|spis)(?: (?:stosowanych|u\u017cywanych|wykorzystanych|najwa\u017cniejszych))? (?:skr\u00f3t\u00f3w|oznacze\u0144|symboli|akronim\u00f3w|skr\u00f3t\u00f3w i oznacze\u0144|skr\u00f3t\u00f3w i symboli|skr\u00f3t\u00f3w i akronim\u00f3w|oznacze\u0144 i skr\u00f3t\u00f3w|symboli i skr\u00f3t\u00f3w)(?: (?:u\u017cytych|stosowanych) w pracy)?|skr\u00f3ty|skr\u00f3ty i oznaczenia|abbreviations|list of abbreviations|list of abbreviations and symbols)$/;
@@ -107,14 +106,11 @@ function abbreviationListed_(abbr, listed) {
 
 function abbreviationContext_() {
   const body = DocumentApp.getActiveDocument().getBody();
-  const all = [];
-  collectParagraphs_(body, [], false, all);
-  const paragraphs = outsideTitlePage_(all, titlePageEnd_(body));
+  const paragraphs = documentParagraphs_(body);
   const headings = [];
   paragraphs.forEach(function (p) {
-    p.text = p.element.getText();
-    const match = /^HEADING([1-6])$/.exec(String(p.element.getHeading()));
-    p.level = match && p.text.trim() && !p.inTable ? Number(match[1]) : 0;
+    const level = headingLevel_(p.heading);
+    p.level = level && p.text.trim() && !p.inTable ? level : 0;
     if (p.level) headings.push({ level: p.level, text: p.text, paragraph: p });
   });
   const roles = styleRoles_(headings);
@@ -174,14 +170,9 @@ function abbreviationItem_(location, text, start, end, detail) {
 
 function checkAbbreviations() {
   const ctx = abbreviationContext_();
-  const hide = ignoreFilter_('abbreviations');
-  const groups = {};
-  ABBR_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [], info: !!ABBR_INFO_KINDS[kind] }; });
+  const groups = checkGroups_(ABBR_KINDS, { info: ABBR_INFO_KINDS, hide: ignoreFilter_('abbreviations') });
   const add = function (kind, item) {
-    const group = groups[kind];
-    if (hide(group, item)) return;
-    group.count++;
-    if (group.items.length < ABBR_MAX_ITEMS) group.items.push(item);
+    groups.add(kind, item);
   };
   const uses = {};
   ctx.paragraphs.forEach(function (entry) {
@@ -214,8 +205,7 @@ function checkAbbreviations() {
     const start = entry.paragraph.text.indexOf(entry.abbr);
     add('order', abbreviationItem_(entry.paragraph.location, entry.paragraph.text, start, start + entry.abbr.length, t_('abbr.order.detail', { previous: ctx.entries[index - 1].abbr })));
   });
-  const list = ABBR_KINDS.map(function (kind) { return groups[kind]; });
-  hide.finish(list);
+  const list = groups.list();
   return {
     noSection: !ctx.section,
     stats: { abbreviations: Object.keys(uses).length, listed: ctx.entries.length },

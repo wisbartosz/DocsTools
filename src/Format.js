@@ -1,5 +1,4 @@
 const FORMAT_RULES_PROP = 'formatRules';
-const FORMAT_MAX_ITEMS = 100;
 const PT_PER_CM = 72 / 2.54;
 const FORMAT_A4 = { width: 595.28, height: 841.89 };
 const FORMAT_KINDS = ['page', 'margins', 'font', 'size', 'color', 'lineSpacing', 'alignment', 'indent',
@@ -42,22 +41,11 @@ function currentFormatRules_() {
 }
 
 function saveFormatRules(input) {
-  const rules = normalizeFormatRules_(input);
-  const isDefault = JSON.stringify(rules) === JSON.stringify(defaultFormatRules_());
-  if (isDefault) docProps_().deleteProperty(FORMAT_RULES_PROP);
-  else docProps_().setProperty(FORMAT_RULES_PROP, JSON.stringify(rules));
-  return { rules: rules, isDefault: isDefault };
+  return writeRulesProp_(FORMAT_RULES_PROP, normalizeFormatRules_(input), defaultFormatRules_());
 }
 
 function readFormatRules_() {
-  const raw = docProps_().getProperty(FORMAT_RULES_PROP);
-  if (!raw) return null;
-  try {
-    return normalizeFormatRules_(JSON.parse(raw));
-  } catch (e) {
-    console.warn('Niepoprawny zapis wymagań edytorskich: ' + e.message);
-    return null;
-  }
+  return readRulesProp_(FORMAT_RULES_PROP, normalizeFormatRules_);
 }
 
 function normalizeFormatRules_(input) {
@@ -89,18 +77,15 @@ function normalizeFormatRules_(input) {
 function checkFormatting() {
   const rules = currentFormatRules_();
   const ctx = formatContext_();
-  const groups = {};
-  FORMAT_KINDS.forEach(function (kind) { groups[kind] = { kind: kind, count: 0, items: [] }; });
+  const groups = checkGroups_(FORMAT_KINDS);
   const add = function (issue, entry) {
-    const group = groups[issue.kind];
-    group.count++;
-    if (group.items.length < FORMAT_MAX_ITEMS) group.items.push(describeFormatIssue_(issue, entry));
+    groups.add(issue.kind, function () { return describeFormatIssue_(issue, entry); });
   };
   documentFormatIssues_(rules, ctx).forEach(function (issue) { add(issue, null); });
   ctx.paragraphs.forEach(function (entry) {
     paragraphFormatIssues_(entry, rules, ctx).forEach(function (issue) { add(issue, entry); });
   });
-  return { noHeadings: ctx.noHeadings, groups: FORMAT_KINDS.map(function (kind) { return groups[kind]; }) };
+  return { noHeadings: ctx.noHeadings, groups: groups.list() };
 }
 
 function showFormatIssue(ref) {
@@ -118,7 +103,7 @@ function fixFormatIssue(ref) {
     return checkFormatting();
   }
   const entry = ctx.paragraphs.filter(function (candidate) { return candidate.key === ref.key; })[0];
-  const valid = entry && entry.text.slice(0, 40) === ref.fingerprint &&
+  const valid = entry && entry.text.slice(0, FINGERPRINT_CHARS) === ref.fingerprint &&
     paragraphFormatIssues_(entry, rules, ctx).some(function (issue) { return issue.kind === ref.kind; });
   if (!valid) throw userError_('format.err.changed');
   applyParagraphFormatFix_(ref.kind, entry, rules, ctx);
@@ -150,14 +135,10 @@ function formatContext_() {
   ['NORMAL', 'HEADING1', 'HEADING2'].forEach(function (name) {
     styles[name] = body.getHeadingAttributes(DocumentApp.ParagraphHeading[name]) || {};
   });
-  const all = [];
-  collectParagraphs_(body, [], false, all);
-  const paragraphs = outsideTitlePage_(all, titlePageEnd_(body));
+  const paragraphs = documentParagraphs_(body);
   let seenHeading = false;
   let backMatter = false;
   paragraphs.forEach(function (entry) {
-    entry.heading = String(entry.element.getHeading());
-    entry.text = entry.element.getText();
     if (entry.heading === 'HEADING1' && !entry.inTable) {
       seenHeading = true;
       backMatter = FORMAT_BACK_MATTER.test(entry.text);
@@ -168,20 +149,6 @@ function formatContext_() {
   const noHeadings = !seenHeading;
   if (noHeadings) paragraphs.forEach(function (entry) { entry.isBody = true; });
   return { body: body, styles: styles, paragraphs: paragraphs, noHeadings: noHeadings };
-}
-
-function collectParagraphs_(container, path, inTable, out) {
-  const count = container.getNumChildren();
-  for (let i = 0; i < count; i++) {
-    const child = castElement_(container.getChild(i));
-    if (!child || child.isText) continue;
-    const location = { footnote: -1, path: path.concat(i) };
-    if (child.type === 'PARAGRAPH' || child.type === 'LIST_ITEM') {
-      out.push({ element: child.element, isList: child.type === 'LIST_ITEM', inTable: inTable, location: location, key: locationKey_(location) });
-    } else {
-      collectParagraphs_(child.element, location.path, true, out);
-    }
-  }
 }
 
 function documentFormatIssues_(rules, ctx) {
@@ -274,9 +241,9 @@ function paragraphFormatIssues_(entry, rules, ctx) {
 function describeFormatIssue_(issue, entry) {
   if (!entry) return { ref: { kind: issue.kind }, showable: false, preview: t_('format.document'), detail: issue.detail };
   return {
-    ref: { kind: issue.kind, key: entry.key, location: entry.location, fingerprint: entry.text.slice(0, 40) },
+    ref: { kind: issue.kind, key: entry.key, location: entry.location, fingerprint: entry.text.slice(0, FINGERPRINT_CHARS) },
     showable: true,
-    preview: entry.text.length > 90 ? entry.text.slice(0, 90) + '…' : entry.text,
+    preview: preview_(entry.text, 90),
     detail: issue.detail,
   };
 }
