@@ -454,6 +454,16 @@
     const UI_MODE = <?!= JSON.stringify(mode) ?>;
     const I18N = <?!= JSON.stringify(uiMessages_()) ?>;
   </script>
-  <?!= include_('Client'); ?>
+  <script>
+<?!= includeScript_('ClientCore'); ?>
+<?!= includeScript_('ClientShell'); ?>
+<?!= includeScript_('ClientSettings'); ?>
+<?!= includeScript_('ClientSources'); ?>
+<?!= includeScript_('ClientAssistant'); ?>
+<?!= includeScript_('ClientResults'); ?>
+<?!= includeScript_('ClientRules'); ?>
+<?!= includeScript_('ClientModules'); ?>
+<?!= includeScript_('ClientInit'); ?>
+  </script>
 </body>
 </html>

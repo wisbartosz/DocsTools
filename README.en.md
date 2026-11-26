@@ -225,7 +225,9 @@ the script editor, because the next push will overwrite your changes.
 3. Replace the contents of `appsscript.json` with `src/appsscript.json`.
 4. For each `.js` file in `src`, create a script file with the same name (without the
    extension) and paste the contents. You can delete the default `Code.gs`.
-5. Do the same with the `.html` files: `Sidebar`, `Styles`, `Client` and `Logo`.
+5. Do the same with the `.html` files: `Sidebar`, `Styles`, `Logo` and all the `Client…`
+   ones (`ClientCore`, `ClientShell`, `ClientSettings`, `ClientSources`, `ClientAssistant`,
+   `ClientResults`, `ClientRules`, `ClientModules`, `ClientInit`).
 6. Save and reload the document.
 
 ## First run
@@ -327,7 +329,11 @@ no subfolders, so the manual installation can recreate them.
   matching, alphabetical order, sorting, citation style and placement with fixes. The pure functions can be tested in Node.
 - `TextClean.js`: text cleanup and page detection. No Google calls, so you can run and
   check it locally in Node.
-- `Sidebar.html`, `Styles.html`, `Client.html`, `Logo.html`: the sidebar (`Logo.html` is the logo in the header).
+- `Sidebar.html`, `Styles.html`, `Logo.html`: the sidebar – layout, styles and the logo in the header.
+- `Client*.html`: the sidebar script split by topic (core, tabs, settings, sources,
+  assistant, check results, requirements, modules, start-up). Plain JavaScript without
+  tags – `Sidebar.html` puts all of them into one `<script>` with `includeScript_`
+  (verbatim, no HTML processing), in the order listed in `Sidebar.html`.
 
 Text from PDFs and Word files is produced by converting a copy of the file to a Google
 Doc (with Polish text recognition) and exporting it as plain text. The copy is deleted

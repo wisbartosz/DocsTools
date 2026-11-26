@@ -1,0 +1,85 @@
+  const TO_PROCESS = ['pending', 'changed', 'outdated', 'error'];
+
+  let sources = [];
+
+  function sourceState(status) {
+    if (status === 'ok') return 'ok';
+    if (status === 'error') return 'error';
+    if (TO_PROCESS.includes(status)) return 'todo';
+    return 'none';
+  }
+
+  function renderSources() {
+    const list = $('sources-list');
+    list.innerHTML = '';
+    sources.forEach(s => {
+      const row = el('div', 'module-row source-row state-' + sourceState(s.status));
+      const badge = el('span', 'module-badge');
+      if (s.status === 'error') badge.textContent = '!';
+      const text = el('span', 'module-text');
+      const name = el('a', 'module-name source-name', s.name);
+      name.href = s.url;
+      name.target = '_blank';
+      const meta = el('span', 'module-status');
+      meta.append(s.type + ' · ', el('span', 'status-' + s.status, t('status.' + s.status)));
+      if (s.pages) meta.append(' · ' + t('sources.pages', { count: s.pages }));
+      else if (s.chars) meta.append(' · ' + t('sources.chars', { count: formatNumber(s.chars) }));
+      text.append(name, meta);
+      if (s.error) text.append(el('span', 'module-status status-error', s.error));
+      row.append(badge, text);
+      list.append(row);
+    });
+    list.classList.toggle('hidden', !sources.length);
+    const ready = sources.filter(s => s.status === 'ok').length;
+    const todo = sources.filter(s => TO_PROCESS.includes(s.status)).length;
+    $('sources-folder-name').textContent = settings.sourceFolderName || '';
+    $('sources-summary').textContent = sources.length
+      ? countText('count.files', sources.length) + ' · ' + (todo ? t('sources.summaryShort', { ready: ready, todo: todo }) : t('sources.allReady'))
+      : t('sources.empty');
+    $('process-label').textContent = todo ? t('sources.processCount', { count: todo }) : t('sources.process');
+    $('btn-process').classList.toggle('primary', todo > 0);
+    $('btn-process').classList.toggle('btn-tonal', !todo);
+    renderAssistantStart();
+  }
+
+  async function loadSources() {
+    if (!settings.sourceFolderName) return;
+    sources = await call('listSources');
+    renderSources();
+  }
+
+  function setProgress(box, text) {
+    box.textContent = text;
+    box.prepend(el('span', 'spinner'));
+  }
+
+  async function processSources() {
+    const progress = $('process-progress');
+    progress.classList.remove('hidden');
+    try {
+      setProgress(progress, t('sources.cleaning'));
+      const cleanup = await call('cleanupSources');
+      await loadSources();
+      const removedNote = cleanup.removed ? ' ' + t('sources.removedNote', { count: cleanup.removed }) : '';
+      const queue = sources.filter(s => TO_PROCESS.includes(s.status));
+      if (!queue.length) {
+        showMessage(t('sources.allDone') + removedNote, 'ok');
+        return;
+      }
+      let failed = 0;
+      for (let i = 0; i < queue.length; i++) {
+        setProgress(progress, t('sources.progress', { current: i + 1, total: queue.length, name: queue[i].name }));
+        const updated = await call('processSource', queue[i].id);
+        if (updated.status === 'error') failed++;
+        sources = sources.map(s => s.id === updated.id ? updated : s);
+        renderSources();
+      }
+      showMessage(
+        (failed ? t('sources.doneWithErrors', { count: failed }) : t('sources.done')) + removedNote,
+        failed ? 'error' : 'ok'
+      );
+    } finally {
+      progress.classList.add('hidden');
+      await loadAssistant();
+    }
+  }

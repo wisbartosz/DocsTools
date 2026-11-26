@@ -1,0 +1,161 @@
+  let settings = null;
+
+  let busy = false;
+
+  function $(id) { return document.getElementById(id); }
+
+  function t(key, params) {
+    const text = I18N[key] || key;
+    if (!params) return text;
+    return text.replace(/\{(\w+)\}/g, (match, name) => params[name] === undefined ? match : String(params[name]));
+  }
+
+  function countText(key, count) {
+    const n = Math.abs(count) % 100;
+    const d = n % 10;
+    const form = count === 1 ? 'one' : UI_LANG === 'pl' && d >= 2 && d <= 4 && (n < 12 || n > 14) ? 'few' : 'many';
+    return t(key + '.' + form, { count: formatNumber(count) });
+  }
+
+  function formatNumber(value) {
+    return value.toLocaleString(UI_LANG === 'pl' ? 'pl-PL' : 'en-US');
+  }
+
+  let ignoreQueue = Promise.resolve();
+
+  function call(fn, ...args) {
+    const send = () => new Promise((resolve, reject) => {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+    });
+    return fn === 'updateIgnoredIssues' ? send() : ignoreQueue.then(send);
+  }
+
+  let lastError = '';
+
+  let toastTimer = null;
+
+  function showMessage(text, kind) {
+    if (kind === 'error') lastError = text;
+    if (kind === 'ok') {
+      $('message').className = 'message hidden';
+      showToast(text);
+      return;
+    }
+    hideToast();
+    const box = $('message');
+    box.textContent = text;
+    box.className = 'message' + (kind ? ' ' + kind : '');
+  }
+
+  function showToast(text, undo) {
+    const toast = $('toast');
+    toast.textContent = text;
+    if (undo) {
+      const button = el('button', 'toast-action', t('ignore.undo'));
+      button.addEventListener('click', e => {
+        e.stopPropagation();
+        hideToast();
+        undo();
+      });
+      toast.append(button);
+    }
+    toast.classList.remove('hidden');
+    scheduleToastHide(Math.min(12000, Math.max(undo ? 7000 : 4000, text.length * 60)));
+  }
+
+  function scheduleToastHide(delay) {
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      if ($('toast').matches(':hover')) scheduleToastHide(1500);
+      else hideToast();
+    }, delay);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    $('toast').classList.add('hidden');
+  }
+
+  function hideMessage() {
+    $('message').className = 'message hidden';
+    hideToast();
+  }
+
+  function errorText(e) {
+    return (e && e.message ? e.message : String(e)).replace(/^(Exception|Error|UserError):\s*/, '');
+  }
+
+  async function run(action) {
+    if (busy) return;
+    busy = true;
+    const buttons = [...document.querySelectorAll('button:not(.tab):not(.rail-item), #check-type, #model-select')].filter(b => !b.classList.contains('loading') && !b.disabled);
+    buttons.forEach(b => b.disabled = true);
+    hideMessage();
+    try {
+      await action();
+    } catch (e) {
+      showMessage(errorText(e), 'error');
+    } finally {
+      buttons.forEach(b => { b.disabled = false; });
+      busy = false;
+      renderParts();
+      renderSettings();
+      if (overviewReady) renderOverview();
+    }
+  }
+
+  let overviewReady = false;
+
+  async function runInBackground(button, action) {
+    if (button.disabled || button.classList.contains('loading')) return;
+    button.disabled = true;
+    hideMessage();
+    try {
+      await action();
+    } catch (e) {
+      showMessage(errorText(e), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function scrollToTop(scroller) {
+    if (UI_MODE !== 'window') window.scrollTo(0, 0);
+    else if (scroller) scroller.scrollTop = 0;
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function infoTip(text) {
+    const tip = el('span', 'info-tip');
+    tip.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>';
+    setInfoTip(tip, text);
+    tip.tabIndex = 0;
+    tip.setAttribute('role', 'img');
+    tip.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      tip.classList.toggle('pinned');
+    });
+    tip.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        tip.classList.toggle('pinned');
+      }
+      if (e.key === 'Escape') tip.classList.remove('pinned');
+    });
+    tip.addEventListener('blur', () => tip.classList.remove('pinned'));
+    return tip;
+  }
+
+  function setInfoTip(tip, text) {
+    tip.dataset.tip = text;
+    tip.setAttribute('aria-label', text);
+    tip.classList.toggle('hidden', !text);
+  }

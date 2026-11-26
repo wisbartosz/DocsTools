@@ -1,0 +1,125 @@
+  let connection = null;
+
+  async function sendFeedback() {
+    const button = $('btn-send-feedback');
+    button.classList.add('loading');
+    try {
+      await call('sendFeedback', $('feedback-message').value, $('feedback-email').value, {
+        lastError: lastError,
+        view: UI_MODE,
+        browser: navigator.userAgent,
+      });
+      $('feedback-message').value = '';
+      showMessage(t('feedback.sent'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  function renderSettings() {
+    if (!settings) return;
+    $('fallback-toggle').checked = settings.fallback !== false;
+    $('folder-name').textContent = settings.sourceFolderName || t(settings.sourceFolderId ? 'settings.folder.noAccess' : 'settings.folder.noneShort');
+    $('folder-current').textContent = settings.sourceFolderId
+      ? (settings.sourceFolderName ? t('settings.folder.drive') : t('settings.folder.inaccessible'))
+      : t('settings.folder.none');
+    $('key-status').textContent = settings.hasApiKey ? t('settings.key.present') : t('settings.key.missing');
+    $('key-status').classList.toggle('ok', !!settings.hasApiKey);
+    $('connection-status').textContent = !connection ? t('settings.connection.unknown')
+      : connection.ok ? t('settings.connection.ok', { time: connection.time }) : t('settings.connection.failed');
+    $('btn-clear-key').disabled = busy || !settings.hasApiKey;
+    $('model-select').disabled = busy || !settings.hasApiKey;
+    $('btn-test').disabled = busy || !settings.hasApiKey || !settings.model;
+    const hasFolder = !!(settings.sourceFolderId && settings.sourceFolderName);
+    $('sources-no-folder').classList.toggle('hidden', hasFolder);
+    $('sources-content').classList.toggle('hidden', !hasFolder);
+    const hasFolderId = !!settings.sourceFolderId;
+    if (editorState.folder !== hasFolderId) $('folder-editor').classList.toggle('hidden', hasFolderId);
+    if (editorState.key !== settings.hasApiKey) $('key-editor').classList.toggle('hidden', !!settings.hasApiKey);
+    editorState.folder = hasFolderId;
+    editorState.key = settings.hasApiKey;
+    $('btn-change-folder').textContent = t(hasFolderId ? 'settings.change' : 'settings.add');
+    $('btn-change-key').textContent = t(settings.hasApiKey ? 'settings.change' : 'settings.add');
+    renderAssistantStart();
+  }
+
+  const editorState = { folder: null, key: null };
+
+  function openEditor(editor, input) {
+    switchTab('settings');
+    $(editor).classList.remove('hidden');
+    $(input).focus();
+  }
+
+  function fillModels(models) {
+    const select = $('model-select');
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = models.length ? t('settings.model.choose') : t('settings.model.none');
+    select.appendChild(empty);
+    const groups = [
+      [t('settings.model.recommended'), models.filter(m => m.recommended)],
+      [t('settings.model.stable'), models.filter(m => m.stable && !m.recommended)],
+      [t('settings.model.unstable'), models.filter(m => !m.stable)],
+    ];
+    groups.forEach(([label, list]) => {
+      if (!list.length) return;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      list.forEach(m => {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.label + ' (' + m.id + ')';
+        group.appendChild(option);
+      });
+      select.appendChild(group);
+    });
+    if (settings.model && !models.some(m => m.id === settings.model)) {
+      const option = document.createElement('option');
+      option.value = settings.model;
+      option.textContent = t('settings.model.unavailable', { model: settings.model });
+      select.appendChild(option);
+    }
+    select.value = settings.model || '';
+  }
+
+  async function loadModels() {
+    if (!settings.hasApiKey) return;
+    try {
+      fillModels(await call('listGeminiModels'));
+    } catch (e) {
+      fillModels([]);
+      showMessage(errorText(e), 'error');
+    }
+  }
+
+  let update = null;
+
+  async function checkForUpdate(force) {
+    $('update-status').textContent = t('update.checking');
+    try {
+      update = await call('checkForUpdate', force);
+    } catch (e) {
+      update = null;
+      $('update-status').textContent = errorText(e);
+    }
+    renderUpdate();
+  }
+
+  function renderUpdate() {
+    const available = !!(update && update.available);
+    if (update) {
+      $('update-status').textContent = available
+        ? t('update.available', { latest: update.latest, current: update.current })
+        : t('update.upToDate', { version: update.current });
+    }
+    $('update-notes').textContent = available ? update.notes : '';
+    $('update-notes').classList.toggle('hidden', !available || !update.notes);
+    $('update-available').classList.toggle('hidden', !available);
+    $('update-banner').classList.toggle('hidden', !available);
+    $('update-banner-text').textContent = available ? t('update.banner', { latest: update.latest }) : '';
+    const tab = document.querySelector('.tab[data-tab="settings"]');
+    tab.querySelectorAll('.tab-dot').forEach(node => node.remove());
+    if (available) tab.append(el('span', 'tab-dot'));
+  }

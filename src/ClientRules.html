@@ -1,0 +1,624 @@
+  const STYLE_RULE_FIELDS = {
+    personal: 'style-rule-personal', digits: 'style-rule-digits', words: 'style-rule-words',
+    tense: 'style-rule-tense', abstractPhrase: 'style-rule-abstract', wordsUpTo: 'style-rule-upto',
+  };
+
+  async function loadStyleRules() {
+    const data = await call('getStyleRules');
+    fillStyleRules(data.rules);
+    setRulesDefault('style', data.isDefault);
+  }
+
+  function fillStyleRules(rules) {
+    Object.keys(STYLE_RULE_FIELDS).forEach(key => {
+      const input = $(STYLE_RULE_FIELDS[key]);
+      if (input.type === 'checkbox') input.checked = !!rules[key];
+      else input.value = String(rules[key]);
+    });
+  }
+
+  function readStyleRules() {
+    const rules = {};
+    Object.keys(STYLE_RULE_FIELDS).forEach(key => {
+      const input = $(STYLE_RULE_FIELDS[key]);
+      rules[key] = input.type === 'checkbox' ? input.checked : Number(input.value);
+    });
+    return rules;
+  }
+
+  const loadedRules = new Set();
+
+  const RULE_FIELDS = {
+    'font': 'rule-font',
+    'size': 'rule-size',
+    'lineSpacing': 'rule-line-spacing',
+    'alignment': 'rule-alignment',
+    'indent': 'rule-indent',
+    'black': 'rule-black',
+    'a4': 'rule-a4',
+    'margins.top': 'rule-margin-top',
+    'margins.right': 'rule-margin-right',
+    'margins.bottom': 'rule-margin-bottom',
+    'margins.left': 'rule-margin-left',
+    'heading1.size': 'rule-h1-size',
+    'heading1.bold': 'rule-h1-bold',
+    'heading1.uppercase': 'rule-h1-upper',
+    'heading2.size': 'rule-h2-size',
+    'heading2.bold': 'rule-h2-bold',
+    'noHeadingPeriod': 'rule-no-period',
+    'chapterNewPage': 'rule-new-page',
+    'captionSize': 'rule-caption-size',
+  };
+
+  function ruleValue(rules, path) {
+    return path.split('.').reduce((value, key) => value === null || value === undefined ? value : value[key], rules);
+  }
+
+  function setRuleInput(path, value) {
+    const input = path.indexOf('structure.') === 0 ? $(STRUCTURE_FIELDS[path.slice(10)]) : $(RULE_FIELDS[path]);
+    if (!input) return;
+    if (input.type === 'checkbox') input.checked = value === true || value === 'true';
+    else if (value === null || value === undefined) input.value = '';
+    else input.value = input.type === 'number' ? String(value).replace(',', '.').replace(/[^\d.]/g, '') : value;
+  }
+
+  function ruleLabel(path) {
+    const [group, key] = path.split('.');
+    if (group === 'structure') {
+      const labels = {
+        sectionsReview: t('structure.rules.title') + ': ' + t('structure.type.review'),
+        sectionsResearch: t('structure.rules.title') + ': ' + t('structure.type.research'),
+        toc: t('structure.rules.toc'),
+        numbering: t('structure.rules.numbering'),
+        keywordsMin: t('structure.rules.keywords') + ': ' + t('structure.from'),
+        keywordsMax: t('structure.rules.keywords') + ': ' + t('structure.to'),
+        abstractMin: t('structure.rules.abstract') + ': ' + t('structure.from'),
+        abstractMax: t('structure.rules.abstract') + ': ' + t('structure.to'),
+        aimMin: t('structure.rules.aim') + ': ' + t('structure.from'),
+        aimMax: t('structure.rules.aim') + ': ' + t('structure.to'),
+        minPages: t('structure.rules.minPages'),
+      };
+      return labels[key] || path;
+    }
+    if (path === 'size') return t('format.rules.text') + ': ' + t('format.rules.size');
+    if (group === 'margins') return t('format.rules.margins') + ': ' + t('format.rules.' + key);
+    if (group === 'heading1' || group === 'heading2') {
+      const name = key === 'size' ? 'format.rules.size' : key === 'bold' ? 'format.rules.bold' : 'format.rules.uppercase';
+      return t('format.rules.' + group) + ': ' + t(name);
+    }
+    return t('format.rules.' + group);
+  }
+
+  async function loadFormatRules() {
+    const data = await call('getFormatRules');
+    $('skip-title-page').checked = data.skipTitlePage;
+    if (overviewReady) renderOverview();
+    fillFormatRules(data.rules);
+    setRulesDefault('format', data.isDefault);
+  }
+
+  function loadCheckRules() {
+    const loaders = { format: loadFormatRules, structure: loadStructureRules, bibliography: loadBibliographyRules, style: loadStyleRules };
+    return Promise.all(Object.keys(loaders).filter(key => !loadedRules.has(key))
+      .map(key => loaders[key]().then(() => loadedRules.add(key))));
+  }
+
+  async function resetFormatRules() {
+    fillFormatRules(await call('getDefaultFormatRules'));
+    hideRulesImport();
+    showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  function hideRulesImport() {
+    $('rules-import-result').innerHTML = '';
+    $('rules-import-result').classList.add('hidden');
+  }
+
+  function fillFormatRules(rules) {
+    Object.keys(RULE_FIELDS).forEach(path => setRuleInput(path, ruleValue(rules, path)));
+  }
+
+  function readFormatRules() {
+    const rules = { margins: {}, heading1: {}, heading2: {} };
+    Object.keys(RULE_FIELDS).forEach(path => {
+      const input = $(RULE_FIELDS[path]);
+      const value = input.type === 'checkbox' ? input.checked : input.value;
+      const [group, key] = path.split('.');
+      if (key) rules[group][key] = value;
+      else rules[group] = value;
+    });
+    return rules;
+  }
+
+  async function importFormatRules() {
+    await loadCheckRules();
+    const result = await callGemini($('btn-import-rules'), 'importFormatRules');
+    if (!result) return;
+    result.rules.found.forEach(path => setRuleInput(path, ruleValue(result.rules, path)));
+    fillImportedStructure(result.structure);
+    setRulesDirty(true);
+    showRulesPane('structure');
+    renderRulesImport(result);
+    showMessage(t('format.rules.imported', { count: result.found }) + (result.fallback ? ' ' + t('ai.fallbackUsed', { model: result.model }) : ''), 'ok');
+  }
+
+  let importedSections = null;
+
+  function fillImportedStructure(imported) {
+    importedSections = imported.sections;
+    const sections = imported.sections[$('srule-type').value];
+    if (sections) {
+      $('srule-sections').value = sections;
+      selectedPart = null;
+      renderParts();
+    }
+    if (imported.toc !== null) $('srule-toc').checked = imported.toc;
+    if (imported.numbering !== null) $('srule-numbering').checked = imported.numbering;
+    ['keywordsMin', 'keywordsMax', 'abstractMin', 'abstractMax', 'aimMin', 'aimMax', 'minPages'].forEach(key => {
+      if (imported[key] !== null) $(STRUCTURE_FIELDS[key]).value = imported[key];
+    });
+  }
+
+  async function saveAllRules() {
+    closePartEditor();
+    renderParts();
+    const format = await call('saveFormatRules', readFormatRules());
+    fillFormatRules(format.rules);
+    setRulesDefault('format', format.isDefault);
+    const saved = await call('saveStructureRules', readStructureRules());
+    fillStructureRules(saved.rules);
+    setRulesDefault('structure', saved.isDefault);
+    const bibliographyRules = await call('saveBibliographyRules', readBibliographyRules());
+    fillBibliographyRules(bibliographyRules.rules);
+    setRulesDefault('bib', bibliographyRules.isDefault);
+    const styleRules = await call('saveStyleRules', readStyleRules());
+    fillStyleRules(styleRules.rules);
+    setRulesDefault('style', styleRules.isDefault);
+    hideRulesImport();
+    setRulesDirty(false);
+    showMessage(t('structure.rules.saved'), 'ok');
+  }
+
+  async function resetAllRules() {
+    setRulesDirty(true);
+    await resetStructureRules();
+    await resetBibliographyRules();
+    await resetFormatRules();
+    fillStyleRules(await call('getDefaultStyleRules'));
+    setRulesDirty(true);
+    showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  function setRulesDirty(dirty) {
+    $('rules-dirty').classList.toggle('hidden', !dirty);
+  }
+
+  const rulesDefault = { format: null, structure: null, bib: null, style: null };
+
+  function setRulesDefault(form, isDefault) {
+    rulesDefault[form] = !!isDefault;
+    renderRulesBanner();
+  }
+
+  function renderRulesBanner() {
+    const banner = $('rules-banner');
+    const states = Object.keys(rulesDefault).map(key => rulesDefault[key]);
+    if (states.some(state => state === null)) {
+      banner.classList.add('hidden');
+      return;
+    }
+    const defaults = states.every(Boolean);
+    banner.textContent = t(defaults ? 'rules.banner.default' : 'rules.banner.custom');
+    banner.classList.toggle('is-default', defaults);
+    banner.classList.remove('hidden');
+  }
+
+  function showRulesPane(name) {
+    document.querySelectorAll('#check-rules .segment').forEach(segment => {
+      const active = segment.dataset.pane === name;
+      segment.classList.toggle('active', active);
+      segment.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('#check-rules .rules-pane').forEach(pane => pane.classList.toggle('active', pane.dataset.pane === name));
+  }
+
+  function renderRulesImport(result) {
+    const box = $('rules-import-result');
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    box.append(el('div', 'typo-desc', t('format.rules.reviewHint')));
+    const save = el('button', 'primary', t('format.rules.saveBoth'));
+    save.addEventListener('click', () => run(saveAllRules));
+    const row = el('div', 'row buttons');
+    row.append(save);
+    box.append(row);
+    if (result.conflicts.length) {
+      box.append(el('div', 'rules-conflicts-title', t('format.rules.conflicts')));
+      result.conflicts.forEach((conflict, index) => {
+        const fieldset = el('div', 'rules-conflict');
+        fieldset.append(el('div', 'rules-conflict-field', ruleLabel(conflict.field)));
+        conflict.options.forEach((option, optionIndex) => {
+          const label = el('label', 'rules-check');
+          const radio = el('input');
+          radio.type = 'radio';
+          radio.name = 'rules-conflict-' + index;
+          radio.checked = optionIndex === 0;
+          radio.addEventListener('change', () => {
+            setRuleInput(conflict.field, option.value);
+            setRulesDirty(true);
+          });
+          label.append(radio, option.value + ' (' + option.source + ')');
+          fieldset.append(label);
+        });
+        box.append(fieldset);
+      });
+    }
+    if (result.evidence.length) {
+      const details = el('details', 'cites');
+      details.append(el('summary', '', t('format.rules.evidence', { count: result.evidence.length })));
+      const list = el('ol');
+      result.evidence.forEach(item => {
+        const li = el('li', '', ruleLabel(item.field) + ' – ' + item.source);
+        li.append(el('div', 'quote', (UI_LANG === 'pl' ? '„' : '“') + item.quote + '”'));
+        list.append(li);
+      });
+      details.append(list);
+      box.append(details);
+    }
+  }
+
+  let structureDefaults = null;
+
+  const STRUCTURE_FIELDS = {
+    type: 'srule-type', sections: 'srule-sections', toc: 'srule-toc', numbering: 'srule-numbering',
+    keywordsMin: 'srule-keywords-min', keywordsMax: 'srule-keywords-max',
+    abstractMin: 'srule-abstract-min', abstractMax: 'srule-abstract-max',
+    aimMin: 'srule-aim-min', aimMax: 'srule-aim-max', minPages: 'srule-min-pages',
+  };
+
+  async function loadStructureRules() {
+    const data = await call('getStructureRules');
+    structureDefaults = { sections: data.sections };
+    fillStructureRules(data.rules);
+    setRulesDefault('structure', data.isDefault);
+  }
+
+  async function resetStructureRules() {
+    fillStructureRules(await call('getDefaultStructureRules', $('srule-type').value));
+    importedSections = null;
+    hideRulesImport();
+    showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  function fillStructureRules(rules) {
+    Object.keys(STRUCTURE_FIELDS).forEach(key => {
+      const input = $(STRUCTURE_FIELDS[key]);
+      const value = rules[key];
+      if (input.type === 'checkbox') input.checked = !!value;
+      else input.value = value === null || value === undefined ? '' : value;
+    });
+    syncCheckType();
+    selectedPart = null;
+    renderParts();
+  }
+
+  let selectedPart = null;
+
+  let partFocus = null;
+
+  let newPart = false;
+
+  let partEditor = null;
+
+  function storePartEditor() {
+    const parts = readParts();
+    parts[selectedPart] = [partEditor.name].concat(partEditor.alts);
+    storeParts(parts);
+    updatePartChip(selectedPart, readParts()[selectedPart]);
+  }
+
+  function sameName(a, b) {
+    return a.toLocaleLowerCase(UI_LANG) === b.toLocaleLowerCase(UI_LANG);
+  }
+
+  function uniqueNames(names) {
+    return names.filter((name, i) => !names.slice(0, i).some(other => sameName(other, name)));
+  }
+
+  function readParts() {
+    return $('srule-sections').value.split('\n')
+      .map(line => uniqueNames(line.split('/').map(name => name.trim()).filter(Boolean)))
+      .filter(names => names.length);
+  }
+
+  function partsText(parts) {
+    return parts.map(names => uniqueNames(names).join(' / ')).join('\n');
+  }
+
+  function storeParts(parts) {
+    $('srule-sections').value = partsText(parts);
+    setRulesDirty(true);
+  }
+
+  function writeParts(parts, focus) {
+    storeParts(parts);
+    partFocus = focus || null;
+    renderParts();
+  }
+
+  function partName(value) {
+    return String(value || '').replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function partIconButton(className, label, path, disabled, handler) {
+    const button = el('button', 'icon-btn ' + className);
+    button.type = 'button';
+    button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="' + path + '"/></svg>';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.disabled = disabled;
+    button.addEventListener('click', handler);
+    return button;
+  }
+
+  function commitPartAlt() {
+    const input = document.querySelector('#srule-parts .part-alt-input');
+    if (selectedPart === null || !partEditor || !input) return false;
+    const value = partName(input.value);
+    input.value = '';
+    if (!value || [partEditor.name].concat(partEditor.alts).some(other => sameName(other, value))) return false;
+    partEditor.alts.push(value);
+    storePartEditor();
+    const list = document.querySelector('#srule-parts .part-alts');
+    if (list) list.append(partAltChip(value));
+    return true;
+  }
+
+  function closePartEditor() {
+    commitPartAlt();
+    if (newPart && selectedPart !== null && partEditor) {
+      const parts = readParts();
+      if (!partEditor.alts.length && sameName(partEditor.name, t('structure.rules.partNew'))) {
+        parts.splice(selectedPart, 1);
+        storeParts(parts);
+      }
+    }
+    newPart = false;
+    selectedPart = null;
+    partEditor = null;
+  }
+
+  function updatePartChip(index, names) {
+    const chip = document.querySelectorAll('#srule-parts .part-chip')[index];
+    if (!chip) return;
+    chip.title = names.join(' / ');
+    chip.querySelector('.part-label').textContent = names[0];
+    let more = chip.querySelector('.part-more');
+    if (names.length > 1) {
+      if (!more) {
+        more = el('span', 'part-more');
+        chip.append(more);
+      }
+      more.textContent = '+' + (names.length - 1);
+    } else if (more) {
+      more.remove();
+    }
+  }
+
+  function partAltChip(alt) {
+    const chip = el('span', 'part-alt-chip', alt);
+    chip.append(partIconButton('part-alt-remove', t('structure.rules.partRemoveAlt', { name: alt }), 'M6 6l12 12M18 6L6 18', busy, () => {
+      if (busy || selectedPart === null || !partEditor) return;
+      partEditor.alts = partEditor.alts.filter(other => other !== alt);
+      storePartEditor();
+      const input = document.querySelector('#srule-parts .part-alt-input');
+      chip.remove();
+      if (input) input.focus();
+    }));
+    return chip;
+  }
+
+  function renderPartEditor(parts, index) {
+    const names = parts[index];
+    partEditor = { name: names[0], alts: names.slice(1) };
+    const card = el('section', 'part-editor');
+    const head = el('div', 'part-editor-head');
+    const move = (offset, focus) => {
+      if (busy) return;
+      commitPartAlt();
+      const next = readParts();
+      const [moved] = next.splice(index, 1);
+      next.splice(index + offset, 0, moved);
+      selectedPart = index + offset;
+      writeParts(next, focus);
+    };
+    head.append(
+      el('span', 'part-editor-title', t('structure.rules.partOf', { n: index + 1, count: parts.length })),
+      partIconButton('part-move part-earlier', t('structure.rules.partEarlier'), 'M15 6l-6 6 6 6', busy || index === 0, () => move(-1, 'earlier')),
+      partIconButton('part-move part-later', t('structure.rules.partLater'), 'M9 6l6 6-6 6', busy || index === parts.length - 1, () => move(1, 'later')));
+    const nameLabel = el('label', 'part-field', t('structure.rules.partName'));
+    const name = el('input', 'part-name-input');
+    name.type = 'text';
+    name.value = names[0];
+    name.disabled = busy;
+    name.addEventListener('input', () => {
+      const value = partName(name.value);
+      if (!value || !partEditor) return;
+      partEditor.name = value;
+      storePartEditor();
+    });
+    name.addEventListener('change', () => {
+      if (!partEditor) return;
+      name.value = partEditor.name;
+      const duplicate = partEditor.alts.find(alt => sameName(alt, partEditor.name));
+      if (!duplicate) return;
+      partEditor.alts = partEditor.alts.filter(alt => alt !== duplicate);
+      storePartEditor();
+      document.querySelectorAll('#srule-parts .part-alt-chip').forEach(chip => {
+        if (chip.firstChild.textContent === duplicate) chip.remove();
+      });
+    });
+    nameLabel.append(name);
+    const alternatives = el('div', 'part-field', t('structure.rules.partAlternatives'));
+    const altList = el('div', 'part-alts');
+    names.slice(1).forEach(alt => altList.append(partAltChip(alt)));
+    const altInput = el('input', 'part-alt-input');
+    altInput.type = 'text';
+    altInput.disabled = busy;
+    altInput.placeholder = t('structure.rules.partAltPlaceholder');
+    altInput.setAttribute('aria-label', t('structure.rules.partAlternatives'));
+    altInput.addEventListener('input', () => setRulesDirty(true));
+    altInput.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      commitPartAlt();
+    });
+    altInput.addEventListener('change', commitPartAlt);
+    alternatives.append(altList, altInput);
+    const actions = el('div', 'part-actions');
+    const done = el('button', 'btn-tonal', t('structure.rules.partDone'));
+    done.type = 'button';
+    done.disabled = busy;
+    done.addEventListener('click', () => {
+      if (busy) return;
+      const at = index;
+      closePartEditor();
+      partFocus = 'chip:' + Math.min(at, readParts().length - 1);
+      renderParts();
+    });
+    const remove = el('button', 'link part-remove', t('structure.rules.partRemove'));
+    remove.type = 'button';
+    remove.disabled = busy;
+    remove.addEventListener('click', () => {
+      if (busy) return;
+      const next = readParts();
+      next.splice(index, 1);
+      selectedPart = null;
+      newPart = false;
+      writeParts(next, 'add');
+    });
+    actions.append(done, remove);
+    card.append(head, nameLabel, alternatives, actions);
+    return card;
+  }
+
+  function renderParts() {
+    const box = $('srule-parts');
+    if (!box) return;
+    const parts = readParts();
+    const type = $('srule-type');
+    const option = type.options[type.selectedIndex];
+    $('srule-parts-title').textContent = t('structure.rules.partsTitle', { type: option ? option.textContent.trim() : '' });
+    if (selectedPart !== null && selectedPart >= parts.length) selectedPart = null;
+    if (selectedPart === null) partEditor = null;
+    box.innerHTML = '';
+    const list = el('div', 'parts-list');
+    parts.forEach((names, i) => {
+      const chip = el('button', 'part-chip' + (i === selectedPart ? ' selected' : ''));
+      chip.type = 'button';
+      chip.disabled = busy;
+      chip.title = names.join(' / ');
+      chip.setAttribute('aria-pressed', i === selectedPart ? 'true' : 'false');
+      chip.append(el('span', 'part-index', String(i + 1)), el('span', 'part-label', names[0]));
+      if (names.length > 1) chip.append(el('span', 'part-more', '+' + (names.length - 1)));
+      chip.addEventListener('click', () => {
+        if (busy) return;
+        const open = selectedPart !== i;
+        const label = names[0];
+        closePartEditor();
+        const fresh = readParts();
+        const at = fresh.findIndex(other => other[0] === label);
+        selectedPart = open && at >= 0 ? at : null;
+        partFocus = selectedPart === null ? 'chip:' + Math.max(0, at) : 'name';
+        renderParts();
+      });
+      list.append(chip);
+    });
+    const add = el('button', 'part-add', t('structure.rules.partAdd'));
+    add.type = 'button';
+    add.disabled = busy;
+    add.addEventListener('click', () => {
+      if (busy) return;
+      closePartEditor();
+      const next = readParts().concat([[t('structure.rules.partNew')]]);
+      selectedPart = next.length - 1;
+      newPart = true;
+      writeParts(next, 'name');
+    });
+    list.append(add);
+    box.append(list);
+    if (selectedPart !== null) box.append(renderPartEditor(parts, selectedPart));
+    const focus = partFocus;
+    partFocus = null;
+    if (!focus) return;
+    let target = null;
+    if (focus.startsWith('chip:')) target = list.querySelectorAll('.part-chip')[Number(focus.slice(5))];
+    else if (focus === 'name') target = box.querySelector('.part-name-input');
+    else if (focus === 'earlier') target = box.querySelector('.part-earlier');
+    else if (focus === 'later') target = box.querySelector('.part-later');
+    else if (focus === 'add') target = add;
+    if (target && target.disabled) target = box.querySelector('.part-name-input');
+    if (target) {
+      target.focus();
+      if (focus === 'name' && target.select) target.select();
+    }
+  }
+
+  function readStructureRules() {
+    const rules = {};
+    Object.keys(STRUCTURE_FIELDS).forEach(key => {
+      const input = $(STRUCTURE_FIELDS[key]);
+      rules[key] = input.type === 'checkbox' ? input.checked : input.value;
+    });
+    return rules;
+  }
+
+  function structureTypeChanged() {
+    if (!structureDefaults) return;
+    const sections = $('srule-sections');
+    const type = $('srule-type').value;
+    const known = Object.values(structureDefaults.sections).concat(importedSections ? Object.values(importedSections) : []);
+    if (!sections.value.trim() || known.includes(sections.value)) {
+      sections.value = (importedSections && importedSections[type]) || structureDefaults.sections[type];
+      selectedPart = null;
+    }
+    renderParts();
+  }
+
+  const BIB_FIELDS = {
+    minReview: 'brule-min-review', minResearch: 'brule-min-research', maxAge: 'brule-max-age',
+    wikipedia: 'brule-wikipedia', web: 'brule-web', format: 'brule-format',
+    citeFormat: 'brule-cite-format', citePlacement: 'brule-cite-placement',
+  };
+
+  async function loadBibliographyRules() {
+    const data = await call('getBibliographyRules');
+    fillBibliographyRules(data.rules);
+    setRulesDefault('bib', data.isDefault);
+  }
+
+  function fillBibliographyRules(rules) {
+    Object.keys(BIB_FIELDS).forEach(key => {
+      const input = $(BIB_FIELDS[key]);
+      if (input.type === 'checkbox') input.checked = !!rules[key];
+      else input.value = rules[key] === null || rules[key] === undefined ? '' : rules[key];
+    });
+  }
+
+  function readBibliographyRules() {
+    const rules = {};
+    Object.keys(BIB_FIELDS).forEach(key => {
+      const input = $(BIB_FIELDS[key]);
+      rules[key] = input.type === 'checkbox' ? input.checked : input.value;
+    });
+    return rules;
+  }
+
+  async function resetBibliographyRules() {
+    fillBibliographyRules(await call('getDefaultBibliographyRules'));
+    showMessage(t('rules.resetDone'), 'ok');
+  }
+
+  function syncCheckType() {
+    $('check-type').value = $('srule-type').value;
+  }

@@ -221,7 +221,9 @@ w edytorze skryptów, bo następne wgranie nadpisze te zmiany.
 3. Zastąp zawartość `appsscript.json` plikiem `src/appsscript.json`.
 4. Dla każdego pliku `.js` z katalogu `src` utwórz w edytorze plik skryptu o tej samej
    nazwie (bez końcówki) i wklej zawartość. Domyślny `Kod.gs` możesz usunąć.
-5. Tak samo z plikami `.html`: `Sidebar`, `Styles`, `Client` i `Logo`.
+5. Tak samo z plikami `.html`: `Sidebar`, `Styles`, `Logo` i wszystkimi `Client…`
+   (`ClientCore`, `ClientShell`, `ClientSettings`, `ClientSources`, `ClientAssistant`,
+   `ClientResults`, `ClientRules`, `ClientModules`, `ClientInit`).
 6. Zapisz i odśwież dokument.
 
 ## Pierwsze uruchomienie
@@ -327,7 +329,11 @@ Kod leży w `src` i działa w Apps Script (V8). Pliki są celowo płasko, bez po
   testowalne w Node.
 - `TextClean.js`: czyszczenie tekstu i wykrywanie stron. Bez wywołań Google, więc
   da się je uruchomić i sprawdzić lokalnie w Node.
-- `Sidebar.html`, `Styles.html`, `Client.html`, `Logo.html`: panel boczny (`Logo.html` to logo w nagłówku).
+- `Sidebar.html`, `Styles.html`, `Logo.html`: panel boczny – układ, style i logo w nagłówku.
+- `Client*.html`: skrypt panelu podzielony według tematów (rdzeń, zakładki, ustawienia,
+  źródła, asystent, wyniki sprawdzania, wymagania, moduły, start). To czysty JavaScript bez
+  znaczników – `Sidebar.html` wstawia wszystkie pliki do jednego `<script>` przez
+  `includeScript_` (dosłownie, bez przetwarzania HTML), w kolejności z `Sidebar.html`.
 
 Teksty z PDF-ów i Worda powstają przez konwersję kopii pliku do Dokumentu Google
 (z rozpoznawaniem tekstu po polsku) i eksport do zwykłego tekstu. Kopia jest od razu

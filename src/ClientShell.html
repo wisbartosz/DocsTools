@@ -1,0 +1,57 @@
+  let checkView = 'overview';
+
+  function confirmAiNotice() {
+    if (settings.aiNoticeAccepted) return Promise.resolve(true);
+    return new Promise(resolve => {
+      $('ai-notice').classList.remove('hidden');
+      $('btn-notice-accept').disabled = false;
+      $('btn-notice-cancel').disabled = false;
+      $('btn-notice-accept').onclick = async () => {
+        $('ai-notice').classList.add('hidden');
+        try {
+          settings = await call('acceptAiNotice');
+          resolve(true);
+        } catch (e) {
+          showMessage(errorText(e), 'error');
+          resolve(false);
+        }
+      };
+      $('btn-notice-cancel').onclick = () => {
+        $('ai-notice').classList.add('hidden');
+        resolve(false);
+      };
+    });
+  }
+
+  let previousTab = 'check';
+
+  function switchTab(name) {
+    const current = document.querySelector('.panel:not(.hidden)');
+    if (current && current.id !== 'tab-settings' && current.id !== 'tab-' + name) previousTab = current.id.replace('tab-', '');
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+    if (name === 'assistant') {
+      assistantUnread = 0;
+      renderAssistantTab();
+    }
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+    $('btn-feedback').classList.toggle('active', name === 'feedback');
+    const lastTurn = name === 'assistant' && activeThread ? activeThread.turnsElement.lastElementChild : null;
+    if (lastTurn) lastTurn.scrollIntoView({ block: 'start' });
+    else scrollToTop($('tab-' + name));
+    hideMessage();
+    if (name === 'check') {
+      if (UI_MODE === 'window' && checkView === 'rules') showCheckView(currentModule ? 'module' : 'overview');
+      loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+    }
+    renderRail();
+  }
+
+  function renderRail() {
+    if (UI_MODE !== 'window') return;
+    const checkOpen = !$('tab-check').classList.contains('hidden');
+    const rulesOpen = checkOpen && checkView === 'rules';
+    document.querySelector('.tab[data-tab="check"]').classList.toggle('active', checkOpen && !rulesOpen);
+    $('rail-rules').classList.toggle('active', rulesOpen);
+    $('rail-sections').classList.toggle('hidden', !rulesOpen);
+    $('rail-threads').classList.toggle('hidden', !threads.length || $('tab-assistant').classList.contains('hidden') || $('assistant-content').classList.contains('hidden'));
+  }

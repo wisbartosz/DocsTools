@@ -1,0 +1,390 @@
+  let assistant = { sources: [], warnChars: 0 };
+
+  let assistantLoaded = false;
+
+  const threads = [];
+
+  let activeThread = null;
+
+  let assistantPending = 0;
+
+  let assistantUnread = 0;
+
+  async function callGemini(button, fn, ...args) {
+    if (!await confirmAiNotice()) return null;
+    button.classList.add('loading');
+    const counts = button.closest('#tab-assistant') !== null;
+    if (counts) assistantPending++;
+    renderAssistantTab();
+    try {
+      return await call(fn, ...args);
+    } finally {
+      button.classList.remove('loading');
+      if (counts) assistantPending--;
+      renderAssistantTab();
+    }
+  }
+
+  function notifyAssistant() {
+    if (!assistantTab().classList.contains('active')) assistantUnread++;
+    renderAssistantTab();
+  }
+
+  function assistantTab() {
+    return document.querySelector('.tab[data-tab="assistant"]');
+  }
+
+  function renderAssistantTab() {
+    const tab = assistantTab();
+    tab.querySelectorAll('.tab-dot, .tab-spinner').forEach(node => node.remove());
+    if (assistantUnread > 0) tab.append(el('span', 'tab-dot'));
+    else if (assistantPending > 0) tab.append(el('span', 'tab-spinner'));
+  }
+
+  function renderQuestionPlaceholder() {
+    const key = fragment ? 'assistant.fragment.placeholder'
+      : activeThread ? 'assistant.placeholderFollowUp'
+      : 'assistant.placeholder';
+    $('question').placeholder = t(key);
+  }
+
+  function markThreadUnread(thread) {
+    thread.unread = true;
+    renderThreadList();
+  }
+
+  function selectThread(thread, scroll) {
+    activeThread = thread;
+    if (thread) thread.unread = false;
+    renderQuestionPlaceholder();
+    renderAssistantSummary();
+    threads.forEach(item => item.element.classList.toggle('active', item === thread));
+    $('assistant-examples').classList.toggle('hidden', !!thread);
+    $('assistant-threads').open = false;
+    renderThreadList();
+    if (scroll === false) return;
+    if (thread) thread.element.scrollIntoView({ block: 'start' });
+    else scrollToTop($('tab-assistant'));
+  }
+
+  function renderThreadList() {
+    const unread = threads.some(thread => thread.unread);
+    $('assistant-threads').classList.toggle('hidden', !threads.length);
+    $('assistant-threads-summary').textContent = t('assistant.threadsSummary', { count: threads.length });
+    $('assistant-threads').querySelector('summary').classList.toggle('has-dot', unread);
+    fillThreadList($('thread-list'));
+    if (UI_MODE === 'window') {
+      fillThreadList($('rail-thread-list'));
+      renderRail();
+    }
+  }
+
+  function fillThreadList(list) {
+    const hadFocus = document.activeElement && list.contains(document.activeElement);
+    list.innerHTML = '';
+    threads.slice().reverse().forEach(thread => {
+      const button = el('button', 'rail-item rail-thread' + (thread === activeThread ? ' active' : ''));
+      button.append(el('span', 'rail-thread-label', thread.label));
+      if (thread.unread) button.append(el('span', 'tab-dot'));
+      button.title = thread.title;
+      if (thread === activeThread) button.setAttribute('aria-current', 'true');
+      button.addEventListener('click', () => {
+        switchTab('assistant');
+        selectThread(thread);
+      });
+      list.append(button);
+      if (hadFocus && thread === activeThread) button.focus();
+    });
+  }
+
+  function renderAssistantStart() {
+    if (!settings) return;
+    const hasFolder = !!settings.sourceFolderName;
+    const hasSources = !!(assistant && assistant.sources && assistant.sources.length);
+    const hasKey = !!settings.hasApiKey;
+    const ready = hasFolder && hasSources && hasKey;
+    $('assistant-start').classList.toggle('hidden', ready || (hasFolder && !assistantLoaded));
+    $('assistant-content').classList.toggle('hidden', !ready);
+    const folderDetail = t('assistant.start.folderDone', { name: settings.sourceFolderName }) + (sources.length ? ' · ' + countText('count.files', sources.length) : '');
+    const keyLink = el('button', 'link inline-link', t('assistant.start.keyLink'));
+    keyLink.addEventListener('click', () => openEditor('key-editor', 'key-input'));
+    const keyTodo = el('span');
+    const keyParts = t('assistant.start.keyTodo').split('{link}');
+    keyTodo.append(keyParts[0], keyLink, keyParts[1] || '');
+    const steps = [
+      { done: hasFolder, title: 'assistant.start.folder', detail: hasFolder ? folderDetail : t('assistant.start.folderTodo'),
+        action: 'assistant.start.folderAction', run: () => openEditor('folder-editor', 'folder-input'), hint: 'assistant.start.needFolder' },
+      { done: hasSources, title: 'assistant.start.sources',
+        detail: hasSources ? t('assistant.start.sourcesDone', { count: assistant.sources.length }) : t('assistant.start.sourcesTodo'),
+        action: 'assistant.start.sourcesAction', needs: hasFolder, hint: 'assistant.start.needSources',
+        run: () => {
+          switchTab('sources');
+          run(processSources);
+        } },
+      { done: hasKey, title: 'assistant.start.key', detail: hasKey ? t('assistant.start.keyDone') : keyTodo,
+        action: 'assistant.start.keyAction', run: () => openEditor('key-editor', 'key-input'), hint: 'assistant.start.needKey' },
+    ];
+    renderRail();
+    const current = steps.findIndex(step => !step.done && step.needs !== false);
+    const pending = steps.find(step => !step.done);
+    $('start-composer-text').textContent = pending ? t(pending.hint) : '';
+    const list = $('start-steps');
+    list.innerHTML = '';
+    steps.forEach((step, i) => {
+      const li = el('li', 'start-step' + (step.done ? ' done' : '') + (i === current ? ' current' : ''));
+      const mark = el('span', 'start-mark', step.done ? '' : String(i + 1));
+      const body = el('span', 'start-body');
+      const detail = el('span', 'start-detail');
+      detail.append(step.detail);
+      body.append(el('span', 'start-name', t(step.title)), detail);
+      if (i === current) {
+        const button = el('button', 'primary start-action', t(step.action));
+        button.addEventListener('click', step.run);
+        body.append(button);
+      }
+      li.append(mark, body);
+      list.append(li);
+    });
+  }
+
+  async function loadAssistant() {
+    if (!settings.sourceFolderName) {
+      assistantLoaded = true;
+      renderAssistantStart();
+      return;
+    }
+    try {
+      assistant = await call('getAssistantSources');
+    } finally {
+      assistantLoaded = true;
+      renderAssistant();
+    }
+  }
+
+  function renderAssistant() {
+    renderAssistantStart();
+    const list = $('assistant-source-list');
+    list.innerHTML = '';
+    assistant.sources.forEach(s => {
+      const label = el('label', 'picker-row');
+      const text = el('span', 'picker-text');
+      text.append(el('span', 'picker-name', s.name));
+      const size = s.pages ? t('sources.pages', { count: s.pages }) : s.chars ? t('sources.chars', { count: formatNumber(s.chars) }) : '';
+      if (size) text.append(el('span', 'picker-meta', size));
+      const box = el('input');
+      box.type = 'checkbox';
+      box.checked = s.selected;
+      box.addEventListener('change', () => { s.selected = box.checked; selectionChanged(); });
+      label.append(text, box);
+      list.append(label);
+    });
+    renderAssistantSummary();
+  }
+
+  function renderAssistantSummary() {
+    const selected = assistant.sources.filter(s => s.selected);
+    const threadFragment = activeThread && activeThread.fragment ? activeThread.fragment.length : 0;
+    const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0) + (fragment ? fragment.chars : threadFragment);
+    $('assistant-sources-summary').textContent = t('assistant.sourcesSummary', { selected: selected.length, total: assistant.sources.length });
+    $('assistant-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
+    $('assistant-picker-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
+    $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
+  }
+
+  function selectionChanged() {
+    renderAssistantSummary();
+    const excluded = assistant.sources.filter(s => !s.selected).map(s => s.id);
+    google.script.run.withFailureHandler(e => showMessage(errorText(e), 'error')).saveAssistantSelection(excluded);
+  }
+
+  function selectAllSources(selected) {
+    assistant.sources.forEach(s => { s.selected = selected; });
+    renderAssistant();
+    selectionChanged();
+  }
+
+  let fragment = null;
+
+  async function attachFragment() {
+    fragment = await call('getSelectedFragment');
+    renderFragment();
+  }
+
+  function removeFragment() {
+    fragment = null;
+    renderFragment();
+  }
+
+  function renderFragment() {
+    $('fragment-box').classList.toggle('hidden', !fragment);
+    $('fragment-title').textContent = fragment ? t('assistant.fragment.chip', { text: fragment.text.slice(0, 120) }) : '';
+    $('fragment-title').title = fragment ? fragment.text : '';
+    $('fragment-text').textContent = fragment ? fragment.text : '';
+    $('btn-attach-fragment').textContent = t(fragment ? 'assistant.fragment.replace' : 'assistant.fragment.attach');
+    renderQuestionPlaceholder();
+    renderAssistantSummary();
+  }
+
+  async function askAssistant() {
+    const target = activeThread;
+    const attached = fragment;
+    const typed = $('question').value;
+    const question = typed.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
+    const selected = assistant.sources.filter(s => s.selected);
+    const history = target ? target.turns.map(turn => ({ question: turn.question, answer: turn.answer })) : [];
+    const fragmentText = attached ? attached.text : (target ? target.fragment : '');
+    const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), history, fragmentText);
+    if (!result) return;
+    hideMessage();
+    if (fragment === attached) removeFragment();
+    let thread = target;
+    if (!thread) {
+      thread = { fragment: fragmentText, turns: [] };
+      thread.element = renderThread(thread, question);
+      threads.push(thread);
+      $('answers').append(thread.element);
+    } else if (attached) {
+      thread.fragment = attached.text;
+    }
+    const turn = addTurn(thread, question, result, attached ? attached.text : '', selected);
+    if ($('question').value === typed) $('question').value = '';
+    if (activeThread === target) {
+      selectThread(thread, false);
+      turn.scrollIntoView({ block: 'start' });
+    } else {
+      markThreadUnread(thread);
+    }
+    notifyAssistant();
+  }
+
+  function renderThread(thread, firstQuestion) {
+    const card = el('div', 'thread');
+    const title = thread.fragment ? (UI_LANG === 'pl' ? '„' : '“') + thread.fragment.slice(0, 80) + '” · ' + firstQuestion : firstQuestion;
+    thread.title = title;
+    thread.label = firstQuestion;
+    thread.turnsElement = el('div', 'turns');
+    card.append(thread.turnsElement);
+    return card;
+  }
+
+  function addTurn(thread, question, result, fragmentText, selected) {
+    const turn = el('div', 'turn');
+    const main = el('div', 'turn-main');
+    turn.append(main);
+    main.append(el('div', 'bubble', question));
+    if (fragmentText) {
+      const box = el('details', 'thread-fragment');
+      box.append(el('summary', '', t('assistant.fragment.inThread')), el('div', 'fragment-text', fragmentText));
+      main.append(box);
+    }
+    if (selected.length < assistant.sources.length) {
+      main.append(el('div', 'thread-sources', t('assistant.threadSources', { names: selected.map(s => s.name).join(', ') })));
+    }
+    if (result.raw) {
+      main.append(el('div', 'not-found', t('assistant.rawNote')), el('p', 'raw', result.raw), ...answerNotes(result));
+      thread.turns.push({ question: question, answer: result.raw });
+      thread.turnsElement.append(turn);
+      return turn;
+    }
+    if (!result.found) main.append(el('div', 'not-found', t('assistant.notFound')));
+    const answer = el('div', 'answer');
+    result.answer.split(/\n{2,}/).forEach(part => answer.append(answerParagraph(part.trim(), turn)));
+    main.append(answer);
+    if (result.citations.length) {
+      turn.classList.add('has-cites');
+      const cites = el('div', 'cites');
+      cites.append(el('div', 'cites-title', t('assistant.citations', { count: result.citations.length })));
+      const list = el('ol');
+      result.citations.forEach((c, index) => list.append(renderCitation(c, index + 1)));
+      cites.append(list);
+      turn.append(cites);
+    }
+    const actions = el('div', 'turn-actions');
+    const copy = el('button', 'link', t('assistant.copy'));
+    copy.addEventListener('click', () => copyAnswer(result));
+    actions.append(copy);
+    turn.append(actions, ...answerNotes(result));
+    thread.turns.push({ question: question, answer: result.answer });
+    thread.turnsElement.append(turn);
+    return turn;
+  }
+
+  function answerParagraph(text, turn) {
+    const p = el('p');
+    text.split(/(\[\d+\])/).forEach(part => {
+      const match = part.match(/^\[(\d+)\]$/);
+      if (!match) {
+        if (part) p.append(part);
+        return;
+      }
+      const ref = el('button', 'cite-ref', match[1]);
+      ref.setAttribute('aria-label', t('assistant.citeRef', { n: match[1] }));
+      ref.addEventListener('click', () => {
+        const target = turn.querySelector('.cite[data-n="' + match[1] + '"]');
+        if (!target) return;
+        target.scrollIntoView({ block: 'nearest' });
+        target.classList.remove('flash');
+        void target.offsetWidth;
+        target.classList.add('flash');
+      });
+      p.append(ref);
+    });
+    return p;
+  }
+
+  function copyAnswer(result) {
+    const lines = [result.answer.trim()];
+    if (result.citations.length) {
+      lines.push('', t('assistant.copySources'));
+      result.citations.forEach((c, index) => {
+        const where = c.page ? ', ' + t('assistant.page', { page: c.page }) : c.location ? ', ' + c.location : '';
+        const quote = c.quote ? ' – ' + (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”' : '';
+        lines.push('[' + (index + 1) + '] ' + c.sourceName + where + quote);
+      });
+    }
+    const text = lines.join('\n');
+    const done = () => showMessage(t('assistant.copied'), 'ok');
+    const fallback = () => {
+      const area = el('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.append(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      area.remove();
+      if (ok) done();
+      else showMessage(t('assistant.copyFailed'), 'error');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  }
+
+  function answerNotes(result) {
+    const notes = [];
+    if (result.excerpts) notes.push(el('div', 'answer-note', t('assistant.excerptsNote')));
+    if (result.fallback) notes.push(el('div', 'answer-note', t('ai.fallbackUsed', { model: result.model })));
+    return notes;
+  }
+
+  function renderCitation(c, n) {
+    const li = el('li', 'cite');
+    li.dataset.n = n;
+    const body = el('div', 'cite-body');
+    if (c.quote) body.append(el('div', 'quote', (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”'));
+    const meta = el('div', 'cite-meta');
+    if (c.known) {
+      const link = el('a', '', c.sourceName);
+      link.href = c.sourceUrl;
+      link.target = '_blank';
+      meta.append(link);
+    } else {
+      meta.append(t('assistant.unknownSource', { name: c.sourceName }));
+    }
+    if (c.page) meta.append(' · ' + t('assistant.page', { page: c.page }));
+    else if (c.location) meta.append(' · ' + c.location);
+    meta.append(' · ', el('span', 'badge ' + c.quoteStatus, t('assistant.quote.' + c.quoteStatus)));
+    body.append(meta);
+    li.append(el('span', 'cite-num', String(n)), body);
+    return li;
+  }

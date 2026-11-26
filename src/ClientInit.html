@@ -1,0 +1,266 @@
+  document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
+
+  $('btn-sources-change').addEventListener('click', () => openEditor('folder-editor', 'folder-input'));
+
+  $('btn-sources-folder').addEventListener('click', () => openEditor('folder-editor', 'folder-input'));
+
+  $('btn-refresh').addEventListener('click', () => run(async () => {
+    try {
+      await loadSources();
+    } finally {
+      await loadAssistant();
+    }
+  }));
+
+  $('btn-process').addEventListener('click', () => run(processSources));
+
+  $('btn-save-folder').addEventListener('click', () => run(async () => {
+    settings = await call('saveSourceFolder', $('folder-input').value);
+    $('folder-input').value = '';
+    $('folder-editor').classList.add('hidden');
+    showMessage(t('settings.folder.saved', { name: settings.sourceFolderName }), 'ok');
+    try {
+      await loadSources();
+    } finally {
+      await loadAssistant();
+    }
+  }));
+
+  $('btn-save-key').addEventListener('click', () => run(async () => {
+    settings = await call('saveApiKey', $('key-input').value);
+    $('key-input').value = '';
+    $('key-editor').classList.add('hidden');
+    showMessage(t('settings.key.saved'), 'ok');
+    await loadModels();
+  }));
+
+  $('btn-clear-key').addEventListener('click', () => run(async () => {
+    settings = await call('clearApiKey');
+    fillModels([]);
+    showMessage(t('settings.key.removed'), 'ok');
+  }));
+
+  $('btn-test').addEventListener('click', () => run(async () => {
+    const time = new Date().toLocaleTimeString(UI_LANG === 'en' ? 'en-GB' : 'pl-PL', { hour: '2-digit', minute: '2-digit' });
+    let result;
+    try {
+      result = await callGemini($('btn-test'), 'testGeminiConnection');
+    } catch (e) {
+      connection = { ok: false, time: time };
+      throw e;
+    }
+    if (!result) return;
+    connection = { ok: true, time: time };
+    showMessage(t('ai.testOk', { model: result.model, reply: result.reply }), 'ok');
+  }));
+
+  $('fallback-toggle').addEventListener('change', () => {
+    call('saveFallback', $('fallback-toggle').checked)
+      .then(updated => { settings = updated; })
+      .catch(e => showMessage(errorText(e), 'error'));
+  });
+
+  $('language-select').addEventListener('change', () => {
+    const value = $('language-select').value;
+    call('saveUiLanguage', value, false)
+      .then(() => {
+        settings.uiLanguageSetting = value;
+        $('language-note').classList.remove('hidden');
+      })
+      .catch(e => {
+        $('language-select').value = settings.uiLanguageSetting || '';
+        showMessage(errorText(e), 'error');
+      });
+  });
+
+  if ($('btn-reopen')) $('btn-reopen').addEventListener('click', () => run(() => call('showSidebar')));
+
+  $('btn-settings-back').addEventListener('click', () => switchTab(previousTab));
+
+  setInfoTip($('model-info'), t('settings.model.hint'));
+
+  $('model-info').innerHTML = document.querySelector('#module-info').innerHTML;
+
+  $('btn-check-update').addEventListener('click', () => runInBackground($('btn-check-update'), () => checkForUpdate(true)));
+
+  $('btn-install-update').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
+
+  $('btn-update-banner').addEventListener('click', () => window.open(update.installerUrl, '_blank'));
+
+  $('btn-change-folder').addEventListener('click', () => {
+    $('folder-editor').classList.toggle('hidden');
+    if (!$('folder-editor').classList.contains('hidden')) $('folder-input').focus();
+  });
+
+  $('btn-change-key').addEventListener('click', () => {
+    $('key-editor').classList.toggle('hidden');
+    if (!$('key-editor').classList.contains('hidden')) $('key-input').focus();
+  });
+
+  $('model-select').addEventListener('change', () => {
+    if (!$('model-select').value) return;
+    run(async () => {
+      try {
+        settings = await call('saveModel', $('model-select').value);
+        showMessage(t('settings.model.saved', { model: settings.model }), 'ok');
+      } finally {
+        $('model-select').value = settings.model || '';
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-view-back').forEach(button => button.addEventListener('click', () => showCheckView('overview')));
+
+  setInfoTip($('import-info'), t('format.rules.importHint'));
+
+  $('import-info').innerHTML = $('module-info').innerHTML;
+
+  ['module-info', 'model-info', 'import-info'].forEach(id => {
+    const tip = $(id);
+    tip.addEventListener('click', () => tip.classList.toggle('pinned'));
+    tip.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        tip.classList.toggle('pinned');
+      }
+      if (e.key === 'Escape') tip.classList.remove('pinned');
+    });
+    tip.addEventListener('blur', () => tip.classList.remove('pinned'));
+  });
+
+  $('btn-open-rules').addEventListener('click', () => {
+    showCheckView('rules');
+    loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+  });
+
+  $('btn-check-all').addEventListener('click', () => run(checkAll));
+
+  $('btn-module-recheck').addEventListener('click', () => {
+    const module = currentModule && moduleById(currentModule);
+    if (module) run(() => runModuleCheck(module));
+  });
+
+  $('check-type').addEventListener('change', () => run(changeCheckType));
+
+  $('btn-save-all-rules').addEventListener('click', () => run(saveAllRules));
+
+  $('btn-reset-all-rules').addEventListener('click', () => run(resetAllRules));
+
+  document.querySelectorAll('#check-rules .segment').forEach(segment => segment.addEventListener('click', () => showRulesPane(segment.dataset.pane)));
+
+  document.querySelectorAll('#check-rules .rules-pane input, #check-rules .rules-pane select, #check-rules .rules-pane textarea').forEach(input => {
+    if (input.id === 'skip-title-page' || input.id === 'srule-type') return;
+    input.addEventListener('input', () => setRulesDirty(true));
+    input.addEventListener('change', () => setRulesDirty(true));
+  });
+
+  renderRulesBanner();
+
+  $('srule-type').addEventListener('change', () => {
+    const type = $('srule-type').value;
+    $('srule-type').value = $('check-type').value;
+    $('check-type').value = type;
+    run(changeCheckType);
+  });
+
+  $('btn-title-page-rules').addEventListener('click', () => {
+    showCheckView('rules');
+    showRulesPane('general');
+    loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+  });
+
+  $('skip-title-page').addEventListener('change', () => {
+    renderOverview();
+    call('saveSkipTitlePage', $('skip-title-page').checked).catch(e => showMessage(errorText(e), 'error'));
+  });
+
+  $('btn-import-rules').addEventListener('click', () => runInBackground($('btn-import-rules'), importFormatRules));
+
+  $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));
+
+  $('btn-remove-fragment').addEventListener('click', removeFragment);
+
+  $('btn-feedback').addEventListener('click', () => switchTab('feedback'));
+
+  $('btn-send-feedback').addEventListener('click', () => runInBackground($('btn-send-feedback'), sendFeedback));
+
+  $('btn-select-all').addEventListener('click', () => selectAllSources(true));
+
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.assistant-bar details[open]').forEach(details => {
+      if (!details.contains(e.target)) details.open = false;
+    });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.assistant-bar details[open]').forEach(details => {
+      details.open = false;
+      details.querySelector('summary').focus();
+    });
+  });
+
+  $('btn-new-thread').addEventListener('click', () => {
+    selectThread(null);
+    $('question').focus();
+  });
+
+  document.querySelectorAll('.example-chip').forEach(chip => chip.addEventListener('click', () => {
+    $('question').value = chip.textContent;
+    $('question').focus();
+  }));
+
+  $('btn-select-none').addEventListener('click', () => selectAllSources(false));
+
+  $('btn-ask').addEventListener('click', () => runInBackground($('btn-ask'), askAssistant));
+
+  if ($('btn-enlarge')) $('btn-enlarge').addEventListener('click', () => run(() => call('showAssistantWindow')));
+
+  $('question').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      runInBackground($('btn-ask'), askAssistant);
+    }
+  });
+
+  $('toast').addEventListener('click', hideToast);
+
+  $('btn-restore-ignored').addEventListener('click', () => {
+    if (!busy) restoreAllIgnored();
+  });
+
+  document.querySelectorAll('.rules-grid .rules-check').forEach(label => {
+    const node = [...label.childNodes].find(child => child.nodeType === 3 && child.textContent.trim());
+    if (node) node.textContent = node.textContent.replace(/\S/, ch => ch.toLocaleUpperCase(UI_LANG));
+  });
+
+  document.querySelectorAll('.rules-pane input[type=number], .rules-pane input[type=text]').forEach(input => {
+    if (!input.placeholder) input.placeholder = t('rules.none');
+  });
+
+  if (UI_MODE === 'window') {
+    $('rail-rules').addEventListener('click', () => {
+      switchTab('check');
+      showCheckView('rules');
+    });
+    document.querySelectorAll('#rail-sections .rail-link').forEach(link => link.addEventListener('click', () => {
+      const pane = document.querySelector('.rules-pane[data-pane="' + link.dataset.pane + '"]');
+      pane.scrollIntoView({ block: 'nearest' });
+      pane.classList.remove('pane-flash');
+      void pane.offsetWidth;
+      pane.classList.add('pane-flash');
+    }));
+    showCheckView('overview');
+    switchTab('assistant');
+  }
+
+  run(async () => {
+    settings = await call('getSettings');
+    $('language-select').value = settings.uiLanguageSetting || '';
+    $('link-installer').href = settings.updateUrl;
+    checkForUpdate(false);
+    renderSettings();
+    await loadCheckRules().catch(e => showMessage(errorText(e), 'error'));
+  }).then(() => Promise.all([loadSources(), loadModels(), loadAssistant()]).catch(e => showMessage(errorText(e), 'error')));
+
+  renderOverview();

@@ -1,0 +1,728 @@
+  let typo = null;
+
+  const typoOpen = new Set();
+
+  const TYPO_SHOW_SPACES = ['orphan', 'spaces', 'punctuation', 'dash'];
+
+  const TYPO_SPEC = {
+    module: 'typography',
+    data: () => typo,
+    summaryId: 'typo-summary',
+    groupsId: 'typo-groups',
+    kindKey: 'typo.kind.',
+    noneKey: 'typo.none',
+    moreKey: 'typo.more',
+    open: typoOpen,
+    showFn: 'showTypographyIssue',
+    showable: () => true,
+    snippet: (item, node) => {
+      if (item.footnote) node.append(el('span', 'result-where', t('typo.footnote')));
+      const match = TYPO_SHOW_SPACES.includes(item.ref.kind) ? item.match.replace(/ /g, '·') : item.match;
+      node.append(item.before, el('mark', '', match), item.after);
+    },
+    fixable: () => true,
+    fixItem: item => fixTypographyIssue(item),
+    groupActions: group => [fixAllButton(group.count, button => fixTypographyKind(group.kind, button))],
+  };
+
+  let style = null;
+
+  const styleOpen = new Set();
+
+  async function checkStyle() {
+    style = await call('checkStyle');
+    renderStyle();
+  }
+
+  const STYLE_SPEC = {
+    module: 'style',
+    data: () => style,
+    summaryId: 'style-summary',
+    groupsId: 'style-groups',
+    kindKey: 'style.kind.',
+    noneKey: 'style.none',
+    moreKey: 'style.more',
+    open: styleOpen,
+    showFn: 'showStyleIssue',
+    showable: () => true,
+    notes: data => [t('style.stats', data.stats)],
+    snippet: (item, node) => node.append(item.before, el('mark', '', item.match), item.after),
+  };
+
+  function renderStyle() {
+    renderCheckResult(STYLE_SPEC);
+  }
+
+  let abbreviations = null;
+
+  const abbreviationsOpen = new Set();
+
+  async function checkAbbreviations() {
+    abbreviations = await call('checkAbbreviations');
+    renderAbbreviations();
+  }
+
+  const ABBREVIATIONS_SPEC = {
+    module: 'abbreviations',
+    data: () => abbreviations,
+    summaryId: 'abbr-summary',
+    groupsId: 'abbr-groups',
+    kindKey: 'abbr.kind.',
+    noneKey: 'abbr.none',
+    moreKey: 'abbr.more',
+    open: abbreviationsOpen,
+    showFn: 'showStyleIssue',
+    showable: () => true,
+    notes: data => [t('abbr.stats', data.stats)].concat(data.noSection ? [t('abbr.noSection')] : []),
+    snippet: (item, node) => {
+      node.append(item.before, el('mark', '', item.match), item.after);
+      if (item.detail) node.append(el('div', 'result-detail', item.detail));
+    },
+  };
+
+  function renderAbbreviations() {
+    renderCheckResult(ABBREVIATIONS_SPEC);
+  }
+
+  async function checkTypography() {
+    typo = await call('checkTypography');
+    renderTypography();
+  }
+
+  function renderTypography() {
+    renderCheckResult(TYPO_SPEC);
+  }
+
+  async function fixTypographyIssue(item) {
+    const update = await call('fixTypographyIssue', item.ref);
+    update.items.forEach(fresh => { fresh.order = item.order; });
+    typo.groups.forEach(group => {
+      group.count += (update.after[group.kind] || 0) - (update.before[group.kind] || 0);
+      group.items = group.items
+        .filter(other => other.ref.key !== update.key)
+        .concat(update.items.filter(fresh => fresh.ref.kind === group.kind))
+        .sort((a, b) => a.order - b.order || a.ref.start - b.ref.start);
+    });
+    renderTypography();
+  }
+
+  async function fixKindWith(button, request, accept) {
+    button.classList.add('loading');
+    try {
+      const response = await request();
+      accept(response.result);
+      showMessage(t('typo.fixed', { count: formatNumber(response.fixed) }) + ' ' + t('typo.versionHint'), 'ok');
+    } finally {
+      button.classList.remove('loading');
+    }
+  }
+
+  async function fixTypographyKind(kind, button) {
+    await fixKindWith(button, () => call('fixTypographyKind', kind), result => {
+      typo = result;
+      renderTypography();
+    });
+  }
+
+  let format = null;
+
+  const formatOpen = new Set();
+
+  async function checkFormatting() {
+    format = await call('checkFormatting');
+    renderFormatting();
+  }
+
+  const FORMAT_SPEC = {
+    module: 'format',
+    data: () => format,
+    summaryId: 'format-summary',
+    groupsId: 'format-groups',
+    kindKey: 'format.kind.',
+    noneKey: 'format.none',
+    moreKey: 'typo.more',
+    open: formatOpen,
+    showFn: 'showFormatIssue',
+    notes: data => (data.noHeadings ? [t('format.noHeadings')] : []),
+    fixable: () => true,
+    fixItem: async item => {
+      format = await call('fixFormatIssue', item.ref);
+      renderFormatting();
+    },
+    groupActions: group => [fixAllButton(group.count, button => fixFormatKind(group.kind, button))],
+  };
+
+  function renderFormatting() {
+    renderCheckResult(FORMAT_SPEC);
+  }
+
+  async function fixFormatKind(kind, button) {
+    await fixKindWith(button, () => call('fixFormatKind', kind), result => {
+      format = result;
+      renderFormatting();
+    });
+  }
+
+  let structure = null;
+
+  const structureOpen = new Set();
+
+  async function checkStructure() {
+    structure = await call('checkStructure', { type: $('check-type').value, pages: true });
+    renderStructure();
+  }
+
+  function withPreviousPages(next) {
+    if (next.pages === null && structure && structure.pages !== null) {
+      next.pages = structure.pages;
+      next.pagesApprox = structure.pagesApprox;
+      next.groups = next.groups.map(group => group.kind === 'pages'
+        ? structure.groups.find(previous => previous.kind === 'pages') || group
+        : group);
+    }
+    return next;
+  }
+
+  const STRUCTURE_SPEC = {
+    module: 'structure',
+    data: () => structure,
+    summaryId: 'structure-summary',
+    groupsId: 'structure-groups',
+    kindKey: 'structure.kind.',
+    noneKey: 'structure.none',
+    open: structureOpen,
+    showFn: 'showStructureIssue',
+    notes: data => (data.pages !== null ? [t(data.pagesApprox ? 'structure.pagesInfoApprox' : 'structure.pagesInfo', { count: data.pages })] : []),
+    fixable: item => !!item.fixable,
+    fixItem: async item => {
+      structure = withPreviousPages(await call('fixStructureIssue', item.ref, $('check-type').value));
+      renderStructure();
+    },
+    groupActions: group => {
+      const fixable = group.items.filter(item => item.fixable).length;
+      return fixable ? [fixAllButton(fixable, button => fixStructureKind(group.kind, button))] : [];
+    },
+  };
+
+  function renderStructure() {
+    renderCheckResult(STRUCTURE_SPEC);
+  }
+
+  async function fixStructureKind(kind, button) {
+    await fixKindWith(button, () => call('fixStructureKind', kind, $('check-type').value), result => {
+      structure = withPreviousPages(result);
+      renderStructure();
+    });
+  }
+
+  let bibliography = null;
+
+  const bibliographyOpen = new Set();
+
+  async function checkBibliography() {
+    bibliography = await call('checkBibliography', { type: $('check-type').value });
+    renderBibliography();
+  }
+
+  const BIBLIOGRAPHY_SPEC = {
+    module: 'bibliography',
+    data: () => bibliography,
+    summaryId: 'bib-summary',
+    groupsId: 'bib-groups',
+    kindKey: 'bib.kind.',
+    noneKey: 'bib.none',
+    open: bibliographyOpen,
+    showFn: 'showBibliographyIssue',
+    empty: data => (data.noSection ? t('bib.noSection') : ''),
+    notes: data => [t('bib.stats', data.stats)],
+    fixable: item => !!item.fixable,
+    fixItem: item => fixBibliographyIssue(item),
+    groupActions: group => {
+      const actions = [];
+      if (group.kind === 'order' && bibliography.sortable) {
+        const sort = el('button', 'btn-tonal', t('bib.sort'));
+        sort.addEventListener('click', () => run(async () => {
+          sort.classList.add('loading');
+          try {
+            bibliography = await call('sortBibliography', { type: $('check-type').value });
+            renderBibliography();
+            showMessage(t('bib.sorted') + ' ' + t('typo.versionHint'), 'ok');
+          } finally {
+            sort.classList.remove('loading');
+          }
+        }));
+        actions.push(sort);
+      }
+      if (group.fixAll && group.fixable) actions.push(fixAllButton(group.fixable, button => fixBibliographyKind(group.kind, button)));
+      return actions;
+    },
+  };
+
+  function renderBibliography() {
+    renderCheckResult(BIBLIOGRAPHY_SPEC);
+  }
+
+  async function fixBibliographyIssue(item) {
+    bibliography = await call('fixBibliographyIssue', item.ref, { type: $('check-type').value });
+    renderBibliography();
+  }
+
+  async function fixBibliographyKind(kind, button) {
+    await fixKindWith(button, () => call('fixBibliographyKind', kind, { type: $('check-type').value }), result => {
+      bibliography = result;
+      renderBibliography();
+    });
+  }
+
+  let figures = null;
+
+  const figuresOpen = new Set();
+
+  async function checkFigures() {
+    hideRenumberPreview();
+    hideListPreview();
+    figures = await call('checkFigures', { type: $('check-type').value });
+    renderFigures();
+  }
+
+  const FIGURES_SPEC = {
+    module: 'figures',
+    data: () => figures,
+    summaryId: 'fig-summary',
+    groupsId: 'fig-groups',
+    kindKey: 'fig.kind.',
+    noneKey: 'fig.none',
+    open: figuresOpen,
+    showFn: 'showBibliographyIssue',
+    notes: data => [t('fig.stats', data.stats)],
+    fixable: item => !!item.fixable,
+    fixLabel: () => t('fig.moveAbove'),
+    fixItem: async item => {
+      figures = await call('moveFigureCaption', { type: $('check-type').value }, item.ref);
+      hideListPreview();
+      hideRenumberPreview();
+      renderFigures();
+      showMessage(t('fig.moved', { count: 1 }) + ' ' + t('typo.versionHint'), 'ok');
+    },
+    groupActions: group => {
+      if (group.kind === 'captionBelow') {
+        const fixable = group.items.filter(item => item.fixable).length;
+        if (!fixable) return [];
+        const all = el('button', 'btn-tonal', t('fig.moveAllAbove', { count: fixable }));
+        all.addEventListener('click', () => run(async () => {
+          all.classList.add('loading');
+          try {
+            const response = await call('moveAllFigureCaptions', { type: $('check-type').value });
+            figures = response.result;
+            hideListPreview();
+            hideRenumberPreview();
+            renderFigures();
+            showMessage(t('fig.moved', { count: response.moved }) + ' ' + t('typo.versionHint'), 'ok');
+          } finally {
+            all.classList.remove('loading');
+          }
+        }));
+        return [all];
+      }
+      if (['noList', 'listMissing', 'listExtra', 'listTitle'].includes(group.kind)) {
+        const list = el('button', 'btn-tonal', t(group.kind === 'noList' ? 'fig.list.create' : 'fig.list.refresh'));
+        list.addEventListener('click', () => run(async () => {
+          list.classList.add('loading');
+          try {
+            hideRenumberPreview();
+            renderListPreview(await call('previewFigureList'));
+          } finally {
+            list.classList.remove('loading');
+          }
+        }));
+        return [list];
+      }
+      if (group.kind !== 'numbering') return [];
+      const button = el('button', 'btn-tonal', t('fig.renumber'));
+      button.addEventListener('click', () => run(async () => {
+        button.classList.add('loading');
+        try {
+          hideListPreview();
+          renderRenumberPreview(await call('previewFigureRenumber'));
+        } finally {
+          button.classList.remove('loading');
+        }
+      }));
+      return [button];
+    },
+  };
+
+  function hideListPreview() {
+    $('fig-list').classList.add('hidden');
+    $('fig-list').innerHTML = '';
+  }
+
+  function listToggle(title, hint, checked, disabled) {
+    const label = el('label', 'picker-row');
+    const text = el('span', 'picker-text');
+    text.append(el('span', 'picker-name', title), el('span', 'picker-meta', hint));
+    const box = el('input');
+    box.type = 'checkbox';
+    box.checked = checked;
+    box.disabled = disabled;
+    label.append(text, box);
+    return { label: label, box: box };
+  }
+
+  function renderListPreview(preview) {
+    const card = $('fig-list');
+    card.innerHTML = '';
+    card.append(el('div', 'renumber-title', t('fig.list.heading')));
+    card.append(el('div', 'small', t('fig.list.place.' + preview.place, { count: preview.existing })));
+    if (!preview.entries.length) card.append(el('div', 'renumber-warn small', t('err.figListEmpty')));
+    const list = el('div', 'list-preview');
+    preview.entries.forEach(entry => {
+      const row = el('div', 'list-preview-row');
+      row.append(el('span', 'list-preview-text', entry.text), el('span', 'list-preview-page', entry.page ? t('fig.list.pageApprox', { page: entry.page }) : '–'));
+      list.append(row);
+    });
+    card.append(list);
+    const toggles = el('div', 'list-toggles');
+    const pages = listToggle(t('fig.list.pages'), t(preview.pages ? 'fig.list.pagesHint' : 'fig.list.pagesNone'), preview.pages, !preview.pages);
+    const links = listToggle(t('fig.list.links'), t('fig.list.linksHint'), true, false);
+    pages.box.addEventListener('change', () => list.classList.toggle('no-pages', !pages.box.checked));
+    toggles.append(pages.label, links.label);
+    card.append(toggles);
+    const actions = el('div', 'renumber-actions');
+    const apply = el('button', 'primary', t(preview.place === 'replace' ? 'fig.list.replace' : 'fig.list.insert'));
+    apply.disabled = !preview.entries.length;
+    apply.addEventListener('click', () => run(async () => {
+      apply.classList.add('loading');
+      try {
+        const response = await call('insertFigureList', { type: $('check-type').value }, { pages: pages.box.checked, links: links.box.checked });
+        hideListPreview();
+        figures = response.result;
+        renderFigures();
+        showMessage(t('fig.list.done', { count: response.count }) + (response.pages ? ' ' + t('fig.list.pagesHint') + '.' : '') + ' ' + t('typo.versionHint'), 'ok');
+      } finally {
+        apply.classList.remove('loading');
+      }
+    }));
+    const cancel = el('button', 'link', t('fig.renumber.cancel'));
+    cancel.addEventListener('click', hideListPreview);
+    actions.append(apply, cancel);
+    card.append(actions);
+    card.classList.remove('hidden');
+    card.scrollIntoView({ block: 'nearest' });
+    apply.disabled ? cancel.focus() : apply.focus();
+  }
+
+  function hideRenumberPreview() {
+    $('fig-renumber').classList.add('hidden');
+    $('fig-renumber').innerHTML = '';
+  }
+
+  function renderRenumberPreview(preview) {
+    const card = $('fig-renumber');
+    card.innerHTML = '';
+    const pending = preview.changes.length + preview.entryCount;
+    if (!pending && !preview.unresolved.length && !preview.conflicts.length) {
+      hideRenumberPreview();
+      showMessage(t('fig.renumber.none'), 'ok');
+      return false;
+    }
+    card.append(el('div', 'renumber-title', t('fig.renumber.title')));
+    if (preview.changes.length) {
+      const list = el('ul', 'renumber-list');
+      preview.changes.slice(0, 12).forEach(change => {
+        const li = el('li');
+        li.append(el('span', 'renumber-label', change.label + ' '), el('span', 'fix-before', change.from), el('span', 'renumber-arrow', ' → '), el('span', 'fix-after', change.to));
+        list.append(li);
+      });
+      if (preview.changes.length > 12) list.append(el('li', 'muted', t('fig.renumber.more', { count: preview.changes.length - 12 })));
+      card.append(list);
+    }
+    const notes = [];
+    if (preview.refCount) notes.push(t('fig.renumber.refs', { count: preview.refCount }));
+    if (preview.entryCount) notes.push(t('fig.renumber.entries', { count: preview.entryCount }));
+    if (notes.length) card.append(el('div', 'muted small', notes.join(' ')));
+    preview.conflicts.forEach(label => card.append(el('div', 'renumber-warn small', t('fig.renumber.conflict', { label: label }))));
+    if (preview.unresolved.length) {
+      card.append(el('div', 'renumber-subtitle small', t('fig.renumber.unresolvedTitle')));
+      const list = el('ul', 'renumber-unresolved small');
+      preview.unresolved.slice(0, 8).forEach(item => {
+        const li = el('li');
+        li.append(el('span', 'renumber-raw', item.raw), ' – ' + t('fig.renumber.reason.' + item.reason, { number: item.number }));
+        list.append(li);
+      });
+      if (preview.unresolved.length > 8) list.append(el('li', 'muted', t('fig.renumber.more', { count: preview.unresolved.length - 8 })));
+      card.append(list);
+    }
+    const actions = el('div', 'renumber-actions');
+    const apply = el('button', 'primary', t('fig.renumber.apply'));
+    apply.disabled = !pending;
+    apply.addEventListener('click', () => run(async () => {
+      apply.classList.add('loading');
+      try {
+        const response = await call('renumberFigures', { type: $('check-type').value }, preview.fingerprint);
+        if (response.stale) {
+          if (renderRenumberPreview(response.preview)) showMessage(t('fig.renumber.stale'), 'warn');
+          return;
+        }
+        hideRenumberPreview();
+        figures = response.result;
+        renderFigures();
+        showMessage(t('fig.renumber.done', { captions: response.captions, refs: response.refs, entries: response.entries }) + ' ' + t('typo.versionHint'), 'ok');
+      } finally {
+        apply.classList.remove('loading');
+      }
+    }));
+    const cancel = el('button', 'link', t('fig.renumber.cancel'));
+    cancel.addEventListener('click', hideRenumberPreview);
+    actions.append(apply, cancel);
+    card.append(actions);
+    card.classList.remove('hidden');
+    card.scrollIntoView({ block: 'nearest' });
+    apply.disabled ? cancel.focus() : apply.focus();
+    return true;
+  }
+
+  function renderFigures() {
+    renderCheckResult(FIGURES_SPEC);
+  }
+
+  const CHECK_MODULES = [
+    { id: 'structure', title: 'structure.title', kindKey: 'structure.kind.', data: () => structure, check: () => checkStructure(), render: () => renderStructure() },
+    { id: 'bibliography', title: 'bib.title', kindKey: 'bib.kind.', data: () => bibliography, check: () => checkBibliography(), render: () => renderBibliography(),
+      unavailable: data => (data.noSection ? t('check.module.noBibliography') : '') },
+    { id: 'figures', title: 'fig.title', kindKey: 'fig.kind.', data: () => figures, check: () => checkFigures(), render: () => renderFigures() },
+    { id: 'style', title: 'style.title', kindKey: 'style.kind.', data: () => style, check: () => checkStyle(), render: () => renderStyle() },
+    { id: 'abbreviations', title: 'abbr.title', kindKey: 'abbr.kind.', data: () => abbreviations, check: () => checkAbbreviations(), render: () => renderAbbreviations() },
+    { id: 'typography', title: 'typo.title', kindKey: 'typo.kind.', data: () => typo, check: () => checkTypography(), render: () => renderTypography() },
+    { id: 'format', title: 'format.title', kindKey: 'format.kind.', data: () => format, check: () => checkFormatting(), render: () => renderFormatting() },
+  ];
+
+  const moduleErrors = {};
+
+  let currentModule = null;
+
+  let resultFilter = 'all';
+
+  let lastCheck = null;
+
+  function moduleById(id) {
+    return CHECK_MODULES.find(m => m.id === id);
+  }
+
+  function moduleStatus(module) {
+    if (moduleErrors[module.id]) return { state: 'error', fix: 0, review: 0, text: t('check.module.error', { error: moduleErrors[module.id] }) };
+    const data = module.data();
+    if (!data) return { state: 'none', fix: 0, review: 0, text: t('check.module.none') };
+    const unavailable = module.unavailable ? module.unavailable(data) : '';
+    if (unavailable) return { state: 'unavailable', fix: 0, review: 0, text: unavailable };
+    const groups = data.groups.filter(g => g.count > 0);
+    const fix = groups.filter(g => !g.info).reduce((sum, g) => sum + g.count, 0);
+    const review = groups.filter(g => g.info).reduce((sum, g) => sum + g.count, 0);
+    const hidden = hiddenCount(data);
+    const withHidden = text => (hidden ? text + ' · ' + countText('ignore.count', hidden) : text);
+    if (!fix && !review) return { state: 'ok', fix: 0, review: 0, hidden: hidden, text: withHidden(t('check.module.ok')) };
+    if (!fix) return { state: 'review', fix: 0, review: review, hidden: hidden, text: withHidden(t('check.module.review', { count: formatNumber(review) })) };
+    const top = groups.filter(g => !g.info).sort((a, b) => b.count - a.count).slice(0, 2).map(g => t(module.kindKey + g.kind + '.title'));
+    const extra = review ? [t('check.module.moreReview', { count: formatNumber(review) })] : [];
+    return { state: 'fix', fix: fix, review: review, hidden: hidden, text: withHidden(top.concat(extra).join(' · ')) };
+  }
+
+  function renderOverview() {
+    const list = $('module-list');
+    const focused = document.activeElement && document.activeElement.classList.contains('module-row') ? document.activeElement.dataset.module : null;
+    list.innerHTML = '';
+    let fix = 0;
+    let review = 0;
+    let ok = 0;
+    let checked = 0;
+    let hidden = 0;
+    let hiddenModules = 0;
+    CHECK_MODULES.forEach(module => {
+      const status = moduleStatus(module);
+      if (status.state !== 'none') checked++;
+      if (status.hidden) {
+        hidden += status.hidden;
+        hiddenModules++;
+      }
+      fix += status.fix;
+      review += status.review;
+      if (status.state === 'ok') ok++;
+      const selected = UI_MODE === 'window' && module.id === currentModule;
+      const row = el('button', 'module-row state-' + status.state + (selected ? ' selected' : ''));
+      row.dataset.module = module.id;
+      if (selected) row.setAttribute('aria-current', 'true');
+      row.disabled = busy;
+      const badge = el('span', 'module-badge');
+      if (status.state === 'fix') badge.textContent = status.fix > 99 ? '99+' : String(status.fix);
+      if (status.state === 'review') badge.textContent = status.review > 99 ? '99+' : String(status.review);
+      if (status.state === 'error') badge.textContent = '!';
+      const text = el('span', 'module-text');
+      text.append(el('span', 'module-name', t(module.title)), el('span', 'module-status', status.text));
+      row.append(badge, text, el('span', 'module-chevron'));
+      row.addEventListener('click', () => openModule(module.id));
+      list.append(row);
+    });
+    $('check-counters').classList.toggle('hidden', !checked);
+    $('count-fix').textContent = formatNumber(fix);
+    $('count-review').textContent = formatNumber(review);
+    $('count-ok').textContent = formatNumber(ok);
+    $('count-hidden').classList.toggle('hidden', !hidden);
+    $('count-hidden-text').textContent = hidden ? countText('ignore.plus', hidden) : '';
+    $('ignored-note').classList.toggle('hidden', !hidden);
+    $('ignored-note-text').textContent = hidden ? t('ignore.note', { count: formatNumber(hidden), modules: countText('ignore.modules', hiddenModules) }) : '';
+    $('title-page-note').classList.toggle('hidden', !$('skip-title-page').checked);
+    $('check-last').textContent = lastCheck ? t('check.last', { time: lastCheck.time, seconds: lastCheck.seconds }) : '';
+    overviewReady = true;
+    const row = focused && list.querySelector('.module-row[data-module="' + focused + '"]');
+    if (row && !row.disabled) row.focus();
+  }
+
+  function showCheckView(name) {
+    const previous = currentModule;
+    const wide = UI_MODE === 'window';
+    checkView = name;
+    ['overview', 'module', 'rules'].forEach(view => {
+      const visible = view === name || (wide && name !== 'rules' && view !== 'rules');
+      $('check-' + view).classList.toggle('hidden', !visible);
+    });
+    scrollToTop($('check-' + name));
+    renderRail();
+    if (wide) {
+      $('check-module').classList.toggle('empty', !currentModule);
+      if (name === 'overview') renderOverview();
+      return;
+    }
+    if (name === 'overview') {
+      currentModule = null;
+      renderOverview();
+      const row = previous && document.querySelector('.module-row[data-module="' + previous + '"]');
+      if (row) row.focus();
+      return;
+    }
+    const back = $('check-' + name).querySelector('.btn-view-back');
+    if (back) back.focus();
+  }
+
+  function renderModuleError() {
+    const box = $('module-error');
+    const error = currentModule && moduleErrors[currentModule];
+    box.textContent = error ? t('check.module.error', { error: error }) : '';
+    box.classList.toggle('hidden', !error);
+  }
+
+  function openModule(id) {
+    const module = moduleById(id);
+    currentModule = id;
+    resultFilter = 'all';
+    $('module-title').textContent = t(module.title);
+    const hint = document.querySelector('.module-view[data-module="' + id + '"] .module-hint');
+    setInfoTip($('module-info'), hint ? hint.textContent.trim() : '');
+    document.querySelectorAll('.module-view').forEach(view => view.classList.toggle('hidden', view.dataset.module !== id));
+    showCheckView('module');
+    if (UI_MODE === 'window') renderOverview();
+    renderModuleError();
+    if (module.data()) module.render();
+    else renderFilters();
+    if (!module.data()) run(() => runModuleCheck(module));
+  }
+
+  async function runModuleCheck(module) {
+    delete moduleErrors[module.id];
+    openFirstGroup[module.id] = true;
+    const spinner = currentModule === module.id ? $('btn-module-recheck') : null;
+    if (spinner) spinner.classList.add('loading');
+    try {
+      await module.check();
+    } catch (e) {
+      moduleErrors[module.id] = errorText(e);
+      delete openFirstGroup[module.id];
+      throw e;
+    } finally {
+      if (spinner) spinner.classList.remove('loading');
+      if (currentModule === module.id) {
+        renderModuleError();
+        renderFilters();
+        if (document.activeElement === document.body) setTimeout(() => {
+          const target = UI_MODE === 'window'
+            ? document.querySelector('.module-row[data-module="' + module.id + '"]')
+            : $('check-module').querySelector('.btn-view-back');
+          if (document.activeElement === document.body && target && !target.disabled) target.focus();
+        }, 0);
+      }
+      renderOverview();
+    }
+  }
+
+  async function checkAll() {
+    const button = $('btn-check-all');
+    const started = Date.now();
+    button.classList.add('loading');
+    try {
+      await loadCheckRules().catch(e => console.warn(e));
+      for (let i = 0; i < CHECK_MODULES.length; i++) {
+        const module = CHECK_MODULES[i];
+        $('check-all-label').textContent = t('check.progress', { name: t(module.title), n: i + 1, total: CHECK_MODULES.length });
+        try {
+          await runModuleCheck(module);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      const now = new Date();
+      lastCheck = {
+        time: now.toLocaleTimeString(UI_LANG === 'en' ? 'en-GB' : 'pl-PL', { hour: '2-digit', minute: '2-digit' }),
+        seconds: Math.round((Date.now() - started) / 1000),
+      };
+    } finally {
+      button.classList.remove('loading');
+      $('check-all-label').textContent = t('check.all');
+      renderOverview();
+    }
+  }
+
+  function renderFilters() {
+    const box = $('module-filters');
+    box.innerHTML = '';
+    const module = currentModule && moduleById(currentModule);
+    const data = module && module.data();
+    if (!data || !data.groups) return;
+    const status = moduleStatus(module);
+    if (status.state === 'unavailable' || status.state === 'ok' || status.state === 'error') return;
+    [['all', status.fix + status.review], ['fix', status.fix], ['review', status.review]].forEach(([key, count]) => {
+      if (key !== 'all' && !count) return;
+      const chip = el('button', 'filter-chip' + (resultFilter === key ? ' active' : ''), t('check.filter.' + key, { count: formatNumber(count) }));
+      chip.setAttribute('aria-pressed', resultFilter === key ? 'true' : 'false');
+      chip.addEventListener('click', () => {
+        resultFilter = key;
+        module.render();
+      });
+      box.append(chip);
+    });
+  }
+
+  async function changeCheckType() {
+    const type = $('check-type').value;
+    const previousType = $('srule-type').value;
+    const previousSections = $('srule-sections').value;
+    $('srule-type').value = type;
+    structureTypeChanged();
+    const sections = $('srule-sections').value;
+    try {
+      await call('saveStructureType', type, sections !== previousSections ? sections : null);
+    } catch (e) {
+      $('srule-type').value = previousType;
+      $('srule-sections').value = previousSections;
+      $('check-type').value = previousType;
+      renderParts();
+      throw e;
+    }
+    for (const id of ['structure', 'bibliography', 'figures']) {
+      const module = moduleById(id);
+      if (!module.data()) continue;
+      try {
+        await runModuleCheck(module);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+  }
