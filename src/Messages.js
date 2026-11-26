@@ -688,6 +688,7 @@ const MESSAGES = {
     'src.convertFailed': 'Dysk Google nie przekonwertował pliku na tekst ({details}). Możliwa przyczyna: plik jest za duży albo to skan słabej jakości.',
     'src.exportFailed': 'Dysk Google nie wyeksportował tekstu (HTTP {code}). Dokument może być większy niż 10 MB tekstu.',
     'src.readFailed': 'Nie udało się odczytać tekstu: {details}',
+    'store.err.foreign': 'Ta kopia dodatku nie może zapisywać w folderze „PDZ – dane”, bo założyła go inna kopia (np. w innym dokumencie). Kliknij „Przetwórz źródła” jeszcze raz – dodatek założy własny folder.',
   },
 
   en: {
@@ -1379,5 +1380,6 @@ const MESSAGES = {
     'src.convertFailed': 'Google Drive could not convert the file to text ({details}). The file may be too large or a low-quality scan.',
     'src.exportFailed': 'Google Drive could not export the text (HTTP {code}). The document may contain more than 10 MB of text.',
     'src.readFailed': 'Could not read the text: {details}',
+    'store.err.foreign': 'This copy of the add-on cannot write to the "PDZ – dane" folder because another copy created it (e.g. in another document). Click "Process sources" again – the add-on will create its own folder.',
   },
 };

@@ -1,8 +1,8 @@
 {
-  "version": "0.22.4",
-  "tag": "v0.22.4",
+  "version": "0.22.5",
+  "tag": "v0.22.5",
   "notes": {
-    "pl": "Przebudowa panelu bez zmian w działaniu: skrypt panelu podzielony na pliki według tematów, wspólna funkcja „Popraw wszystkie” i wspólne kolory w stylach.",
-    "en": "Sidebar rework with no change in behaviour: the sidebar script is split into files by topic, with one shared fix-all flow and shared colours in the styles."
+    "pl": "Przetwarzanie źródeł nie kończy się błędem „The user has not granted the app … write access”, gdy folder „PDZ – dane” założyła inna kopia dodatku (np. kopia gotowego dokumentu z tym samym folderem źródeł) – dodatek zakłada wtedy własny folder i jednorazowo przetwarza źródła od nowa.",
+    "en": "Processing sources no longer fails with \"The user has not granted the app … write access\" when the \"PDZ – dane\" folder was created by another copy of the add-on (e.g. a copy of the ready-made document using the same sources folder) – the add-on then creates its own folder and processes the sources again once."
   }
 }

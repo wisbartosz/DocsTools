@@ -19,6 +19,7 @@ function listSources() {
 }
 
 function cleanupSources() {
+  ensureWritableDataFolder_();
   const index = readSourceIndex_(false);
   if (!index.folderId) return { removed: 0 };
   const current = {};
@@ -36,6 +37,7 @@ function cleanupSources() {
 }
 
 function processSource(fileId) {
+  ensureWritableDataFolder_();
   const index = readSourceIndex_(true);
   const file = DriveApp.getFileById(fileId);
   const previous = index.data[fileId] || {};
@@ -154,6 +156,10 @@ function convertAndExport_(file, workFolderId) {
       { ocrLanguage: 'pl', supportsAllDrives: true }
     );
   } catch (e) {
+    if (isAppAccessError_(e)) {
+      forgetDataFolder_();
+      throw userError_('store.err.foreign');
+    }
     throw userError_('src.convertFailed', { details: e.message });
   }
   try {
