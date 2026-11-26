@@ -1,8 +1,8 @@
 {
-  "version": "0.22.7",
-  "tag": "v0.22.7",
+  "version": "0.22.8",
+  "tag": "v0.22.8",
   "notes": {
-    "pl": "W Safari po kliknięciu „Popraw” przy uwadze tekst pracy nie przewija się już na samą górę: kursor ustawia się w poprawionym miejscu (tylko gdy stał na początku dokumentu). W innych przeglądarkach bez zmian.",
-    "en": "In Safari the document no longer jumps to the top after clicking \"Fix\" on a remark: the cursor is placed at the fixed text (only when it was at the start of the document). No change in other browsers."
+    "pl": "Przyspieszenie bez zmian w działaniu: „Popraw wszystkie” przy numeracji rozdziałów, sprawdzanie źródeł pod tabelami i rycinami oraz zapis ukrytych uwag wykonują mniej pracy.",
+    "en": "Speed-ups with no change in behaviour: fixing all chapter numbering, checking table and figure sources, and saving hidden remarks do less work."
   }
 }

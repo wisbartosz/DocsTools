@@ -694,7 +694,7 @@ function sortBibliography(options) {
   return checkBibliography(options);
 }
 
-function bibliographyContext_(type) {
+function bibliographyContext_(type, options) {
   const body = DocumentApp.getActiveDocument().getBody();
   const paragraphs = documentParagraphs_(body);
   const candidates = [];
@@ -730,6 +730,7 @@ function bibliographyContext_(type) {
       return index >= 0 && (i === 0 || index === indexes[i - 1] + 1);
     });
   }
+  if (options && options.entriesOnly) return { entries: ctx.entries };
   const roles = chapterRoles_(type);
   let stack = [];
   let ownPart = false;

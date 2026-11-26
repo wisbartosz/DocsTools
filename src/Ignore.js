@@ -62,10 +62,14 @@ function readIgnoredIssues_(module) {
 
 function writeIgnoredIssues_(module, keys) {
   const props = docProps_();
-  const chunks = ignoreChunks_(keys);
-  for (let i = 0; i < IGNORE_MAX_CHUNKS; i++) {
-    if (i < chunks.length) props.setProperty(IGNORE_PROP_PREFIX + module + '.' + i, chunks[i]);
-    else props.deleteProperty(IGNORE_PROP_PREFIX + module + '.' + i);
+  const chunks = ignoreChunks_(keys).slice(0, IGNORE_MAX_CHUNKS);
+  const values = {};
+  chunks.forEach(function (chunk, i) { values[IGNORE_PROP_PREFIX + module + '.' + i] = chunk; });
+  if (chunks.length) props.setProperties(values);
+  const existing = props.getKeys();
+  for (let i = chunks.length; i < IGNORE_MAX_CHUNKS; i++) {
+    const key = IGNORE_PROP_PREFIX + module + '.' + i;
+    if (existing.indexOf(key) >= 0) props.deleteProperty(key);
   }
 }
 

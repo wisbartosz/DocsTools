@@ -341,8 +341,30 @@ function fixStructureIssue(ref, type) {
   return checkStructure({ type: type, pages: false });
 }
 
+function numberingEdits_(headings) {
+  return numberingIssues_(headings)
+    .filter(function (issue) { return issue.expected !== null; })
+    .map(function (issue) {
+      const number = headingNumber_(headings[issue.index].text);
+      return { index: issue.index, edit: { at: number.start, remove: number.text.length, insert: issue.expected } };
+    });
+}
+
+function fixAllNumbering_() {
+  const ctx = structureContext_();
+  const edits = numberingEdits_(ctx.headings);
+  edits.slice().reverse().forEach(function (item) {
+    applyDocumentEdits_(ctx.headings[item.index].entry.element.editAsText(), [item.edit]);
+  });
+  return edits.length;
+}
+
 function fixStructureKind(kind, type) {
   if (!STRUCTURE_FIXABLE[kind]) throw userError_('format.err.changed');
+  if (kind === 'numbering') {
+    const fixed = currentStructureRules_(type).numbering ? fixAllNumbering_() : 0;
+    return { fixed: fixed, result: checkStructure({ type: type, pages: false }) };
+  }
   const result = checkStructure({ type: type, pages: false });
   const group = result.groups.filter(function (g) { return g.kind === kind; })[0];
   const refs = group.items.filter(function (item) { return item.fixable; }).map(function (item) { return item.ref; });

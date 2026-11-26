@@ -377,7 +377,7 @@ function checkFigures(options) {
       const items = parseCitations_(sourceText).reduce(function (all, c) { return all.concat(c.items); }, [])
         .concat(citationItems_(sourceText.replace(FIG_SOURCE, '').replace(/^\s*:?\s*/, '').replace(/\.\s*$/, '')));
       if (items.length) {
-        if (!entries) entries = bibliographyContext_((options || {}).type || savedStructureType_()).entries;
+        if (!entries) entries = bibliographyContext_((options || {}).type || savedStructureType_(), { entriesOnly: true }).entries;
         const missing = items.filter(function (item) { return entries.length && !matchCitation_(item, entries).length; });
         if (missing.length) {
           add('sourceCitation', blockItem(object.source.block, objectLabel(object),
