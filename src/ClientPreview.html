@@ -1,0 +1,571 @@
+  const PREVIEW_PDFJS = {
+    lib: { url: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs', sha: 'sha384-+0ti2moQlmLN7WZHE2RHIf5lV8hHxhxEalN0il3YZceG26fUPyOkR0hp9daxk1i7' },
+    worker: { url: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs', sha: 'sha384-ToeVvShCxKc6CEvhHeMt0Q8A06pSPDbAlngO9nokrDmh914gk/pYd0N7D0a4Lz2o' },
+  };
+  const PREVIEW_ZOOMS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 2];
+  const PREVIEW_NEEDLES = [45, 30];
+  const PREVIEW_MIN_NEEDLE = 12;
+  const PREVIEW_MAX_PAGE_FAILURES = 3;
+  const PREVIEW_TOKEN_MAX_AGE_MS = 45 * 60 * 1000;
+  const PREVIEW_RANGE_CHUNK = 262144;
+  const PREVIEW_PAGE_GAP = 12;
+
+  let pdfjsPromise = null;
+  let preview = null;
+  let previewSeq = 0;
+
+  function loadPdfJs() {
+    if (!pdfjsPromise) {
+      pdfjsPromise = (async () => {
+        const lib = await import(await verifiedScriptUrl(PREVIEW_PDFJS.lib));
+        lib.GlobalWorkerOptions.workerSrc = await verifiedScriptUrl(PREVIEW_PDFJS.worker);
+        return lib;
+      })();
+      pdfjsPromise.catch(() => { pdfjsPromise = null; });
+    }
+    return pdfjsPromise;
+  }
+
+  async function verifiedScriptUrl(asset) {
+    const response = await fetch(asset.url);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const bytes = await response.arrayBuffer();
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-384', bytes));
+    let binary = '';
+    digest.forEach(b => { binary += String.fromCharCode(b); });
+    if ('sha384-' + btoa(binary) !== asset.sha) throw new Error('integrity');
+    return URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }));
+  }
+
+  function previewKey(text) {
+    return String(text || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  }
+
+  function previewTarget(quote) {
+    const segments = String(quote || '').split(/…|\.\.\.|\[\.\.\.\]|\(\.\.\.\)/).map(previewKey);
+    return segments.filter(s => s.length >= PREVIEW_MIN_NEEDLE)[0] || '';
+  }
+
+  function showSourcePreview(citations, index, onBack) {
+    const root = $('preview');
+    if (preview && preview.doc) preview.doc.destroy();
+    preview = { citations: citations, index: -1, onBack: onBack, seq: 0, doc: null, docId: null, docUrl: null, docOpened: 0, scale: 1, highlight: null, pages: [], observer: null, cache: {} };
+    root.replaceChildren(previewSkeleton(onBack));
+    root.classList.remove('hidden');
+    showPreviewCitation(index);
+  }
+
+  function hideSourcePreview() {
+    if (preview && preview.doc) preview.doc.destroy();
+    if (preview && preview.observer) preview.observer.disconnect();
+    preview = null;
+    $('preview').classList.add('hidden');
+    $('preview').replaceChildren();
+  }
+
+  function previewSkeleton(onBack) {
+    const frag = document.createDocumentFragment();
+    const bar = el('div', 'preview-bar');
+    if (onBack) {
+      const back = el('button', 'link preview-back', t('preview.back'));
+      back.prepend(previewIcon('M15 6l-6 6 6 6'));
+      back.addEventListener('click', () => { const done = preview.onBack; hideSourcePreview(); done(); });
+      bar.append(back, el('span', 'preview-sep'));
+    }
+    const name = el('span', 'preview-name');
+    name.id = 'preview-name';
+    const controls = el('div', 'preview-controls hidden');
+    controls.id = 'preview-controls';
+    const prev = previewIconButton('M18 15l-6-6-6 6', t('preview.prev'), () => previewGoTo(previewCurrentPage() - 1));
+    const next = previewIconButton('M6 9l6 6 6-6', t('preview.next'), () => previewGoTo(previewCurrentPage() + 1));
+    const label = el('label', '', t('preview.page'));
+    label.htmlFor = 'preview-page-input';
+    const input = el('input', 'preview-page-input');
+    input.id = 'preview-page-input';
+    input.inputMode = 'numeric';
+    input.addEventListener('change', () => previewGoTo(parseInt(input.value, 10)));
+    const total = el('span', 'preview-total');
+    total.id = 'preview-total';
+    const zoomOut = el('button', 'preview-zoom', '−');
+    zoomOut.setAttribute('aria-label', t('preview.zoomOut'));
+    zoomOut.addEventListener('click', () => previewZoom(-1));
+    const zoomLabel = el('span', 'preview-zoom-label');
+    zoomLabel.id = 'preview-zoom-label';
+    const zoomIn = el('button', 'preview-zoom', '+');
+    zoomIn.setAttribute('aria-label', t('preview.zoomIn'));
+    zoomIn.addEventListener('click', () => previewZoom(1));
+    controls.append(prev, label, input, total, next, el('span', 'preview-sep'), zoomOut, zoomLabel, zoomIn);
+    const open = el('a', 'preview-open hidden', t('preview.openDrive'));
+    open.id = 'preview-open';
+    open.target = '_blank';
+    open.rel = 'noopener';
+    open.append(previewIcon('M14 4h6v6M20 4l-9 9M18 14v6H4V6h6'));
+    bar.append(name, controls, open);
+
+    const main = el('div', 'preview-main');
+    const content = el('section', 'preview-content');
+    const banner = el('div', 'preview-banner hidden');
+    banner.id = 'preview-banner';
+    const scroll = el('div', 'preview-scroll');
+    scroll.id = 'preview-scroll';
+    scroll.addEventListener('scroll', previewTrackPage);
+    content.append(banner, scroll);
+    const aside = el('aside', 'preview-aside');
+    aside.append(el('div', 'preview-aside-title', t('preview.citations')));
+    const list = el('div', 'preview-cards');
+    list.id = 'preview-cards';
+    aside.append(list, el('div', 'preview-aside-hint muted small', t('preview.citationsHint')));
+    main.append(content, aside);
+    frag.append(bar, main);
+    return frag;
+  }
+
+  function previewIcon(path) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'preview-icon');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', path);
+    svg.append(p);
+    return svg;
+  }
+
+  function previewIconButton(path, label, onClick) {
+    const button = el('button', 'preview-icon-button');
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.append(previewIcon(path));
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function renderPreviewCards() {
+    const list = $('preview-cards');
+    list.replaceChildren();
+    preview.citations.forEach((c, i) => {
+      const card = el('button', 'preview-card' + (i === preview.index ? ' active' : ''));
+      const head = el('span', 'preview-card-head');
+      head.append(el('span', 'cite-num', String(c.number || i + 1)), el('span', 'preview-card-name', c.sourceName));
+      if (c.page) head.append(el('span', 'muted small', t('assistant.page', { page: c.page })));
+      card.append(head);
+      if (c.quote) card.append(el('span', 'preview-card-quote', (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”'));
+      card.addEventListener('click', () => showPreviewCitation(i));
+      list.append(card);
+    });
+  }
+
+  function previewBanner(text, kind, action) {
+    const banner = $('preview-banner');
+    banner.className = 'preview-banner' + (kind ? ' ' + kind : '');
+    banner.replaceChildren(el('span', '', text));
+    if (action) {
+      const button = el('button', 'link', action.label);
+      button.addEventListener('click', action.run);
+      banner.append(button);
+    }
+  }
+
+  async function showPreviewCitation(index) {
+    const c = preview.citations[index];
+    if (!c) return;
+    const state = preview;
+    const seq = ++previewSeq;
+    state.seq = seq;
+    state.index = index;
+    const stale = () => preview !== state || state.seq !== seq;
+    renderPreviewCards();
+    $('preview-name').textContent = c.sourceName;
+    previewBanner(t('preview.loading'), 'loading');
+    try {
+      if (state.doc && state.docId === c.sourceId && Date.now() - state.docOpened < PREVIEW_TOKEN_MAX_AGE_MS) {
+        previewSetOpenLink(state.docUrl);
+        try {
+          await previewLocateInPdf(c, stale);
+          return;
+        } catch (e) {
+          console.warn('Ponowne otwarcie PDF: ' + (e && e.message));
+          if (stale()) return;
+          previewDropDoc();
+        }
+      }
+      const info = await call('previewSource', c.sourceId, c.quote, false);
+      if (stale()) return;
+      if (info.kind === 'pdf') {
+        await previewOpenPdf(info, c, stale);
+      } else {
+        previewSetOpenLink(info.url);
+        previewShowText(info.excerpt, null);
+      }
+    } catch (e) {
+      if (stale()) return;
+      previewClearContent();
+      previewBanner(errorText(e), 'error');
+    }
+  }
+
+  function previewSetOpenLink(url) {
+    const open = $('preview-open');
+    open.href = url || '#';
+    open.classList.toggle('hidden', !url);
+  }
+
+  function previewClearContent() {
+    if (preview.observer) preview.observer.disconnect();
+    preview.pages = [];
+    preview.highlight = null;
+    $('preview-scroll').replaceChildren();
+    $('preview-controls').classList.add('hidden');
+    previewSetOpenLink(null);
+  }
+
+  function previewDropDoc() {
+    if (preview.doc) preview.doc.destroy();
+    preview.doc = null;
+    preview.docId = null;
+    preview.cache = {};
+    previewClearContent();
+  }
+
+  async function previewOpenPdf(info, c, stale) {
+    let lib;
+    let doc;
+    let first;
+    try {
+      lib = await loadPdfJs();
+      doc = await lib.getDocument({
+        url: 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(info.fileId) + '?alt=media&supportsAllDrives=true',
+        httpHeaders: { Authorization: 'Bearer ' + info.token },
+        disableAutoFetch: true,
+        disableStream: true,
+        rangeChunkSize: PREVIEW_RANGE_CHUNK,
+        isEvalSupported: false,
+      }).promise;
+      first = await doc.getPage(1);
+    } catch (e) {
+      if (doc) doc.destroy();
+      console.warn('Podgląd PDF niedostępny: ' + (e && e.message));
+      if (stale()) return;
+      await previewFallbackText(c, stale, t('preview.pdfFailed'));
+      return;
+    }
+    if (stale()) {
+      doc.destroy();
+      return;
+    }
+    previewDropDoc();
+    const base = first.getViewport({ scale: 1 });
+    Object.assign(preview, {
+      lib: lib,
+      doc: doc,
+      docId: c.sourceId,
+      docUrl: info.url,
+      docOpened: Date.now(),
+      base: { width: base.width, height: base.height },
+      cache: {},
+    });
+    previewSetOpenLink(info.url);
+    const fit = ($('preview-scroll').clientWidth - 48) / base.width;
+    preview.scale = PREVIEW_ZOOMS.reduce((best, z) => (z <= fit && z > best ? z : best), PREVIEW_ZOOMS[0]);
+    await previewLocateInPdf(c, stale);
+  }
+
+  async function previewFallbackText(c, stale, note) {
+    try {
+      const info = await call('previewSource', c.sourceId, c.quote, true);
+      if (stale()) return;
+      previewSetOpenLink(info.url);
+      previewShowText(info.excerpt, note);
+    } catch (e) {
+      if (stale()) return;
+      previewClearContent();
+      previewBanner(errorText(e), 'error');
+    }
+  }
+
+  function previewPageText(n) {
+    if (!preview.cache[n]) {
+      const cache = preview.cache;
+      const pending = preview.doc.getPage(n).then(page => page.getTextContent()).then(content => {
+        let key = '';
+        const owner = [];
+        const offset = [];
+        const lengths = [];
+        content.items.forEach((item, i) => {
+          const str = String(item.str || '').normalize('NFKC');
+          lengths.push(str.length);
+          let at = 0;
+          Array.from(str).forEach(ch => {
+            const part = previewKey(ch);
+            key += part;
+            for (let j = 0; j < part.length; j++) {
+              owner.push(i);
+              offset.push({ start: at, end: at + ch.length });
+            }
+            at += ch.length;
+          });
+        });
+        return { items: content.items, key: key, owner: owner, offset: offset, lengths: lengths };
+      });
+      cache[n] = pending;
+      pending.catch(() => { if (cache[n] === pending) delete cache[n]; });
+    }
+    return preview.cache[n];
+  }
+
+  async function previewFindQuote(c, stale) {
+    const target = previewTarget(c.quote);
+    if (!target) return null;
+    const pages = preview.doc.numPages;
+    const start = Math.min(Math.max(c.page || 1, 1), pages);
+    const order = [];
+    for (let d = 0; order.length < pages; d++) {
+      [start + d, start - d].forEach(n => { if (n >= 1 && n <= pages && !order.includes(n)) order.push(n); });
+    }
+    let failures = 0;
+    for (const size of PREVIEW_NEEDLES) {
+      const needle = target.slice(0, size);
+      for (const n of order) {
+        let text;
+        try {
+          text = await previewPageText(n);
+        } catch (e) {
+          if (++failures > PREVIEW_MAX_PAGE_FAILURES) throw e;
+          continue;
+        }
+        if (stale()) return null;
+        const at = text.key.indexOf(needle);
+        if (at < 0) continue;
+        let end = at + needle.length;
+        while (end < text.key.length && end - at < target.length && text.key[end] === target[end - at]) end++;
+        return { page: n, from: text.owner[at], fromChar: text.offset[at].start, to: text.owner[end - 1], toChar: text.offset[end - 1].end };
+      }
+    }
+    return null;
+  }
+
+  async function previewLocateInPdf(c, stale) {
+    if (!preview.pages.length) {
+      $('preview-controls').classList.remove('hidden');
+      $('preview-total').textContent = t('preview.of', { count: preview.doc.numPages });
+      previewLayoutPages();
+    }
+    const found = await previewFindQuote(c, stale);
+    if (stale()) return;
+    const showText = { label: t('preview.showText'), run: () => previewFallbackText(c, stale, null) };
+    if (found) {
+      preview.highlight = found;
+      const text = c.page && c.page !== found.page
+        ? t('preview.foundFooter', { page: found.page, footer: c.page })
+        : t('preview.found', { page: found.page });
+      previewBanner(text, 'found', showText);
+      previewRedrawHighlight();
+      previewGoTo(found.page, true);
+      return;
+    }
+    preview.highlight = null;
+    previewRedrawHighlight();
+    const page = Math.min(Math.max(c.page || 1, 1), preview.doc.numPages);
+    previewBanner(c.page ? t('preview.notFoundPage', { page: page }) : t('preview.notFound'), 'info', showText);
+    previewGoTo(page);
+  }
+
+  function previewLayoutPages() {
+    const scroll = $('preview-scroll');
+    if (preview.observer) preview.observer.disconnect();
+    scroll.replaceChildren();
+    scroll.classList.remove('text');
+    preview.pages = [];
+    preview.observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) previewRenderPage(Number(entry.target.dataset.page)); });
+    }, { root: scroll, rootMargin: '800px 0px' });
+    for (let n = 1; n <= preview.doc.numPages; n++) {
+      const box = el('div', 'preview-pdf-page');
+      box.dataset.page = String(n);
+      box.style.width = Math.round(preview.base.width * preview.scale) + 'px';
+      box.style.height = Math.round(preview.base.height * preview.scale) + 'px';
+      scroll.append(box);
+      preview.pages.push({ box: box, scale: 0, rendering: null });
+      preview.observer.observe(box);
+    }
+    $('preview-zoom-label').textContent = Math.round(preview.scale * 100) + '%';
+  }
+
+  async function previewRenderPage(n) {
+    const slot = preview && preview.pages[n - 1];
+    if (!slot || slot.scale === preview.scale || slot.rendering) return;
+    const scale = preview.scale;
+    const doc = preview.doc;
+    slot.rendering = (async () => {
+      const page = await doc.getPage(n);
+      if (!preview || preview.doc !== doc || preview.scale !== scale) return;
+      const viewport = page.getViewport({ scale: scale });
+      const ratio = window.devicePixelRatio || 1;
+      const canvas = el('canvas');
+      canvas.width = Math.floor(viewport.width * ratio);
+      canvas.height = Math.floor(viewport.height * ratio);
+      canvas.style.width = Math.floor(viewport.width) + 'px';
+      canvas.style.height = Math.floor(viewport.height) + 'px';
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport, transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null }).promise;
+      if (!preview || preview.doc !== doc || preview.scale !== scale) return;
+      slot.box.style.width = Math.floor(viewport.width) + 'px';
+      slot.box.style.height = Math.floor(viewport.height) + 'px';
+      slot.box.replaceChildren(canvas);
+      slot.scale = scale;
+      slot.viewport = viewport;
+      if (preview.highlight && preview.highlight.page === n) await previewDrawHighlight(n);
+    })();
+    try {
+      await slot.rendering;
+    } catch (e) {
+      console.warn('Nie udało się narysować strony ' + n + ': ' + (e && e.message));
+    } finally {
+      slot.rendering = null;
+    }
+  }
+
+  function previewRedrawHighlight() {
+    if (!preview || !preview.pages) return;
+    preview.pages.forEach(slot => slot.box.querySelectorAll('.preview-mark').forEach(mark => mark.remove()));
+    if (preview.highlight && preview.pages[preview.highlight.page - 1] && preview.pages[preview.highlight.page - 1].viewport) {
+      previewDrawHighlight(preview.highlight.page);
+    }
+  }
+
+  async function previewDrawHighlight(n) {
+    const slot = preview.pages[n - 1];
+    const found = preview.highlight;
+    if (!slot.viewport || !found || found.page !== n) return;
+    const text = await previewPageText(n);
+    if (!preview || preview.highlight !== found || !slot.viewport) return;
+    slot.box.querySelectorAll('.preview-mark').forEach(mark => mark.remove());
+    const lines = [];
+    for (let i = found.from; i <= found.to; i++) {
+      const item = text.items[i];
+      if (!item || !item.str || !item.str.trim()) continue;
+      const tx = preview.lib.Util.transform(slot.viewport.transform, item.transform);
+      const height = Math.hypot(tx[2], tx[3]);
+      const width = item.width * slot.viewport.scale;
+      const from = i === found.from ? found.fromChar / text.lengths[i] : 0;
+      const to = i === found.to ? found.toChar / text.lengths[i] : 1;
+      const box = { left: tx[4] + width * from, right: tx[4] + width * to, top: tx[5] - height, bottom: tx[5] + height * 0.2 };
+      const line = lines.find(l => Math.abs(l.top - box.top) < height * 0.5);
+      if (line) {
+        line.left = Math.min(line.left, box.left);
+        line.right = Math.max(line.right, box.right);
+        line.bottom = Math.max(line.bottom, box.bottom);
+      } else {
+        lines.push(box);
+      }
+    }
+    let first = null;
+    lines.forEach(line => {
+      const mark = el('div', 'preview-mark');
+      mark.style.left = (line.left - 2) + 'px';
+      mark.style.top = (line.top - 1) + 'px';
+      mark.style.width = (line.right - line.left + 4) + 'px';
+      mark.style.height = (line.bottom - line.top + 2) + 'px';
+      slot.box.append(mark);
+      if (!first) first = mark;
+    });
+    if (first && preview.scrollToMark) {
+      preview.scrollToMark = false;
+      first.scrollIntoView({ block: 'center' });
+    }
+  }
+
+  function previewGoTo(n, toMark) {
+    if (!preview || !preview.doc || !n) return;
+    const page = Math.min(Math.max(n, 1), preview.doc.numPages);
+    const slot = preview.pages[page - 1];
+    $('preview-scroll').scrollTop = slot.box.offsetTop - PREVIEW_PAGE_GAP;
+    $('preview-page-input').value = String(page);
+    preview.scrollToMark = !!toMark;
+    const mark = toMark && slot.box.querySelector('.preview-mark');
+    if (mark) {
+      preview.scrollToMark = false;
+      mark.scrollIntoView({ block: 'center' });
+    }
+    previewRenderPage(page);
+  }
+
+  function previewCurrentPage() {
+    return parseInt($('preview-page-input').value, 10) || 1;
+  }
+
+  function previewTrackPage() {
+    if (!preview || !preview.doc || !preview.pages.length) return;
+    const scroll = $('preview-scroll');
+    const middle = scroll.scrollTop + scroll.clientHeight / 2;
+    let current = 1;
+    preview.pages.forEach((slot, i) => { if (slot.box.offsetTop <= middle) current = i + 1; });
+    $('preview-page-input').value = String(current);
+  }
+
+  function previewZoom(step) {
+    if (!preview || !preview.doc) return;
+    const current = PREVIEW_ZOOMS.indexOf(preview.scale);
+    const next = PREVIEW_ZOOMS[Math.min(Math.max(current + step, 0), PREVIEW_ZOOMS.length - 1)];
+    if (next === preview.scale) return;
+    const page = previewCurrentPage();
+    preview.scale = next;
+    previewLayoutPages();
+    previewGoTo(page);
+  }
+
+  function previewShowText(excerpt, note) {
+    if (preview.observer) preview.observer.disconnect();
+    preview.pages = [];
+    $('preview-controls').classList.add('hidden');
+    const scroll = $('preview-scroll');
+    scroll.classList.add('text');
+    const column = el('div', 'preview-text');
+    if (excerpt.before) column.append(el('div', 'preview-more muted', '…'));
+    const mark = excerpt.mark;
+    let offset = 0;
+    let markEl = null;
+    excerpt.text.split('\n').forEach(line => {
+      const lineStart = offset;
+      offset += line.length + 1;
+      const only = line.trim().match(/^\[\[str\. (\d+)\]\]$/);
+      if (only) {
+        column.append(el('div', 'preview-page-marker', t('preview.pageMarker', { page: only[1] })));
+        return;
+      }
+      if (!line.trim()) return;
+      const p = el('p');
+      const markerRe = /\[\[str\. (\d+)\]\]/g;
+      let last = 0;
+      let m;
+      const appendText = (from, to) => {
+        if (to <= from) return;
+        const absFrom = lineStart + from;
+        const absTo = lineStart + to;
+        if (!mark || absTo <= mark.start || absFrom >= mark.end) {
+          p.append(line.slice(from, to));
+          return;
+        }
+        const a = Math.max(absFrom, mark.start) - lineStart;
+        const b = Math.min(absTo, mark.end) - lineStart;
+        if (a > from) p.append(line.slice(from, a));
+        const span = el('mark', 'preview-text-mark', line.slice(a, b));
+        p.append(span);
+        if (!markEl) markEl = span;
+        if (to > b) p.append(line.slice(b, to));
+      };
+      while ((m = markerRe.exec(line)) !== null) {
+        appendText(last, m.index);
+        p.append(el('span', 'preview-inline-marker', t('preview.pageMarker', { page: m[1] })));
+        last = m.index + m[0].length;
+      }
+      appendText(last, line.length);
+      column.append(p);
+    });
+    if (excerpt.after) column.append(el('div', 'preview-more muted', '…'));
+    scroll.replaceChildren(column);
+    scroll.scrollTop = 0;
+    previewBanner(note || (excerpt.mark ? t('preview.textNote') : t('preview.textNotFound')), note ? 'info' : excerpt.mark ? 'neutral' : 'info');
+    if (markEl) markEl.scrollIntoView({ block: 'center' });
+  }

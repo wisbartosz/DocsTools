@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="<?= uiLanguage_() ?>">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <?!= include_('Styles'); ?>
+</head>
+<body class="preview-dialog">
+  <div id="preview" class="preview"></div>
+  <script>
+    const UI_LANG = <?!= JSON.stringify(uiLanguage_()) ?>;
+    const UI_MODE = 'preview';
+    const I18N = <?!= JSON.stringify(uiMessages_()) ?>;
+    const PREVIEW_STATE = <?!= state ?>;
+  </script>
+  <script>
+<?!= includeScript_('ClientCore'); ?>
+<?!= includeScript_('ClientPreview'); ?>
+    showSourcePreview(PREVIEW_STATE.citations, PREVIEW_STATE.index, null);
+  </script>
+</body>
+</html>

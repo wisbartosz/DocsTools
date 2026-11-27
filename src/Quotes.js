@@ -1,6 +1,7 @@
 const QUOTE_CLOSE_RATIO = 0.8;
 const QUOTE_WINDOW_SLACK = 1.4;
 const QUOTE_MIN_SEGMENT_WORDS = 3;
+const QUOTE_SPAN_CHARS = 3000;
 
 function indexSourceWords_(text) {
   const source = String(text || '').normalize('NFC');
@@ -71,6 +72,7 @@ function locateQuote_(sourceIndex, quote) {
   if (!segments.length) return { status: 'missing', page: null };
   let status = 'exact';
   let firstPos = null;
+  let lastEnd = 0;
   for (let s = 0; s < segments.length; s++) {
     const target = segments[s];
     let index = findExact_(sourceIndex.words, target);
@@ -79,7 +81,15 @@ function locateQuote_(sourceIndex, quote) {
       if (index < 0) return { status: 'missing', page: null };
       status = 'close';
     }
-    if (firstPos === null) firstPos = sourceIndex.words[index].pos;
+    const pos = sourceIndex.words[index].pos;
+    const last = sourceIndex.words[Math.min(index + target.length, sourceIndex.words.length) - 1];
+    const end = last.pos + last.word.length;
+    if (firstPos === null) {
+      firstPos = pos;
+      lastEnd = end;
+    } else if (pos >= lastEnd && end - firstPos <= QUOTE_SPAN_CHARS) {
+      lastEnd = end;
+    }
   }
-  return { status: status, page: pageAt_(sourceIndex.markers, firstPos) };
+  return { status: status, page: pageAt_(sourceIndex.markers, firstPos), start: firstPos, end: lastEnd };
 }

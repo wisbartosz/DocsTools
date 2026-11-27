@@ -232,6 +232,7 @@ function resolveCitation_(citation, sources) {
   const source = citedSource_(name, quote, sources);
   const match = source ? locateQuote_(sourceIndex_(source), quote) : { status: 'missing', page: null };
   return {
+    sourceId: source ? source.id : null,
     sourceName: source ? source.name : name,
     sourceUrl: source ? source.url : null,
     known: !!source,

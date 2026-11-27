@@ -67,6 +67,9 @@ odśwież dokument.
   cytatem i stroną (gdy ją znamy) przy każdym źródle. Przybornik sam sprawdza, czy cytat naprawdę
   jest w tekście; gdy w źródłach nie ma odpowiedzi, mówi to wprost. Rozmowa działa jak czat,
   a „Kopiuj z przypisami” kopiuje odpowiedź z listą źródeł.
+- **Podgląd źródła.** „Pokaż w źródle” przy cytacie otwiera plik PDF od razu na stronie z cytatem
+  i podświetla go. Przy innych plikach (Word, Dokumenty Google) pokazuje tekst źródła
+  z podświetlonym cytatem.
 - **Pytanie o fragment pracy.** Zaznacz akapit i kliknij „Dołącz zaznaczony fragment pracy”.
   Bez pytania asystent pokaże, co z fragmentu potwierdzają źródła, czego w nich nie ma i co im
   przeczy. Fragmentu nie przepisuje.

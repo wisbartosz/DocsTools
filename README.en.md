@@ -70,6 +70,9 @@ document after updating.
   that the quote really appears in the text; if the sources don't answer the question, it says so
   plainly. The conversation works like a chat, and "Copy with references" copies the answer with
   its sources.
+- **Source preview.** "Show in source" next to a quote opens the PDF right at the page with the
+  quote and highlights it. For other files (Word, Google Docs) it shows the source text with the
+  quote highlighted.
 - **Questions about a passage of your thesis.** Select a paragraph and click "Attach the selected
   passage of your thesis". With no question, the assistant shows what in the passage your sources
   support, what they don't cover and what they contradict. It never rewrites the passage.

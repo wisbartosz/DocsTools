@@ -31,6 +31,11 @@ Google.
   źródeł są ustawione. Treść pracy, źródła i klucz API nie są wysyłane. Wiadomość
   przychodzi mailem na konto Google autora i służy tylko do poprawiania Przybornika
   oraz odpowiedzi, jeśli podasz adres.
+- Podgląd źródła („Pokaż w źródle” przy cytacie) wczytuje w Twojej przeglądarce
+  bibliotekę pdf.js (Mozilla) z serwera cdnjs.cloudflare.com; Przybornik sprawdza jej
+  sumę kontrolną przed uruchomieniem. Plik PDF przeglądarka pobiera wtedy bezpośrednio
+  z Twojego Dysku Google (Google Drive API), z dostępem Twojego konta, i tylko fragmenty
+  potrzebne do pokazania stron. Plik nie trafia nigdzie indziej.
 
 **Instalator PDZ**
 
@@ -72,6 +77,11 @@ account.
   folder are set. Your thesis, sources and API key are never sent. The message arrives by
   email in the author's Google account and is used only to improve the toolkit and to
   reply, if you left an address.
+- The source preview ("Show in source" next to a quote) loads the pdf.js library
+  (Mozilla) from cdnjs.cloudflare.com in your browser; the toolkit checks its checksum
+  before running it. Your browser then downloads the PDF directly from your Google Drive
+  (Google Drive API) with your account's access, and only the parts needed to show the
+  pages. The file goes nowhere else.
 
 **PDZ Installer**
 

@@ -1,8 +1,8 @@
 {
-  "version": "0.22.8",
-  "tag": "v0.22.8",
+  "version": "0.23.0",
+  "tag": "v0.23.0",
   "notes": {
-    "pl": "Przyspieszenie bez zmian w działaniu: „Popraw wszystkie” przy numeracji rozdziałów, sprawdzanie źródeł pod tabelami i rycinami oraz zapis ukrytych uwag wykonują mniej pracy.",
-    "en": "Speed-ups with no change in behaviour: fixing all chapter numbering, checking table and figure sources, and saving hidden remarks do less work."
+    "pl": "Podgląd źródła: „Pokaż w źródle” przy cytacie z asystenta otwiera plik PDF od razu na stronie z cytatem i go podświetla. Inne pliki – tekst źródła z podświetlonym cytatem.",
+    "en": "Source preview: \"Show in source\" next to an assistant quote opens the PDF right at the page with the quote and highlights it. Other files show the source text with the quote highlighted."
   }
 }

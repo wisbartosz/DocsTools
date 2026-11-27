@@ -295,7 +295,7 @@
       const cites = el('div', 'cites');
       cites.append(el('div', 'cites-title', t('assistant.citations', { count: result.citations.length })));
       const list = el('ol');
-      result.citations.forEach((c, index) => list.append(renderCitation(c, index + 1)));
+      result.citations.forEach((c, index) => list.append(renderCitation(c, index + 1, result.citations)));
       cites.append(list);
       turn.append(cites);
     }
@@ -367,24 +367,31 @@
     return notes;
   }
 
-  function renderCitation(c, n) {
+  function renderCitation(c, n, all) {
     const li = el('li', 'cite');
     li.dataset.n = n;
     const body = el('div', 'cite-body');
     if (c.quote) body.append(el('div', 'quote', (UI_LANG === 'pl' ? '„' : '“') + c.quote + '”'));
     const meta = el('div', 'cite-meta');
-    if (c.known) {
-      const link = el('a', '', c.sourceName);
-      link.href = c.sourceUrl;
-      link.target = '_blank';
-      meta.append(link);
-    } else {
-      meta.append(t('assistant.unknownSource', { name: c.sourceName }));
-    }
+    if (c.known) meta.append(c.sourceName);
+    else meta.append(t('assistant.unknownSource', { name: c.sourceName }));
     if (c.page) meta.append(' · ' + t('assistant.page', { page: c.page }));
     else if (c.location) meta.append(' · ' + c.location);
     meta.append(' · ', el('span', 'badge ' + c.quoteStatus, t('assistant.quote.' + c.quoteStatus)));
     body.append(meta);
+    if (c.known && c.sourceId) {
+      const show = el('button', 'link cite-show', t('assistant.showInSource'));
+      show.addEventListener('click', () => openCitationPreview(all, c));
+      body.append(show);
+    }
     li.append(el('span', 'cite-num', String(n)), body);
     return li;
+  }
+
+  function openCitationPreview(all, chosen) {
+    const usable = all.filter(c => c.known && c.sourceId);
+    const citations = usable.map(c => ({ number: all.indexOf(c) + 1, sourceId: c.sourceId, sourceName: c.sourceName, quote: c.quote, page: c.page }));
+    const index = usable.indexOf(chosen);
+    if (UI_MODE === 'window') showSourcePreview(citations, index, () => {});
+    else run(() => call('openSourcePreview', { citations: citations, index: index }));
   }
