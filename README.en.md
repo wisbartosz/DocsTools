@@ -96,6 +96,7 @@ review. Click a remark to see the place in the document.
 |---|---|---|
 | Structure | table of contents, heading levels and chapter numbering, required parts and their order, keywords, length of the abstract and the aim, number of pages | chapter numbering, a title typed as plain text → heading |
 | References and citations | Harvard citations with no entry and entries nothing cites, alphabetical order, how entries and citations are written, old sources and Wikipedia, quotes without a citation | citation style, sorting the references |
+| Closeness to sources | passages copied from your sources without quotation marks (12 words in a row by default) and close paraphrases; compared without AI and only with your sources – this is not the university's anti-plagiarism system | pointers only, "Show in source" opens the preview |
 | Tables, figures and appendices | captions and their position, sources under tables, numbering, references in the text, the list of tables and figures | renumbering with a preview, caption above the table, a list with links |
 | Style | the personal form, numbers in digits or words, tenses in the Introduction and Conclusion, announcements in the abstract | pointers only |
 | Abbreviations | acronyms missing from the list of abbreviations, unused list entries, list order, the full name at first use | pointers only |
@@ -155,7 +156,6 @@ with access to the document can't see it.
 - an AI usage log, handy for the AI disclosure statement many universities ask for,
 - source cards with a summary and the key points,
 - adding reference entries by DOI or ISBN,
-- spotting passages copied too closely from sources,
 - different names for the same concept and editorial notes (overlong sentences, repetition),
 - questions your supervisor might ask, and comparing your goals with your conclusions,
 - a progress counter.

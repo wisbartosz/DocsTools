@@ -15,7 +15,7 @@ const BIB_FIX_ALL = { periodBefore: true, innerSpace: true, commaYear: true };
 const BIB_FORMAT_KINDS = { authors: true, letters: true, periodBefore: true, innerSpace: true, commaYear: true, etAl: true,
   sameAuthor: true, semicolon: true, quoteItalic: true, quoteNoCite: true };
 const BIB_PLACEMENT_KINDS = { noCitation: true, results: true, discussion: true };
-const BIB_DEFAULT_RULES = { minReview: 30, minResearch: null, maxAge: 10, wikipedia: true, web: true, format: true, citeFormat: true, citePlacement: true };
+const BIB_DEFAULT_RULES = { minReview: 30, minResearch: null, maxAge: 10, wikipedia: true, web: true, format: true, citeFormat: true, citePlacement: true, closenessWords: 12, closenessParaphrase: true };
 const BIB_EN_WORDS = /\b(the|of|and|with|for|in|on|to|from|an|by|is|are|study|review|effect|treatment|patients?)\b/gi;
 const BIB_PL_WORDS = /\b(i|w|z|na|do|oraz|dla|od|po|jako|przez|badanie|leczenie|pacjent\w*)\b/gi;
 const BIB_QUOTE_MIN_WORDS = 5;
@@ -453,6 +453,8 @@ function normalizeBibliographyRules_(input) {
     format: !!source.format,
     citeFormat: flag(source.citeFormat),
     citePlacement: flag(source.citePlacement),
+    closenessWords: closenessWordsRule_(source.closenessWords),
+    closenessParaphrase: flag(source.closenessParaphrase),
   };
 }
 

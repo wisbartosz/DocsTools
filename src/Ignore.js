@@ -10,6 +10,7 @@ function ignoreInfoKinds_(module) {
   if (module === 'figures') return FIG_INFO_KINDS;
   if (module === 'style') return STYLE_INFO_KINDS;
   if (module === 'abbreviations') return ABBR_INFO_KINDS;
+  if (module === 'closeness') return CLOSENESS_INFO_KINDS;
   return null;
 }
 

@@ -49,8 +49,8 @@
   function showSourcePreview(citations, index, onBack, kind) {
     const root = $('preview');
     if (preview && preview.doc) preview.doc.destroy();
-    preview = { citations: citations, search: kind === 'search', index: -1, onBack: onBack, seq: 0, doc: null, docId: null, docUrl: null, docOpened: 0, scale: 1, highlight: null, pages: [], observer: null, cache: {} };
-    root.replaceChildren(previewSkeleton(onBack, kind === 'search'));
+    preview = { citations: citations, labels: PREVIEW_LABELS[kind] || PREVIEW_LABELS.answer, index: -1, onBack: onBack, seq: 0, doc: null, docId: null, docUrl: null, docOpened: 0, scale: 1, highlight: null, pages: [], observer: null, cache: {} };
+    root.replaceChildren(previewSkeleton(onBack, PREVIEW_LABELS[kind] || PREVIEW_LABELS.answer));
     root.classList.remove('hidden');
     showPreviewCitation(index);
   }
@@ -63,11 +63,17 @@
     $('preview').replaceChildren();
   }
 
-  function previewSkeleton(onBack, searchHits) {
+  const PREVIEW_LABELS = {
+    answer: { back: 'preview.back', list: 'preview.citations', hint: 'preview.citationsHint', found: 'preview.found', foundFooter: 'preview.foundFooter', notFound: 'preview.notFound', notFoundPage: 'preview.notFoundPage' },
+    search: { back: 'preview.backResults', list: 'preview.hits', hint: 'preview.hitsHint', found: 'preview.foundHit', foundFooter: 'preview.foundHitFooter', notFound: 'preview.notFoundHit', notFoundPage: 'preview.notFoundHitPage' },
+    closeness: { back: 'preview.backResults', list: 'preview.match', hint: 'preview.matchHint', found: 'preview.foundMatch', foundFooter: 'preview.foundMatchFooter', notFound: 'preview.notFoundMatch', notFoundPage: 'preview.notFoundMatchPage' },
+  };
+
+  function previewSkeleton(onBack, labels) {
     const frag = document.createDocumentFragment();
     const bar = el('div', 'preview-bar');
     if (onBack) {
-      const back = el('button', 'link preview-back', t(searchHits ? 'preview.backResults' : 'preview.back'));
+      const back = el('button', 'link preview-back', t(labels.back));
       back.prepend(previewIcon('M15 6l-6 6 6 6'));
       back.addEventListener('click', () => { const done = preview.onBack; hideSourcePreview(); done(); });
       bar.append(back, el('span', 'preview-sep'));
@@ -111,10 +117,10 @@
     scroll.addEventListener('scroll', previewTrackPage);
     content.append(banner, scroll);
     const aside = el('aside', 'preview-aside');
-    aside.append(el('div', 'preview-aside-title', t(searchHits ? 'preview.hits' : 'preview.citations')));
+    aside.append(el('div', 'preview-aside-title', t(labels.list)));
     const list = el('div', 'preview-cards');
     list.id = 'preview-cards';
-    aside.append(list, el('div', 'preview-aside-hint muted small', t(searchHits ? 'preview.hitsHint' : 'preview.citationsHint')));
+    aside.append(list, el('div', 'preview-aside-hint muted small', t(labels.hint)));
     main.append(content, aside);
     frag.append(bar, main);
     return frag;
@@ -358,8 +364,8 @@
     if (found) {
       preview.highlight = found;
       const text = c.page && c.page !== found.page
-        ? t(preview.search ? 'preview.foundHitFooter' : 'preview.foundFooter', { page: found.page, footer: c.page })
-        : t(preview.search ? 'preview.foundHit' : 'preview.found', { page: found.page });
+        ? t(preview.labels.foundFooter, { page: found.page, footer: c.page })
+        : t(preview.labels.found, { page: found.page });
       previewBanner(text, 'found', showText);
       previewRedrawHighlight();
       previewGoTo(found.page, true);
@@ -368,8 +374,7 @@
     preview.highlight = null;
     previewRedrawHighlight();
     const page = Math.min(Math.max(c.page || 1, 1), preview.doc.numPages);
-    const notFound = preview.search ? ['preview.notFoundHitPage', 'preview.notFoundHit'] : ['preview.notFoundPage', 'preview.notFound'];
-    previewBanner(c.page ? t(notFound[0], { page: page }) : t(notFound[1]), 'info', showText);
+    previewBanner(c.page ? t(preview.labels.notFoundPage, { page: page }) : t(preview.labels.notFound), 'info', showText);
     previewGoTo(page);
   }
 

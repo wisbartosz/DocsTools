@@ -227,6 +227,12 @@
   .toast-action:not(:disabled):hover { background: none; text-decoration: underline; }
   body.window .result-groups-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; align-items: start; margin-top: 10px; }
   body.window .result-groups-grid > .result-group { margin: 0; }
+  body.window #closeness-groups { grid-template-columns: minmax(0, 1fr); }
+  .close-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+  .close-meta button.link { font-size: 11px; font-weight: 500; }
+  .close-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .close-col-label { font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 2px; }
+  .close-col-source .close-text { color: var(--text); }
   .rules-grid { display: grid; grid-template-columns: 1fr 112px; gap: 4px 8px; align-items: center; font-size: 12px; margin: 6px 0; }
   .rules-grid input[type=text], .rules-grid input[type=number], .rules-grid select { margin: 0; padding: 4px 6px; }
   .rules-grid input[type=number] { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-s); font: inherit; }

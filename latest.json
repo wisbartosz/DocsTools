@@ -1,8 +1,8 @@
 {
-  "version": "0.25.0",
-  "tag": "v0.25.0",
+  "version": "0.26.0",
+  "tag": "v0.26.0",
   "notes": {
-    "pl": "Tryb „Gemini” w Asystencie: zwykła rozmowa z Gemini bez źródeł, np. o styl zaznaczonego fragmentu pracy. Gemini widzi wcześniejszą część rozmowy, a jego odpowiedzi są wyraźnie oznaczone „bez źródeł”.",
-    "en": "A \"Gemini\" mode in the assistant: a plain conversation with Gemini without your sources, e.g. about the style of a selected passage. Gemini sees the earlier part of the conversation and its answers are clearly marked \"no sources\"."
+    "pl": "Nowy moduł „Bliskość do źródeł” w zakładce Sprawdź: wskazuje fragmenty przepisane ze źródeł bez cudzysłowu i bliskie parafrazy, z podglądem miejsca w źródle. Porównanie bez AI, tylko z Twoimi źródłami.",
+    "en": "A new \"Closeness to sources\" module in the Check tab: it points out passages copied from your sources without quotation marks and close paraphrases, with a preview of the place in the source. Compared without AI, only with your sources."
   }
 }

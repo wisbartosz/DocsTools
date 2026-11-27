@@ -176,6 +176,11 @@
         <div id="bib-summary" class="muted hidden"></div>
         <div id="bib-groups" class="result-groups-grid"></div>
       </section>
+      <section class="module-view hidden" data-module="closeness">
+        <div class="muted small module-hint collapsed"><?= t_('close.hint') ?></div>
+        <div id="closeness-summary" class="muted hidden"></div>
+        <div id="closeness-groups" class="result-groups-grid"></div>
+      </section>
       <section class="module-view hidden" data-module="figures">
         <div class="muted small module-hint collapsed"><?= t_('fig.hint') ?></div>
         <div id="fig-summary" class="muted hidden"></div>
@@ -272,7 +277,11 @@
           <label class="rules-check"><input id="brule-cite-placement" type="checkbox"> <?= t_('bib.rules.citePlacement') ?></label>
           <label class="rules-check"><input id="brule-wikipedia" type="checkbox"> <?= t_('bib.rules.wikipedia') ?></label>
           <label class="rules-check"><input id="brule-web" type="checkbox"> <?= t_('bib.rules.web') ?></label>
+          <b class="rules-head"><?= t_('bib.rules.groupCloseness') ?></b>
+          <label for="brule-closeness-words"><?= t_('bib.rules.closenessWords') ?></label><input id="brule-closeness-words" type="number" min="0" step="1">
+          <label class="rules-check"><input id="brule-closeness-paraphrase" type="checkbox"> <?= t_('bib.rules.closenessParaphrase') ?></label>
         </div>
+        <div class="muted small rules-pane-hint"><?= t_('bib.rules.closenessHint') ?></div>
       </section>
       <section id="format-rules" class="rules-pane" data-pane="format">
         <h4 class="rules-pane-title"><?= t_('format.rules.title') ?></h4>

@@ -57,6 +57,87 @@
     renderCheckResult(STYLE_SPEC);
   }
 
+  let closeness = null;
+
+  const closenessOpen = new Set();
+
+  async function checkCloseness() {
+    closeness = await call('checkCloseness');
+    renderCloseness();
+  }
+
+  const CLOSENESS_SPEC = {
+    module: 'closeness',
+    data: () => closeness,
+    summaryId: 'closeness-summary',
+    groupsId: 'closeness-groups',
+    kindKey: 'close.kind.',
+    noneKey: 'close.none',
+    moreKey: 'close.more',
+    open: closenessOpen,
+    showFn: 'showStyleIssue',
+    showable: () => true,
+    empty: data => (data.noSources ? t('close.noSources') : data.off ? t('close.off') : ''),
+    notes: data => [t('close.stats', data.stats), t('close.disclaimer')],
+    snippet: (item, node) => renderClosenessItem(item, node),
+  };
+
+  function renderCloseness() {
+    renderCheckResult(CLOSENESS_SPEC);
+  }
+
+  function renderClosenessItem(item, node) {
+    const thesis = markedText(item.thesis);
+    const source = item.source;
+    const meta = el('div', 'close-meta');
+    const amount = item.percent ? t('close.percent', { percent: item.percent }) : countText('close.words', item.words);
+    meta.append(el('span', '', [source.name, source.page ? t('close.page', { page: source.page }) : '', amount].filter(Boolean).join(' · ')));
+    const show = el('button', 'link', t('close.showSource'));
+    show.addEventListener('click', e => {
+      e.stopPropagation();
+      openClosenessPreview(item);
+    });
+    show.addEventListener('keydown', e => e.stopPropagation());
+    meta.append(show);
+    if (UI_MODE !== 'window') {
+      node.append(thesis, meta);
+      return;
+    }
+    const pair = el('div', 'close-pair');
+    const mine = el('div', 'close-col');
+    mine.append(el('div', 'close-col-label', t('close.yourText')), thesis);
+    const theirs = el('div', 'close-col close-col-source');
+    theirs.append(el('div', 'close-col-label', t('close.source')), markedText(source));
+    pair.append(mine, theirs);
+    node.append(pair, meta);
+  }
+
+  function markedText(part) {
+    const box = el('div', 'close-text');
+    const text = part.text;
+    const marks = [];
+    (part.marks || []).forEach(m => {
+      const last = marks[marks.length - 1];
+      if (last && !/[^\s,;:–—-]/.test(text.slice(last[1], m[0]))) last[1] = m[1];
+      else marks.push([m[0], m[1]]);
+    });
+    if (part.cutStart) box.append('…');
+    let at = 0;
+    marks.forEach(m => {
+      box.append(text.slice(at, m[0]), el('mark', '', text.slice(m[0], m[1])));
+      at = m[1];
+    });
+    box.append(text.slice(at));
+    if (part.cutEnd) box.append('…');
+    return box;
+  }
+
+  function openClosenessPreview(item) {
+    const citations = [{ number: 1, sourceId: item.source.id, sourceName: item.source.name, quote: item.source.quote, page: item.source.page }];
+    if (UI_MODE === 'window') showSourcePreview(citations, 0, () => {}, 'closeness');
+    else run(() => call('openSourcePreview', { citations: citations, index: 0, kind: 'closeness' }));
+  }
+
   let abbreviations = null;
 
   const abbreviationsOpen = new Set();
@@ -494,6 +575,8 @@
     { id: 'structure', title: 'structure.title', kindKey: 'structure.kind.', data: () => structure, check: () => checkStructure(), render: () => renderStructure() },
     { id: 'bibliography', title: 'bib.title', kindKey: 'bib.kind.', data: () => bibliography, check: () => checkBibliography(), render: () => renderBibliography(),
       unavailable: data => (data.noSection ? t('check.module.noBibliography') : '') },
+    { id: 'closeness', title: 'close.title', kindKey: 'close.kind.', data: () => closeness, check: () => checkCloseness(), render: () => renderCloseness(),
+      unavailable: data => (data.noSources ? t('check.module.noSources') : data.off ? t('check.module.off') : '') },
     { id: 'figures', title: 'fig.title', kindKey: 'fig.kind.', data: () => figures, check: () => checkFigures(), render: () => renderFigures() },
     { id: 'style', title: 'style.title', kindKey: 'style.kind.', data: () => style, check: () => checkStyle(), render: () => renderStyle() },
     { id: 'abbreviations', title: 'abbr.title', kindKey: 'abbr.kind.', data: () => abbreviations, check: () => checkAbbreviations(), render: () => renderAbbreviations() },

@@ -10,7 +10,7 @@ function openSourcePreview(state) {
   if (!citations.length) throw userError_('preview.err.source');
   const index = Math.min(Math.max(Number(state.index) || 0, 0), citations.length - 1);
   const template = HtmlService.createTemplateFromFile('PreviewPage');
-  template.state = scriptJson_({ citations: citations, index: index, kind: state.kind === 'search' ? 'search' : 'answer' });
+  template.state = scriptJson_({ citations: citations, index: index, kind: state.kind === 'search' || state.kind === 'closeness' ? state.kind : 'answer' });
   const html = template.evaluate().setWidth(ASSISTANT_WINDOW.width).setHeight(ASSISTANT_WINDOW.height);
   DocumentApp.getUi().showModelessDialog(html, t_('preview.title'));
 }

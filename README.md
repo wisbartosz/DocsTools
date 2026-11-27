@@ -93,6 +93,7 @@ przejrzenia. Kliknięcie uwagi pokazuje miejsce w dokumencie.
 |---|---|---|
 | Struktura | spis treści, poziomy i numeracja rozdziałów, wymagane części i ich kolejność, słowa kluczowe, długość abstraktu i celu pracy, liczba stron | numeracja rozdziałów, tytuł zapisany zwykłym tekstem → nagłówek |
 | Bibliografia i przypisy | przypisy harwardzkie bez pozycji i pozycje bez przypisu, kolejność alfabetyczna, zapis pozycji i przypisów, stare źródła i Wikipedia, cytaty bez przypisu | zapis przypisów, sortowanie bibliografii |
+| Bliskość do źródeł | fragmenty przepisane ze źródeł bez cudzysłowu (domyślnie od 12 słów z rzędu) i bliskie parafrazy; porównanie bez AI, tylko z Twoimi źródłami – to nie jest system antyplagiatowy uczelni | tylko wskazania, „Pokaż w źródle” otwiera podgląd |
 | Tabele, ryciny i załączniki | podpisy i ich miejsce, źródła pod tabelami, numeracja, odwołania w tekście, spis tabel i rycin | przenumerowanie z podglądem, podpis nad tabelą, spis z linkami |
 | Styl | forma osobowa, liczby cyfrą czy słownie, czasy we Wstępie i Zakończeniu, zapowiedzi w streszczeniu | tylko wskazania |
 | Skróty | skrótowce spoza wykazu skrótów, nieużyte pozycje wykazu, kolejność wykazu, rozwinięcie przy pierwszym użyciu | tylko wskazania |
@@ -149,7 +150,6 @@ z dostępem do dokumentu go nie zobaczą.
 - dziennik użycia AI, przydatny do oświadczenia o korzystaniu z AI,
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
 - dodawanie pozycji bibliografii po numerze DOI lub ISBN,
-- wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - różne nazwy tego samego pojęcia i uwagi redakcyjne (za długie zdania, powtórzenia),
 - pytania, jakie mógłby zadać promotor, i porównanie celów pracy z wnioskami,
 - licznik postępu.
