@@ -1,8 +1,8 @@
 {
-  "version": "0.24.0",
-  "tag": "v0.24.0",
+  "version": "0.24.1",
+  "tag": "v0.24.1",
   "notes": {
-    "pl": "Wyszukiwarka w źródłach: w Asystencie przełącznik „Ze źródłami | Szukaj”. Szukanie bez AI, słowa w dowolnej formie, wyniki z fragmentem i stroną, „Pokaż w źródle” otwiera podgląd na tej stronie.",
-    "en": "Search in sources: a \"From sources | Search\" switch in the assistant. Search without AI, any word form, results with a passage and page, and \"Show in source\" opens the preview at that page."
+    "pl": "Czytelniejsze przyciski: nowa rozmowa i odświeżanie listy jako ikony, „Wymagania” jako przycisk, zaznaczony fragment pracy jako karta w polu pytania (z podglądem całego tekstu) i podpowiedź, gdy nic nie zaznaczono.",
+    "en": "Clearer buttons: new conversation and list refresh as icons, \"Requirements\" as a button, the selected passage as a card in the question box (with a full-text preview), and a hint when nothing is selected."
   }
 }

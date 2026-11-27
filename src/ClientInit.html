@@ -176,9 +176,15 @@
 
   $('btn-import-rules').addEventListener('click', () => runInBackground($('btn-import-rules'), importFormatRules));
 
-  $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), attachFragment));
+  $('btn-attach-fragment').addEventListener('click', () => runInBackground($('btn-attach-fragment'), () => attachFragment(false)));
 
   $('btn-remove-fragment').addEventListener('click', removeFragment);
+
+  $('btn-replace-fragment').addEventListener('click', () => runInBackground($('btn-replace-fragment'), () => attachFragment(true)));
+
+  $('btn-fragment-toggle').addEventListener('click', toggleFragmentText);
+
+  $('question').addEventListener('input', hideFragmentHint);
 
   $('btn-feedback').addEventListener('click', () => switchTab('feedback'));
 
@@ -207,6 +213,7 @@
 
   document.querySelectorAll('.example-chip').forEach(chip => chip.addEventListener('click', () => {
     $('question').value = chip.textContent;
+    hideFragmentHint();
     $('question').focus();
   }));
 

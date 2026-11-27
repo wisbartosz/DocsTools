@@ -54,7 +54,8 @@
       button.setAttribute('aria-pressed', String(on));
     });
     $('assistant-composer').classList.toggle('search-mode', search);
-    $('btn-attach-fragment').classList.toggle('hidden', search);
+    renderAttachButton();
+    hideFragmentHint();
     $('assistant-size').classList.toggle('hidden', search);
     $('search-hint').classList.toggle('hidden', !search);
     $('assistant-examples').classList.toggle('hidden', search || !!activeThread);
@@ -198,6 +199,7 @@
 
   function selectThread(thread, scroll) {
     activeThread = thread;
+    hideFragmentHint();
     if (thread) thread.unread = false;
     renderQuestionPlaceholder();
     renderAssistantSummary();
@@ -329,8 +331,11 @@
     const threadFragment = activeThread && activeThread.fragment ? activeThread.fragment.length : 0;
     const chars = selected.reduce((sum, s) => sum + (s.chars || 0), 0) + (fragment ? fragment.chars : threadFragment);
     $('assistant-sources-summary').textContent = t('assistant.sourcesSummary', { selected: selected.length, total: assistant.sources.length });
-    $('assistant-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
-    $('assistant-picker-size').textContent = t('assistant.size', { chars: formatNumber(chars) });
+    const sourceChars = selected.reduce((sum, s) => sum + (s.chars || 0), 0);
+    const fragmentChars = fragment ? fragment.chars : threadFragment;
+    const sizeText = t('assistant.size', { chars: approxChars(sourceChars) });
+    $('assistant-size').textContent = sizeText + (fragmentChars ? ' · ' + countText('assistant.sizeFragment', fragmentChars) : '');
+    $('assistant-picker-size').textContent = sizeText;
     $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
   }
 
@@ -348,22 +353,60 @@
 
   let fragment = null;
 
-  async function attachFragment() {
-    fragment = await call('getSelectedFragment');
+  let fragmentRequest = 0;
+
+  async function attachFragment(replacing) {
+    hideFragmentHint();
+    const request = ++fragmentRequest;
+    const selected = await call('getSelectedFragment');
+    if (request !== fragmentRequest) return;
+    if (!selected) {
+      showFragmentHint(t(replacing ? 'assistant.err.noSelectionReplace' : 'assistant.err.noSelection'));
+      return;
+    }
+    fragment = selected;
     renderFragment();
+  }
+
+  function showFragmentHint(text) {
+    const hint = $('fragment-hint');
+    hint.textContent = '';
+    hint.classList.remove('hidden');
+    hint.textContent = text;
+  }
+
+  function hideFragmentHint() {
+    $('fragment-hint').classList.add('hidden');
+  }
+
+  function renderAttachButton() {
+    $('btn-attach-fragment').classList.toggle('hidden', assistantMode === 'search' || !!fragment);
+  }
+
+  function toggleFragmentText() {
+    const expanded = !$('fragment-box').classList.contains('expanded');
+    $('fragment-box').classList.toggle('expanded', expanded);
+    $('btn-fragment-toggle').setAttribute('aria-expanded', String(expanded));
+  }
+
+  function approxChars(chars) {
+    return chars < 10000 ? formatNumber(chars) : t('assistant.thousands', { n: formatNumber(Math.round(chars / 1000)) });
   }
 
   function removeFragment() {
     fragment = null;
+    fragmentRequest++;
+    hideFragmentHint();
     renderFragment();
   }
 
   function renderFragment() {
     $('fragment-box').classList.toggle('hidden', !fragment);
-    $('fragment-title').textContent = fragment ? t('assistant.fragment.chip', { text: fragment.text.slice(0, 120) }) : '';
-    $('fragment-title').title = fragment ? fragment.text : '';
+    $('fragment-title').textContent = fragment ? countText('assistant.fragment.title', fragment.chars) : '';
     $('fragment-text').textContent = fragment ? fragment.text : '';
-    $('btn-attach-fragment').textContent = t(fragment ? 'assistant.fragment.replace' : 'assistant.fragment.attach');
+    $('fragment-box').classList.remove('expanded');
+    $('btn-fragment-toggle').setAttribute('aria-expanded', 'false');
+    renderAttachButton();
     renderQuestionPlaceholder();
     renderAssistantSummary();
   }
@@ -443,7 +486,7 @@
       turn.append(cites);
     }
     const actions = el('div', 'turn-actions');
-    const copy = el('button', 'link', t('assistant.copy'));
+    const copy = el('button', 'btn-small', t('assistant.copy'));
     copy.addEventListener('click', () => copyAnswer(result));
     actions.append(copy);
     turn.append(actions, ...answerNotes(result));

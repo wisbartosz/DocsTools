@@ -108,7 +108,7 @@ function getSelectedFragment() {
     });
   }
   const text = parts.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-  if (!text) throw userError_('assistant.err.noSelection');
+  if (!text) return null;
   if (text.length > ASSISTANT_MAX_FRAGMENT_CHARS) {
     throw userError_('assistant.err.selectionTooLong', { max: ASSISTANT_MAX_FRAGMENT_CHARS });
   }
