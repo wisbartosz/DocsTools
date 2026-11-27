@@ -48,17 +48,21 @@
   function setAssistantMode(mode) {
     assistantMode = mode;
     const search = mode === 'search';
+    const gemini = mode === 'gemini';
     document.querySelectorAll('#assistant-modes .mode-btn').forEach(button => {
       const on = button.dataset.mode === mode;
       button.classList.toggle('active', on);
       button.setAttribute('aria-pressed', String(on));
     });
     $('assistant-composer').classList.toggle('search-mode', search);
+    $('assistant-composer').classList.toggle('gemini-mode', gemini);
+    $('assistant-sources').classList.toggle('hidden', gemini);
+    $('gemini-badge').classList.toggle('hidden', !gemini);
     renderAttachButton();
     hideFragmentHint();
-    $('assistant-size').classList.toggle('hidden', search);
     $('search-hint').classList.toggle('hidden', !search);
-    $('assistant-examples').classList.toggle('hidden', search || !!activeThread);
+    renderExamples();
+    renderAssistantSummary();
     const label = t(search ? 'search.button' : 'assistant.ask');
     $('btn-ask').setAttribute('aria-label', label);
     $('btn-ask').title = label;
@@ -66,7 +70,85 @@
   }
 
   function submitQuestion() {
-    return assistantMode === 'search' ? searchInSources() : askAssistant();
+    if (assistantMode === 'search') return searchInSources();
+    if (assistantMode === 'gemini') return askGeminiChat();
+    return askAssistant();
+  }
+
+  function renderExamples() {
+    $('assistant-examples').classList.toggle('hidden', !!activeThread || assistantMode !== 'sources');
+    $('gemini-intro').classList.toggle('hidden', !!activeThread || assistantMode !== 'gemini');
+  }
+
+  function threadHistory(thread) {
+    if (!thread) return [];
+    const lastSearch = thread.turns.filter(turn => turn.query).pop();
+    return thread.turns
+      .filter(turn => !turn.query || turn === lastSearch)
+      .map(turn => ({ question: turn.question, answer: turn.answer, query: turn.query || null, chat: turn.chat || null }));
+  }
+
+  async function askGeminiChat() {
+    const target = activeThread;
+    const attached = fragment;
+    const typed = $('question').value;
+    const question = typed.trim();
+    if (!question) {
+      showFragmentHint(t('gemini.err.empty'));
+      $('question').focus();
+      return;
+    }
+    const fragmentText = attached ? attached.text : (target ? target.fragment : '');
+    const result = await callGemini($('btn-ask'), 'askGemini', question, threadHistory(target), fragmentText);
+    if (!result) return;
+    hideMessage();
+    if (fragment === attached) removeFragment();
+    let thread = target;
+    if (!thread) {
+      thread = { fragment: fragmentText, turns: [] };
+      thread.element = renderThread(thread, question);
+      threads.push(thread);
+      $('answers').append(thread.element);
+    } else if (attached) {
+      thread.fragment = attached.text;
+    }
+    const turn = addGeminiTurn(thread, question, result, attached ? attached.text : '');
+    if ($('question').value === typed) $('question').value = '';
+    if (activeThread === target) {
+      selectThread(thread, false);
+      turn.scrollIntoView({ block: 'start' });
+    } else {
+      markThreadUnread(thread);
+    }
+    notifyAssistant();
+  }
+
+  function addGeminiTurn(thread, question, result, fragmentText) {
+    const turn = el('div', 'turn gemini-turn');
+    const main = el('div', 'turn-main');
+    turn.append(main);
+    main.append(el('div', 'bubble-mode', t('gemini.bubbleLabel')), el('div', 'bubble gemini-bubble', question));
+    if (fragmentText) {
+      const box = el('details', 'thread-fragment');
+      box.append(el('summary', '', t('assistant.fragment.inThread')), el('div', 'fragment-text', fragmentText));
+      main.append(box);
+    }
+    main.append(el('div', 'gemini-answer-label', t('gemini.answerLabel')));
+    const answer = el('div', 'answer gemini-answer');
+    result.answer.split(/\n{2,}/).forEach(part => { if (part.trim()) answer.append(el('p', '', part.trim())); });
+    main.append(answer);
+    const actions = el('div', 'turn-actions');
+    const copy = el('button', 'btn-small', t('gemini.copy'));
+    copy.addEventListener('click', () => copyText(result.answer, 'gemini.copied'));
+    actions.append(copy);
+    turn.append(actions, ...answerNotes(result));
+    thread.turns.push({
+      question: 'Question to Gemini without the sources: ' + question,
+      answer: '[General-knowledge answer from Gemini, not from the sources – not a fact from the sources] ' + result.answer,
+      chat: question,
+    });
+    thread.turnsElement.append(turn);
+    return turn;
   }
 
   async function searchInSources() {
@@ -185,6 +267,10 @@
       $('question').placeholder = t('search.placeholder');
       return;
     }
+    if (assistantMode === 'gemini') {
+      $('question').placeholder = t(fragment ? 'gemini.placeholderFragment' : activeThread ? 'gemini.placeholderFollowUp' : 'gemini.placeholder');
+      return;
+    }
     const key = fragment ? 'assistant.fragment.placeholder'
       : activeThread ? 'assistant.placeholderFollowUp'
       : 'assistant.placeholder';
@@ -203,7 +289,7 @@
     renderQuestionPlaceholder();
     renderAssistantSummary();
     threads.forEach(item => item.element.classList.toggle('active', item === thread));
-    $('assistant-examples').classList.toggle('hidden', !!thread || assistantMode === 'search');
+    renderExamples();
     $('assistant-threads').open = false;
     renderThreadList();
     if (scroll === false) return;
@@ -333,9 +419,12 @@
     const sourceChars = selected.reduce((sum, s) => sum + (s.chars || 0), 0);
     const fragmentChars = fragment ? fragment.chars : threadFragment;
     const sizeText = t('assistant.size', { chars: approxChars(sourceChars) });
-    $('assistant-size').textContent = sizeText + (fragmentChars ? ' · ' + countText('assistant.sizeFragment', fragmentChars) : '');
+    const fragmentSize = fragmentChars ? countText('assistant.sizeFragment', fragmentChars) : '';
+    const gemini = assistantMode === 'gemini';
+    $('assistant-size').textContent = gemini ? fragmentSize : sizeText + (fragmentSize ? ' · ' + fragmentSize : '');
+    $('assistant-size').classList.toggle('hidden', assistantMode === 'search' || (gemini && !fragmentSize));
     $('assistant-picker-size').textContent = sizeText;
-    $('assistant-size-warning').classList.toggle('hidden', chars <= assistant.warnChars);
+    $('assistant-size-warning').classList.toggle('hidden', gemini || chars <= assistant.warnChars);
   }
 
   function selectionChanged() {
@@ -416,10 +505,7 @@
     const typed = $('question').value;
     const question = typed.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
     const selected = assistant.sources.filter(s => s.selected);
-    const lastSearch = target ? target.turns.filter(turn => turn.query).pop() : null;
-    const history = target ? target.turns
-      .filter(turn => !turn.query || turn === lastSearch)
-      .map(turn => ({ question: turn.question, answer: turn.answer, query: turn.query || null })) : [];
+    const history = threadHistory(target);
     const fragmentText = attached ? attached.text : (target ? target.fragment : '');
     const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), history, fragmentText);
     if (!result) return;
@@ -530,8 +616,11 @@
         lines.push('[' + (index + 1) + '] ' + c.sourceName + where + quote);
       });
     }
-    const text = lines.join('\n');
-    const done = () => showMessage(t('assistant.copied'), 'ok');
+    copyText(lines.join('\n'), 'assistant.copied');
+  }
+
+  function copyText(text, doneKey) {
+    const done = () => showMessage(t(doneKey), 'ok');
     const fallback = () => {
       const area = el('textarea');
       area.value = text;

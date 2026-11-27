@@ -685,4 +685,19 @@
   .card-row button.link { border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 3px 10px; font-size: 12px; background: #fff; flex: 0 0 auto; }
   .card-row button.link:not(:disabled):hover { text-decoration: none; background: var(--surface); }
   .sources-head #btn-refresh { width: 28px; height: 28px; color: var(--accent); }
+
+  :root { --gemini: #6e4bb3; --gemini-strong: #553a8f; --gemini-soft: #f3eefb; --gemini-bubble: #eaddff; }
+  button.mode-btn.active[data-mode="gemini"] { color: var(--gemini); }
+  .gemini-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gemini); background: var(--gemini-soft); border-radius: 16px; padding: 4px 10px; align-self: center; }
+  .composer.gemini-mode .composer-box:focus-within { border-color: var(--gemini); }
+  .composer.gemini-mode button.send-btn.primary { background: var(--gemini); border-color: var(--gemini); }
+  .composer.gemini-mode button.send-btn.primary:not(:disabled):hover { background: var(--gemini-strong); }
+  .composer.gemini-mode #btn-attach-fragment { background: var(--gemini-soft); border-color: var(--gemini-soft); color: var(--gemini); }
+  .composer.gemini-mode .fragment-quote { color: var(--gemini); }
+  .gemini-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--gemini-soft); color: #3b2a66; font-size: 12px; line-height: 1.45; margin-bottom: 6px; }
+  .gemini-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--gemini); }
+  .gemini-turn .bubble-mode { color: var(--gemini); }
+  .bubble.gemini-bubble { background: var(--gemini-bubble); color: #21005d; }
+  .gemini-answer-label { font-size: 11px; color: var(--gemini); margin-bottom: 4px; }
+  .gemini-answer p { white-space: pre-wrap; }
 </style>

@@ -70,9 +70,13 @@ document after updating.
   that the quote really appears in the text; if the sources don't answer the question, it says so
   plainly. The conversation works like a chat, and "Copy with references" copies the answer with
   its sources.
-- **Search in your sources.** A "From sources | Search" switch above the question box. Search works
+- **Search in your sources.** The "Search" mode in the switch above the question box. Search works
   without AI: any word form (Polish inflections included), and "in quotes" for the exact phrase.
   Results show the passage and page, and "Show in source" opens the preview at that page.
+  After a search you can ask the assistant about the passages found in the same conversation.
+- **Chat with Gemini without sources.** The "Gemini" mode: a plain chat, e.g. about the style of a
+  selected passage or to explain a term. Answers are clearly marked "no sources" and have no
+  references; Gemini sees the earlier part of the conversation and never changes your thesis.
 - **Source preview.** "Show in source" next to a quote opens the PDF right at the page with the
   quote and highlights it. For other files (Word, Google Docs) it shows the source text with the
   quote highlighted.
@@ -150,7 +154,6 @@ with access to the document can't see it.
 
 - an AI usage log, handy for the AI disclosure statement many universities ask for,
 - source cards with a summary and the key points,
-- a plain Gemini chat without sources, e.g. about the style of a selected passage,
 - adding reference entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - different names for the same concept and editorial notes (overlong sentences, repetition),

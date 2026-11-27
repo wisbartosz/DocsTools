@@ -73,6 +73,7 @@
             <div id="assistant-picker-size" class="picker-foot muted small"></div>
           </div>
         </details>
+        <span id="gemini-badge" class="gemini-badge hidden"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg><?= t_('gemini.badge') ?></span>
         <details id="assistant-threads" class="sources-chip threads-chip hidden">
           <summary><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span id="assistant-threads-summary"></span></summary>
           <div class="sources-panel">
@@ -88,10 +89,17 @@
         <button class="example-chip"><?= t_('assistant.example1') ?></button>
         <button class="example-chip"><?= t_('assistant.example2') ?></button>
       </div>
+      <div id="gemini-intro" class="examples hidden">
+        <div class="gemini-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg><span><?= t_('gemini.note') ?></span></div>
+        <div class="muted small"><?= t_('assistant.examplesTitle') ?></div>
+        <button class="example-chip"><?= t_('gemini.example1') ?></button>
+        <button class="example-chip"><?= t_('gemini.example2') ?></button>
+      </div>
       <div id="assistant-composer" class="composer">
         <div id="assistant-modes" class="mode-switch" role="group" aria-label="<?= t_('assistant.mode.label') ?>">
           <button class="mode-btn active" data-mode="sources" aria-pressed="true"><?= t_('assistant.mode.sources') ?></button>
           <button class="mode-btn" data-mode="search" aria-pressed="false"><?= t_('assistant.mode.search') ?></button>
+          <button class="mode-btn" data-mode="gemini" aria-pressed="false"><?= t_('assistant.mode.gemini') ?></button>
         </div>
         <div class="composer-box composer-stack">
           <div id="fragment-box" class="fragment-card hidden">

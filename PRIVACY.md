@@ -21,7 +21,8 @@ Google.
 **Co jest wysyłane poza Twoje konto Google**
 
 - Gdy korzystasz z funkcji AI (np. asystenta), do Google Gemini API trafiają Twoje
-  pytanie i teksty zaznaczonych źródeł. Zapytanie jest wysyłane Twoim kluczem API, więc
+  pytanie, wcześniejsza część rozmowy, dołączony fragment pracy oraz – w trybie „Ze źródłami” –
+  teksty zaznaczonych źródeł. Zapytanie jest wysyłane Twoim kluczem API, więc
   obowiązują Cię warunki Google dla Gemini API. Na darmowym planie Google może
   wykorzystywać te treści do ulepszania swoich usług. Przybornik przypomina o tym przy
   pierwszym użyciu AI.
@@ -67,8 +68,9 @@ account.
 
 **What is sent outside your Google account**
 
-- When you use AI features (such as the assistant), your question and the text of the
-  selected sources are sent to the Google Gemini API using your own API key, so Google's
+- When you use AI features (such as the assistant), your question, the earlier part of the
+  conversation, an attached passage of your thesis and – in the "From sources" mode – the text of
+  the selected sources are sent to the Google Gemini API using your own API key, so Google's
   Gemini API terms apply to you. On the free tier Google may use this content to improve
   its services. The toolkit reminds you about this the first time you use AI.
 - The author only receives what you send yourself with "Send feedback": your message,
