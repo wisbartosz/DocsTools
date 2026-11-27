@@ -88,7 +88,11 @@
         <button class="example-chip"><?= t_('assistant.example1') ?></button>
         <button class="example-chip"><?= t_('assistant.example2') ?></button>
       </div>
-      <div class="composer">
+      <div id="assistant-composer" class="composer">
+        <div id="assistant-modes" class="mode-switch" role="group" aria-label="<?= t_('assistant.mode.label') ?>">
+          <button class="mode-btn active" data-mode="sources" aria-pressed="true"><?= t_('assistant.mode.sources') ?></button>
+          <button class="mode-btn" data-mode="search" aria-pressed="false"><?= t_('assistant.mode.search') ?></button>
+        </div>
         <div id="fragment-box" class="fragment-chip hidden">
           <span id="fragment-title" class="fragment-chip-text"></span>
           <button id="btn-remove-fragment" class="icon-btn small" aria-label="<?= t_('assistant.fragment.remove') ?>" title="<?= t_('assistant.fragment.remove') ?>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -97,11 +101,12 @@
         <div class="composer-box">
           <label for="question" class="visually-hidden"><?= t_('assistant.placeholder') ?></label>
           <textarea id="question" rows="2" placeholder="<?= t_('assistant.placeholder') ?>"></textarea>
-          <button id="btn-ask" class="primary send-btn" aria-label="<?= t_('assistant.ask') ?>" title="<?= t_('assistant.ask') ?>"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button id="btn-ask" class="primary send-btn" aria-label="<?= t_('assistant.ask') ?>" title="<?= t_('assistant.ask') ?>"><svg class="icon-send" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><svg class="icon-search" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
         </div>
         <div class="composer-meta">
           <button id="btn-attach-fragment" class="link"><?= t_('assistant.fragment.attach') ?></button>
           <span id="assistant-size" class="muted small"></span>
+          <span id="search-hint" class="muted small hidden"><?= t_('search.hint') ?></span>
         </div>
         <div id="assistant-size-warning" class="message warn hidden"><?= t_('assistant.sizeWarning') ?></div>
       </div>

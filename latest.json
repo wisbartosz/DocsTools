@@ -1,8 +1,8 @@
 {
-  "version": "0.23.0",
-  "tag": "v0.23.0",
+  "version": "0.24.0",
+  "tag": "v0.24.0",
   "notes": {
-    "pl": "Podgląd źródła: „Pokaż w źródle” przy cytacie z asystenta otwiera plik PDF od razu na stronie z cytatem i go podświetla. Inne pliki – tekst źródła z podświetlonym cytatem.",
-    "en": "Source preview: \"Show in source\" next to an assistant quote opens the PDF right at the page with the quote and highlights it. Other files show the source text with the quote highlighted."
+    "pl": "Wyszukiwarka w źródłach: w Asystencie przełącznik „Ze źródłami | Szukaj”. Szukanie bez AI, słowa w dowolnej formie, wyniki z fragmentem i stroną, „Pokaż w źródle” otwiera podgląd na tej stronie.",
+    "en": "Search in sources: a \"From sources | Search\" switch in the assistant. Search without AI, any word form, results with a passage and page, and \"Show in source\" opens the preview at that page."
   }
 }

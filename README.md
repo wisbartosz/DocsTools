@@ -67,6 +67,9 @@ odśwież dokument.
   cytatem i stroną (gdy ją znamy) przy każdym źródle. Przybornik sam sprawdza, czy cytat naprawdę
   jest w tekście; gdy w źródłach nie ma odpowiedzi, mówi to wprost. Rozmowa działa jak czat,
   a „Kopiuj z przypisami” kopiuje odpowiedź z listą źródeł.
+- **Szukanie w źródłach.** Przełącznik „Ze źródłami | Szukaj” nad polem pytania. Szukanie działa
+  bez AI: słowa w dowolnej formie („próba” znajdzie „próby”), a „w cudzysłowie” – dokładnie to
+  wyrażenie. Wyniki pokazują fragment i stronę, a „Pokaż w źródle” otwiera podgląd na tej stronie.
 - **Podgląd źródła.** „Pokaż w źródle” przy cytacie otwiera plik PDF od razu na stronie z cytatem
   i podświetla go. Przy innych plikach (Word, Dokumenty Google) pokazuje tekst źródła
   z podświetlonym cytatem.
@@ -141,7 +144,7 @@ z dostępem do dokumentu go nie zobaczą.
 
 - dziennik użycia AI, przydatny do oświadczenia o korzystaniu z AI,
 - karty źródeł ze streszczeniem i najważniejszymi tezami,
-- wyszukiwarka w źródłach,
+- zwykła rozmowa z Gemini bez źródeł, np. o styl zaznaczonego fragmentu,
 - dodawanie pozycji bibliografii po numerze DOI lub ISBN,
 - wykrywanie fragmentów zbyt blisko przepisanych ze źródeł,
 - różne nazwy tego samego pojęcia i uwagi redakcyjne (za długie zdania, powtórzenia),

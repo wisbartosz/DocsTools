@@ -70,6 +70,9 @@ document after updating.
   that the quote really appears in the text; if the sources don't answer the question, it says so
   plainly. The conversation works like a chat, and "Copy with references" copies the answer with
   its sources.
+- **Search in your sources.** A "From sources | Search" switch above the question box. Search works
+  without AI: any word form (Polish inflections included), and "in quotes" for the exact phrase.
+  Results show the passage and page, and "Show in source" opens the preview at that page.
 - **Source preview.** "Show in source" next to a quote opens the PDF right at the page with the
   quote and highlights it. For other files (Word, Google Docs) it shows the source text with the
   quote highlighted.
@@ -147,7 +150,7 @@ with access to the document can't see it.
 
 - an AI usage log, handy for the AI disclosure statement many universities ask for,
 - source cards with a summary and the key points,
-- search across your sources,
+- a plain Gemini chat without sources, e.g. about the style of a selected passage,
 - adding reference entries by DOI or ISBN,
 - spotting passages copied too closely from sources,
 - different names for the same concept and editorial notes (overlong sentences, repetition),

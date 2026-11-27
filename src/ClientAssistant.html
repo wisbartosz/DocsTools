@@ -10,6 +10,10 @@
 
   let assistantUnread = 0;
 
+  let assistantMode = 'sources';
+
+  const SEARCH_VISIBLE_HITS = 3;
+
   async function callGemini(button, fn, ...args) {
     if (!await confirmAiNotice()) return null;
     button.classList.add('loading');
@@ -41,7 +45,146 @@
     else if (assistantPending > 0) tab.append(el('span', 'tab-spinner'));
   }
 
+  function setAssistantMode(mode) {
+    assistantMode = mode;
+    const search = mode === 'search';
+    document.querySelectorAll('#assistant-modes .mode-btn').forEach(button => {
+      const on = button.dataset.mode === mode;
+      button.classList.toggle('active', on);
+      button.setAttribute('aria-pressed', String(on));
+    });
+    $('assistant-composer').classList.toggle('search-mode', search);
+    $('btn-attach-fragment').classList.toggle('hidden', search);
+    $('assistant-size').classList.toggle('hidden', search);
+    $('search-hint').classList.toggle('hidden', !search);
+    $('assistant-examples').classList.toggle('hidden', search || !!activeThread);
+    const label = t(search ? 'search.button' : 'assistant.ask');
+    $('btn-ask').setAttribute('aria-label', label);
+    $('btn-ask').title = label;
+    renderQuestionPlaceholder();
+  }
+
+  function submitQuestion() {
+    return assistantMode === 'search' ? searchInSources() : askAssistant();
+  }
+
+  async function searchInSources() {
+    const target = activeThread;
+    const typed = $('question').value;
+    const query = typed.trim();
+    if (!query) {
+      $('question').focus();
+      return;
+    }
+    const selected = assistant.sources.filter(s => s.selected);
+    const button = $('btn-ask');
+    button.classList.add('loading');
+    let result;
+    try {
+      result = await call('searchSources', query, selected.map(s => s.id));
+    } finally {
+      button.classList.remove('loading');
+    }
+    hideMessage();
+    let thread = target;
+    if (!thread) {
+      thread = { fragment: '', turns: [] };
+      thread.element = renderThread(thread, query);
+      threads.push(thread);
+      $('answers').append(thread.element);
+    }
+    const turn = addSearchTurn(thread, query, result, selected);
+    if ($('question').value === typed) $('question').value = '';
+    if (activeThread === target) {
+      selectThread(thread, false);
+      turn.scrollIntoView({ block: 'start' });
+    } else {
+      markThreadUnread(thread);
+    }
+    notifyAssistant();
+  }
+
+  function addSearchTurn(thread, query, result, selected) {
+    const turn = el('div', 'turn search-turn');
+    const main = el('div', 'turn-main');
+    main.append(el('div', 'bubble-mode', t('search.bubbleLabel')), el('div', 'bubble search-bubble', query));
+    if (selected.length < assistant.sources.length) {
+      main.append(el('div', 'thread-sources', t('assistant.threadSources', { names: selected.map(s => s.name).join(', ') })));
+    }
+    main.append(renderSearchResults(result));
+    turn.append(main);
+    thread.turnsElement.append(turn);
+    return turn;
+  }
+
+  function renderSearchResults(result) {
+    const box = el('div', 'search-results');
+    if (!result.total) box.append(el('div', 'search-summary', t('search.none')));
+    else box.append(el('div', 'search-summary', countText('search.hits', result.total) + ' ' + countText('search.files', result.files.length)));
+    result.files.forEach(file => box.append(renderSearchFile(file)));
+    const skipped = sources.filter(s => TO_PROCESS.includes(s.status)).length;
+    if (skipped) box.append(el('div', 'muted small', countText('search.skipped', skipped)));
+    return box;
+  }
+
+  function renderSearchFile(file) {
+    const group = el('div', 'search-file');
+    const head = el('div', 'search-file-head');
+    const current = assistant.sources.find(s => s.id === file.sourceId);
+    if (current) file.name = current.name;
+    head.append(el('span', 'search-file-name', file.name), el('span', 'muted', String(file.count)));
+    const list = el('div', 'search-hits');
+    file.hits.forEach((hit, i) => {
+      const row = renderSearchHit(file, hit, i);
+      if (i >= SEARCH_VISIBLE_HITS) row.classList.add('hidden');
+      list.append(row);
+    });
+    group.append(head, list);
+    const hidden = file.hits.length - SEARCH_VISIBLE_HITS;
+    if (hidden > 0) {
+      const more = el('button', 'link search-more', t('search.more', { count: hidden }));
+      more.addEventListener('click', () => {
+        list.querySelectorAll('.search-hit.hidden').forEach(row => row.classList.remove('hidden'));
+        more.remove();
+      });
+      group.append(more);
+    }
+    if (file.count > file.hits.length) group.append(el('div', 'muted small', t('search.moreInFile', { count: file.count - file.hits.length })));
+    return group;
+  }
+
+  function renderSearchHit(file, hit, index) {
+    const row = el('div', 'search-hit');
+    const text = el('div', 'search-hit-text');
+    if (hit.cutStart) text.append('…');
+    let at = 0;
+    hit.marks.forEach(([from, to]) => {
+      if (from > at) text.append(hit.text.slice(at, from));
+      text.append(el('mark', '', hit.text.slice(from, to)));
+      at = to;
+    });
+    text.append(hit.text.slice(at));
+    if (hit.cutEnd) text.append('…');
+    const meta = el('div', 'search-hit-meta');
+    if (hit.page) meta.append(t('assistant.page', { page: hit.page }) + ' · ');
+    const show = el('button', 'link cite-show', t('assistant.showInSource'));
+    show.addEventListener('click', () => openSearchPreview(file, index));
+    meta.append(show);
+    row.append(text, meta);
+    return row;
+  }
+
+  function openSearchPreview(file, index) {
+    const citations = file.hits.map((hit, i) => ({ number: i + 1, sourceId: file.sourceId, sourceName: file.name, quote: hit.quote, page: hit.page }));
+    if (UI_MODE === 'window') showSourcePreview(citations, index, () => {}, 'search');
+    else run(() => call('openSourcePreview', { citations: citations, index: index, kind: 'search' }));
+  }
+
   function renderQuestionPlaceholder() {
+    if (assistantMode === 'search') {
+      $('question').placeholder = t('search.placeholder');
+      return;
+    }
     const key = fragment ? 'assistant.fragment.placeholder'
       : activeThread ? 'assistant.placeholderFollowUp'
       : 'assistant.placeholder';
@@ -59,7 +202,7 @@
     renderQuestionPlaceholder();
     renderAssistantSummary();
     threads.forEach(item => item.element.classList.toggle('active', item === thread));
-    $('assistant-examples').classList.toggle('hidden', !!thread);
+    $('assistant-examples').classList.toggle('hidden', !!thread || assistantMode === 'search');
     $('assistant-threads').open = false;
     renderThreadList();
     if (scroll === false) return;

@@ -212,14 +212,19 @@
 
   $('btn-select-none').addEventListener('click', () => selectAllSources(false));
 
-  $('btn-ask').addEventListener('click', () => runInBackground($('btn-ask'), askAssistant));
+  $('btn-ask').addEventListener('click', () => runInBackground($('btn-ask'), submitQuestion));
+
+  document.querySelectorAll('#assistant-modes .mode-btn').forEach(button => button.addEventListener('click', () => {
+    setAssistantMode(button.dataset.mode);
+    $('question').focus();
+  }));
 
   if ($('btn-enlarge')) $('btn-enlarge').addEventListener('click', () => run(() => call('showAssistantWindow')));
 
   $('question').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || (assistantMode === 'search' && !e.shiftKey))) {
       e.preventDefault();
-      runInBackground($('btn-ask'), askAssistant);
+      runInBackground($('btn-ask'), submitQuestion);
     }
   });
 
