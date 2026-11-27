@@ -82,7 +82,7 @@
     button.classList.add('loading');
     let result;
     try {
-      result = await call('searchSources', query, selected.map(s => s.id));
+      result = await call('searchSources', query, selected.map(s => s.id), Object.fromEntries(selected.map(s => [s.id, s.name])));
     } finally {
       button.classList.remove('loading');
     }
@@ -114,6 +114,7 @@
     }
     main.append(renderSearchResults(result));
     turn.append(main);
+    thread.turns.push({ question: result.context.question, answer: result.context.answer, query: result.context.query });
     thread.turnsElement.append(turn);
     return turn;
   }
@@ -131,8 +132,6 @@
   function renderSearchFile(file) {
     const group = el('div', 'search-file');
     const head = el('div', 'search-file-head');
-    const current = assistant.sources.find(s => s.id === file.sourceId);
-    if (current) file.name = current.name;
     head.append(el('span', 'search-file-name', file.name), el('span', 'muted', String(file.count)));
     const list = el('div', 'search-hits');
     file.hits.forEach((hit, i) => {
@@ -417,7 +416,10 @@
     const typed = $('question').value;
     const question = typed.trim() || (attached ? t('assistant.fragment.defaultQuestion') : '');
     const selected = assistant.sources.filter(s => s.selected);
-    const history = target ? target.turns.map(turn => ({ question: turn.question, answer: turn.answer })) : [];
+    const lastSearch = target ? target.turns.filter(turn => turn.query).pop() : null;
+    const history = target ? target.turns
+      .filter(turn => !turn.query || turn === lastSearch)
+      .map(turn => ({ question: turn.question, answer: turn.answer, query: turn.query || null })) : [];
     const fragmentText = attached ? attached.text : (target ? target.fragment : '');
     const result = await callGemini($('btn-ask'), 'askAssistant', question, selected.map(s => s.id), history, fragmentText);
     if (!result) return;

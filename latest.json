@@ -1,8 +1,8 @@
 {
-  "version": "0.24.1",
-  "tag": "v0.24.1",
+  "version": "0.24.2",
+  "tag": "v0.24.2",
   "notes": {
-    "pl": "Czytelniejsze przyciski: nowa rozmowa i odświeżanie listy jako ikony, „Wymagania” jako przycisk, zaznaczony fragment pracy jako karta w polu pytania (z podglądem całego tekstu) i podpowiedź, gdy nic nie zaznaczono.",
-    "en": "Clearer buttons: new conversation and list refresh as icons, \"Requirements\" as a button, the selected passage as a card in the question box (with a full-text preview), and a hint when nothing is selected."
+    "pl": "Po wyszukaniu w źródłach można w tej samej rozmowie zapytać asystenta o znalezione fragmenty – asystent widzi, co znalazło wyszukiwanie.",
+    "en": "After searching your sources you can ask the assistant about the passages found in the same conversation – it now sees what the search found."
   }
 }
